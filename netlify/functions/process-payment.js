@@ -5,7 +5,7 @@ const nodemailer = require('nodemailer');
 const { createClient } = require('@supabase/supabase-js');
 const { Readable } = require('stream');
 const fs = require('fs');
-const FormData = require('form-data'); // Para construir FormData para envíos a Telegram
+const FormData = require('form-data'); 
 
 // Función para escapar caracteres especiales de MarkdownV2 para Telegram
 function escapeMarkdownV2(text) {
@@ -21,17 +21,15 @@ exports.handler = async function(event, context) {
         return { statusCode: 405, body: "Method Not Allowed" };
     }
 
-    let fieldsData; // Para los datos del formulario (game, playerId, etc.)
-    let paymentReceiptFile; // Para el archivo adjunto
+    let fieldsData; 
+    let paymentReceiptFile; 
 
     // --- Configuración de Supabase ---
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 
-    // AÑADIDAS LÍNEAS DE DEPURACIÓN
     console.log("DEBUG: SUPABASE_URL vista por la función:", supabaseUrl);
     console.log("DEBUG: SUPABASE_SERVICE_KEY vista por la función:", supabaseServiceKey);
-    // FIN LÍNEAS DE DEPURACIÓN
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -49,7 +47,6 @@ exports.handler = async function(event, context) {
     reqStream.push(bodyBuffer);
     reqStream.push(null);
 
-    // Formidable espera headers y method en el stream para ciertos Content-Types
     reqStream.headers = event.headers;
     reqStream.method = event.httpMethod;
 
@@ -65,7 +62,6 @@ exports.handler = async function(event, context) {
                 });
             });
 
-            // Formidable v3+ devuelve campos y archivos como arrays. Extraer el primer valor.
             fieldsData = Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]));
             paymentReceiptFile = files['paymentReceipt'] ? files['paymentReceipt'][0] : null;
 
@@ -91,11 +87,10 @@ exports.handler = async function(event, context) {
     const SMTP_USER = process.env.SMTP_USER;
     const SMTP_PASS = process.env.SMTP_PASS;
     const SENDER_EMAIL = process.env.SENDER_EMAIL || SMTP_USER;
-    const WHATSAPP_CONTACT = process.env.WHATSAPP_CONTACT || '584126949631'; // Tu número de WhatsApp por defecto
+    const WHATSAPP_CONTACT = process.env.WHATSAPP_CONTACT || '584126949631';
 
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !SMTP_HOST || isNaN(parseInt(SMTP_PORT, 10)) || !SMTP_USER || !SMTP_PASS || !supabaseUrl || !supabaseServiceKey) {
         console.error("Faltan variables de entorno requeridas o SMTP_PORT no es un número válido.");
-        // Añadimos más detalle para depuración en caso de error
         console.error(`Missing TELEGRAM_BOT_TOKEN: ${!TELEGRAM_BOT_TOKEN}`);
         console.error(`Missing TELEGRAM_CHAT_ID: ${!TELEGRAM_CHAT_ID}`);
         console.error(`Missing SMTP_HOST: ${!SMTP_HOST}`);
@@ -111,25 +106,14 @@ exports.handler = async function(event, context) {
         };
     }
 
-    // Extraer datos del formulario (ya procesados por formidable)
-    // Asegúrate de que estos nombres coincidan con los que envías desde el frontend (script.js)
     const { game, playerId, package: packageName, finalPrice, currency, paymentMethod, email, fullName, whatsappNumber, referenceNumber, txid } = fieldsData;
-
-    let methodSpecificDetails = {};
-    if (paymentMethod === 'pago-movil') {
-        methodSpecificDetails.reference = referenceNumber; // Usar el campo genérico de referencia
-    } else if (paymentMethod === 'binance') {
-        methodSpecificDetails.txid = txid || referenceNumber; // Usar txid o referencia
-    } else if (paymentMethod === 'zinli') {
-        methodSpecificDetails.reference = referenceNumber; // Usar el campo genérico de referencia
-    }
 
     let receiptUrl = null;
     let newTransactionData;
     let id_transaccion_generado;
 
     try {
-        id_transaccion_generado = `GMK-${Date.now()}`; // Generar un ID único simple para la transacción, con prefijo GamingKings
+        id_transaccion_generado = `GMK-${Date.now()}`; 
 
         // --- Subir comprobante a Supabase Storage PRIMERO ---
         if (paymentReceiptFile && paymentReceiptFile.filepath) {
@@ -137,17 +121,15 @@ exports.handler = async function(event, context) {
             const fileBuffer = fs.readFileSync(paymentReceiptFile.filepath);
             const fileName = `${id_transaccion_generado}_${Date.now()}_${paymentReceiptFile.originalFilename}`;
             const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('comprobantes') // Asegúrate de que tu bucket se llame 'comprobantes'
+                .from('comprobantes') 
                 .upload(fileName, fileBuffer, {
                     contentType: paymentReceiptFile.mimetype,
-                    upsert: false // No sobrescribir si ya existe
+                    upsert: false 
                 });
 
             if (uploadError) {
                 console.error("Error al subir el comprobante a Supabase Storage:", uploadError);
-                // Si falla la subida, aún intentamos guardar la transacción sin el comprobante
             } else {
-                // Obtener la URL pública del archivo subido
                 const { data: publicUrlData } = supabase.storage
                     .from('comprobantes')
                     .getPublicUrl(fileName);
@@ -156,38 +138,49 @@ exports.handler = async function(event, context) {
             }
         }
 
+        // --- PREPARANDO DATOS PARA LA INSERCIÓN ---
+        const dataToInsert = {
+            id_transaccion: id_transaccion_generado,
+            game: game,                       
+            player_id: playerId || null,      
+            package_name: packageName,        
+            final_price: parseFloat(finalPrice),
+            currency: currency,               
+            payment_method: paymentMethod,    
+            email: email,                     
+            full_name: fullName || null,      
+            whatsapp_number: whatsappNumber || null, 
+            reference_number: referenceNumber || null, 
+            txid: txid || null,               
+            receipt_url: receiptUrl,          
+            status: 'pendiente',              
+            telegram_chat_id: TELEGRAM_CHAT_ID, 
+        };
+        console.log("DEBUG: Datos preparados para insertar en Supabase:", JSON.stringify(dataToInsert, null, 2));
+
         // --- Guardar Transacción en Supabase ---
         const { data: insertedData, error: insertError } = await supabase
-            .from('transactions') // Asegúrate de que 'transactions' es el nombre correcto de tu tabla en Supabase
-            .insert({
-                id_transaccion: id_transaccion_generado,
-                game: game,
-                player_id: playerId || null, // Usar snake_case si tu tabla lo usa
-                package_name: packageName, // Usar snake_case
-                final_price: parseFloat(finalPrice),
-                currency: currency,
-                payment_method: paymentMethod,
-                email: email,
-                full_name: fullName || null, // Asegúrate de tener este campo si lo envías desde el frontend
-                whatsapp_number: whatsappNumber || null, // Usar snake_case
-                reference_number: referenceNumber || null, // Campo para referencias genéricas
-                txid: txid || null, // Campo específico para TXID de Binance
-                // method_details: methodSpecificDetails, // Podrías guardar un JSON con detalles adicionales
-                receipt_url: receiptUrl,
-                status: 'pendiente', // Estado inicial de la transacción
-                telegram_chat_id: TELEGRAM_CHAT_ID,
-            })
-            .select();
+            .from('transactions') 
+            .insert(dataToInsert)
+            .select(); // .select() es importante para obtener los datos insertados
 
+        // --- LÓGICA DE DEPURACIÓN DE ERRORES DE INSERCIÓN ---
         if (insertError) {
-            throw insertError;
+            console.error("DEBUG: Supabase insertError capturado directamente:", JSON.stringify(insertError, null, 2));
+            throw insertError; 
         }
+        
+        if (!insertedData || insertedData.length === 0) {
+            console.error("DEBUG: Supabase insert successful but returned empty data. Response:", JSON.stringify({ insertedData, insertError }, null, 2));
+            throw new Error("Supabase insert did not return expected data.");
+        }
+
         newTransactionData = insertedData[0];
         console.log("Transacción guardada en Supabase con ID interno:", newTransactionData.id);
 
     } catch (supabaseError) {
-        // CAMBIO CRÍTICO: Imprimir el objeto de error completo serializado
-        console.error("Error al guardar la transacción en Supabase:", JSON.stringify(supabaseError, null, 2));
+        // CAMBIO: Imprimir el objeto de error completo serializado para depuración
+        console.error("Error al guardar la transacción en Supabase (catch block):", JSON.stringify(supabaseError, null, 2));
         return {
             statusCode: 500,
             body: JSON.stringify({ message: "Error al guardar la transacción en la base de datos." })
@@ -195,7 +188,7 @@ exports.handler = async function(event, context) {
     }
 
     // --- Enviar Notificación a Telegram ---
-    let messageText = `✨ Nueva Recarga GamingKings ✨\n\n`; // CAMBIO: Nombre de la marca
+    let messageText = `✨ Nueva Recarga GamingKings ✨\n\n`; 
     messageText += `*ID de Transacción:* \`${escapeMarkdownV2(id_transaccion_generado || 'N/A')}\`\n`;
     messageText += `*Estado:* \`PENDIENTE\`\n\n`;
     messageText += `🎮 Juego: *${escapeMarkdownV2(game)}*\n`;
@@ -211,7 +204,6 @@ exports.handler = async function(event, context) {
         messageText += `📱 WhatsApp Cliente: ${escapeMarkdownV2(whatsappNumber)}\n`;
     }
 
-    // Detalles específicos del método de pago
     if (paymentMethod === 'pago-movil') {
         messageText += `📊 Referencia Pago Móvil: ${escapeMarkdownV2(referenceNumber || 'N/A')}\n`;
     } else if (paymentMethod === 'binance') {
@@ -220,7 +212,6 @@ exports.handler = async function(event, context) {
         messageText += `📊 Referencia Zinli: ${escapeMarkdownV2(referenceNumber || 'N/A')}\n`;
     }
 
-    // Botones inline para Telegram
     const replyMarkup = {
         inline_keyboard: [
             [{ text: "✅ Marcar como Realizada", callback_data: `mark_done_${id_transaccion_generado}` }]
@@ -234,22 +225,19 @@ exports.handler = async function(event, context) {
         telegramMessageResponse = await axios.post(telegramApiUrl, {
             chat_id: TELEGRAM_CHAT_ID,
             text: messageText,
-            parse_mode: 'MarkdownV2', // Asegúrate de usar MarkdownV2
+            parse_mode: 'MarkdownV2', 
             reply_markup: replyMarkup
         });
         console.log("Mensaje de Telegram enviado con éxito.");
 
-        // --- Enviar comprobante de pago a Telegram si existe y fue subido ---
-        if (receiptUrl) { // Ahora usamos la URL de Supabase Storage
+        if (receiptUrl) { 
             console.log("DEBUG: Intentando enviar comprobante a Telegram desde Supabase URL.");
             try {
-                // Telegram sendPhoto/sendDocument requiere el archivo directamente o una URL HTTPS
-                // Para una URL pública de Supabase, puedes usar sendDocument con la URL
                 const sendFileUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument`;
                 
                 await axios.post(sendFileUrl, {
                     chat_id: TELEGRAM_CHAT_ID,
-                    document: receiptUrl, // Aquí va la URL pública
+                    document: receiptUrl, 
                     caption: escapeMarkdownV2(`Comprobante de pago para la transacción ${id_transaccion_generado}`),
                     parse_mode: 'MarkdownV2'
                 });
@@ -269,12 +257,11 @@ exports.handler = async function(event, context) {
             console.log("DEBUG: No hay URL de comprobante de pago para enviar a Telegram.");
         }
 
-        // --- Actualizar Transaction en Supabase con el Message ID de Telegram ---
         if (newTransactionData && telegramMessageResponse && telegramMessageResponse.data && telegramMessageResponse.data.result) {
             const { data: updatedData, error: updateError } = await supabase
                 .from('transactions')
                 .update({ telegram_message_id: telegramMessageResponse.data.result.message_id })
-                .eq('id', newTransactionData.id); // Usar el ID interno de Supabase para la actualización
+                .eq('id', newTransactionData.id); 
 
             if (updateError) {
                 console.error("Error al actualizar la transacción en Supabase con telegram_message_id:", updateError.message);
@@ -294,13 +281,13 @@ exports.handler = async function(event, context) {
             transporter = nodemailer.createTransport({
                 host: SMTP_HOST,
                 port: parseInt(SMTP_PORT, 10),
-                secure: parseInt(SMTP_PORT, 10) === 465, // True para 465 (SSL), False para 587 (TLS)
+                secure: parseInt(SMTP_PORT, 10) === 465, 
                 auth: {
                     user: SMTP_USER,
                     pass: SMTP_PASS,
                 },
                 tls: {
-                    rejectUnauthorized: false // Puede ser necesario para algunos servidores SMTP
+                    rejectUnauthorized: false 
                 }
             });
         } catch (createTransportError) {
@@ -310,7 +297,7 @@ exports.handler = async function(event, context) {
         const mailOptions = {
             from: SENDER_EMAIL,
             to: email,
-            subject: `🎉 Tu Solicitud de Recarga de ${game} con GamingKings ha sido Recibida! 🎉`, // CAMBIO: Nombre de la marca
+            subject: `🎉 Tu Solicitud de Recarga de ${game} con GamingKings ha sido Recibida! 🎉`, 
             html: `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                     <h2 style="color: #007bff;">¡Hola!</h2>
