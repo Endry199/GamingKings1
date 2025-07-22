@@ -138,33 +138,33 @@ exports.handler = async function(event, context) {
             }
         }
 
-        // --- PREPARANDO DATOS PARA LA INSERCIÓN ---
+        // --- PREPARANDO DATOS PARA LA INSERCIÓN - VERSIÓN MÍNIMA ---
         const dataToInsert = {
             id_transaccion: id_transaccion_generado,
             game: game,                       
-            player_id: playerId || null,      
             package_name: packageName,        
             final_price: parseFloat(finalPrice),
             currency: currency,               
             payment_method: paymentMethod,    
             email: email,                     
-            full_name: fullName || null,      
-            whatsapp_number: whatsappNumber || null, 
-            reference_number: referenceNumber || null, 
-            txid: txid || null,               
-            receipt_url: receiptUrl,          
-            status: 'pendiente',              
-            telegram_chat_id: TELEGRAM_CHAT_ID, 
+            status: 'pendiente', 
+            // Campos comentados para la prueba mínima:
+            // player_id: playerId || null,      
+            // full_name: fullName || null,      
+            // whatsapp_number: whatsappNumber || null, 
+            // reference_number: referenceNumber || null, 
+            // txid: txid || null,               
+            // receipt_url: receiptUrl,          
+            // telegram_chat_id: TELEGRAM_CHAT_ID, 
         };
-        console.log("DEBUG: Datos preparados para insertar en Supabase:", JSON.stringify(dataToInsert, null, 2));
+        console.log("DEBUG: Datos preparados para insertar en Supabase (MINIMAL):", JSON.stringify(dataToInsert, null, 2));
 
         // --- Guardar Transacción en Supabase ---
         const { data: insertedData, error: insertError } = await supabase
             .from('transactions') 
             .insert(dataToInsert)
-            .select(); // .select() es importante para obtener los datos insertados
+            .select(); 
 
-        // --- LÓGICA DE DEPURACIÓN DE ERRORES DE INSERCIÓN ---
         if (insertError) {
             console.error("DEBUG: Supabase insertError capturado directamente:", JSON.stringify(insertError, null, 2));
             throw insertError; 
@@ -179,7 +179,6 @@ exports.handler = async function(event, context) {
         console.log("Transacción guardada en Supabase con ID interno:", newTransactionData.id);
 
     } catch (supabaseError) {
-        // CAMBIO: Imprimir el objeto de error completo serializado para depuración
         console.error("Error al guardar la transacción en Supabase (catch block):", JSON.stringify(supabaseError, null, 2));
         return {
             statusCode: 500,
@@ -188,11 +187,12 @@ exports.handler = async function(event, context) {
     }
 
     // --- Enviar Notificación a Telegram ---
+    // (Este bloque se ejecuta solo si la inserción en Supabase fue exitosa)
     let messageText = `✨ Nueva Recarga GamingKings ✨\n\n`; 
     messageText += `*ID de Transacción:* \`${escapeMarkdownV2(id_transaccion_generado || 'N/A')}\`\n`;
     messageText += `*Estado:* \`PENDIENTE\`\n\n`;
     messageText += `🎮 Juego: *${escapeMarkdownV2(game)}*\n`;
-    messageText += `👤 ID de Jugador: *${escapeMarkdownV2(playerId || 'N/A')}*\n`;
+    messageText += `👤 ID de Jugador: *${escapeMarkdownV2(playerId || 'N/A')}*\n`; // Nota: playerId seguirá siendo null en este log si se comenta en la inserción
     messageText += `📦 Paquete: *${escapeMarkdownV2(packageName)}*\n`;
     messageText += `💰 Total a Pagar: *${escapeMarkdownV2(finalPrice)} ${escapeMarkdownV2(currency)}*\n`;
     messageText += `💳 Método de Pago: *${escapeMarkdownV2(paymentMethod.replace('-', ' ').toUpperCase())}*\n`;
