@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalles de Pago - Malok Recargas</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Estilos para el botón de copiar y el mensaje */
+        .copy-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .copy-container .wallet-address {
+            display: none; /* Oculta la dirección real */
+        }
+        .copy-button {
+            background-color: var(--primary-color);
+            color: var(--button-text-color);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.3s ease;
+        }
+        .copy-button:hover {
+            background-color: #0056b3;
+        }
+        .copy-feedback {
+            display: none;
+            margin-left: 10px;
+            color: #28a745;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        /* Estilo para la etiqueta de la dirección */
+        .address-label {
+            font-weight: bold;
+            color: var(--text-color);
+        }
+        /* Estilo para los nuevos campos de correo y whatsapp */
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+        .input-group input[type="email"],
+        .input-group input[type="tel"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--input-background);
+            color: var(--text-color);
+            box-sizing: border-box; /* Asegura que el padding no aumente el ancho */
+        }
+        /* Estilo para el mensaje de éxito */
+        .payment-success-message {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: var(--accent-green-light); /* Un color de fondo suave para el éxito */
+            border: 1px solid var(--accent-green);
+            border-radius: 8px;
+            text-align: center;
+            color: var(--accent-green); /* Color del texto */
+        }
+        .payment-success-message h2 {
+            margin-top: 0;
+            color: var(--accent-green);
+        }
+        .payment-success-message p {
+            margin-bottom: 0;
+        }
+        /* Estilos para los pasos */
+        .form-section-step {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+        .form-section-step h3 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            text-align: center;
+        }
+        /* Nuevo estilo para el header del juego en la página de pago */
+        .game-payment-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .game-payment-header img {
+            width: 100%;
+            max-height: 200px; /* Ajusta la altura máxima para banners */
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .game-payment-header h2 {
+            margin-top: 0;
+            color: var(--heading-color);
+            font-size: 2em;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <a href="index.html" class="logo-link">
+                <img src="images/gamingkings_logo.png" alt="GamingKings Logo" class="logo-img">
+            </a>
+        </div>
+        <div class="header-right">
+            <div class="search-bar">
+                <input type="text" placeholder="Buscar juego...">
+                <i class="fas fa-search"></i>
+            </div>
+            </div>
+    </header>
+
+    <main class="payment-main">
+        <div class="form-container">
+            <div id="game-payment-header" class="game-payment-header" style="display: none;">
+                <img id="gameBannerDisplay" src="" alt="Game Banner">
+                <h2 id="gameTitleDisplay">Confirmar Recarga</h2>
+            </div>
+
+            <div id="transaction-summary" class="transaction-summary">
+            </div>
+
+            <form id="payment-form">
+                <div class="form-section-step">
+                    <h3>Paso 1: Selecciona tu Método de Pago</h3>
+                    <div class="form-group">
+                        <label>Método de Pago:</label>
+                        <div class="payment-methods" id="payment-methods">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section-step">
+                    <h3>Paso 2: Realiza el Pago y Sube tu Comprobante</h3>
+                    <div id="payment-details-form" class="payment-details-form">
+                    </div>
+                </div>
+                
+                <div class="form-section-step">
+                    <h3>Paso 3: Información de Contacto para Notificaciones</h3>
+                    <div class="input-group">
+                        <label for="email">Correo Electrónico (Para notificaciones y factura):</label>
+                        <input type="email" id="email" name="email" placeholder="tu_correo@ejemplo.com" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="whatsappNumber">Número de WhatsApp (Opcional, para contacto):</label>
+                        <input type="tel" id="whatsappNumber" name="whatsappNumber" placeholder="Ej: 584121234567">
+                    </div>
+                </div>
+                <div id="whatsapp-message-container" class="payment-confirmation-message" style="margin-top: 30px; margin-bottom: 20px; text-align: center; display: none;">
+                    <p style="font-size: 1.1em; color: var(--text-color); margin-bottom: 15px;">
+                        ¡Importante! Una vez realizado el pago con el método seleccionado, <strong>envía la captura de tu comprobante y tus datos de TikTok</strong> al siguiente número de WhatsApp para que tu recarga sea procesada rápidamente:
+                    </p>
+                    <a href="https://wa.me/573021090841?text=Hola%2C%20acabo%20de%20realizar%20un%20pago%20para%20recarga%20de%20TikTok.%20Mis%20datos%20de%20TikTok%20son%3A%20%5BAQUI_TUS_DATOS%5D."
+                        class="whatsapp-link"
+                        target="_blank"
+                        style="font-size: 1.1em; padding: 12px 25px;">
+                        <i class="fab fa-whatsapp"></i> Enviar Captura al WhatsApp
+                    </a>
+                    <p class="small-text" style="margin-top: 15px;">
+                        (Por favor, no olvides incluir tus datos de TikTok en el mensaje de WhatsApp).
+                    </p>
+                </div>
+
+                <button type="submit" class="btn-primary" id="finalize-recharge-btn" disabled>Finalizar Recarga</button>
+            </form>
+
+            <div id="success-message-display" class="payment-success-message" style="display: none;">
+                <h2>🎉 ¡Notificación Enviada! 🎉</h2>
+                <p>Hemos recibido tu solicitud de recarga. Te enviaremos un correo de confirmación y la factura virtual una vez que tu recarga sea procesada.</p>
+                <p>¡Gracias por usar Malok Recargas!</p>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 Malok Recargas. Todos los derechos reservados.</p>
+            <div class="footer-links">
+                <a href="privacy.html">Políticas de Privacidad</a>
+                <a href="terms.html">Términos de Servicio</a>
+            </div>
+            <a href="https://wa.me/573021090841" target="_blank" class="whatsapp-link">
+                <i class="fab fa-whatsapp"></i> Contáctanos por WhatsApp
+            </a>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        const paymentDetailsTemplates = {
+            'pago-movil': `
+                <p><strong>Paso 1:</strong> Realiza el Pago Móvil a los siguientes datos:</p>
+                <ul>
+                    <li><strong>Banco:</strong> Banco de Mercantil (0105)</li>
+                    <li><strong>Cédula/RIF:</strong> V-30258234</li>
+                    <li><strong>Teléfono:</strong> 0412-6949631</li>
+                </ul>
+                <div class="payment-fields-container">
+                    <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
+                    <label for="payment-receipt">Subir Comprobante de Pago:</label>
+                    <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
+                </div>
+            `,
+            'binance': `
+                <p><strong>Paso 1:</strong> Realiza la transferencia a nuestra cuenta Binance (USDT BEP20) O (Binance Pay).</p>
+                <ul>
+                    <p><strong>USDT (BEP20):</strong></p>
+                    <li>
+                        <div class="copy-container">
+                            <span class="address-label">Dirección de Billetera BEP20:</span>
+                            <span class="wallet-address" id="binance-address">0xd8e6d7a73f6d30519793b8e67d76c5945730dc46</span>
+                            <button type="button" class="copy-button" data-copy-target="binance-address">Copiar</button>
+                            <span class="copy-feedback" id="binance-copy-feedback">¡Copiado!</span>
+                        </div>
+                    </li>
+                    <li><strong>Moneda:</strong> USDT (BEP20)</li>
+                    <p><strong>Binance Pay:</strong></p>
+                    <li><strong>ID Binance Pay:</strong> 91149377</li>
+                </ul>
+                <div class="payment-fields-container">
+                    <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
+                    <label for="payment-receipt">Subir Comprobante de Pago:</label>
+                    <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
+                </div>
+            `,
+            'zinli': `
+                <p><strong>Paso 1:</strong> Transfiere el monto exacto a nuestra cuenta Zinli.</p>
+                <ul>
+                    <li><strong>Usuario Zinli:</strong> miladelarocaedwar04@gmail.com</li>
+                </ul>
+                <div class="payment-fields-container">
+                    <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
+                    <label for="payment-receipt">Subir Comprobante de Pago:</label>
+                    <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
+                </div>
+            `
+        };
+
+        const paymentMethodsVES = [
+            { id: 'pago-movil', name: 'Pago Móvil', type: 'ves', icon: 'fas fa-mobile-alt' }
+        ];
+
+        const paymentMethodsUSD = [
+            { id: 'binance', name: 'Binance', type: 'usd', icon: 'fab fa-bitcoin' },
+            { id: 'zinli', name: 'Zinli', type: 'usd', icon: 'fas fa-wallet' }
+        ];
+
+        let transactionDetails = null;
+        const paymentForm = document.getElementById('payment-form');
+        const whatsappMessageContainer = document.getElementById('whatsapp-message-container');
+        const finalizeBtn = document.getElementById('finalize-recharge-btn');
+        const successMessageDisplay = document.getElementById('success-message-display'); 
+        const gamePaymentHeader = document.getElementById('game-payment-header'); // Nuevo elemento
+        const gameBannerDisplay = document.getElementById('gameBannerDisplay'); // Nuevo elemento
+        const gameTitleDisplay = document.getElementById('gameTitleDisplay'); // Nuevo elemento
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const transactionSummaryDiv = document.getElementById('transaction-summary');
+            const paymentMethodsDiv = document.getElementById('payment-methods');
+            const paymentDetailsFormDiv = document.getElementById('payment-details-form');
+            
+            const storedDetails = localStorage.getItem('transactionDetails');
+            if (storedDetails) {
+                transactionDetails = JSON.parse(storedDetails);
+                updateGameHeader(); // Llamada a la nueva función
+                updateTransactionSummary();
+                updatePaymentMethods();
+
+                if (transactionDetails.game === "TikTok") {
+                    whatsappMessageContainer.style.display = 'block';
+                    finalizeBtn.style.display = 'none';
+                    const emailInput = document.getElementById('email');
+                    if (emailInput) emailInput.required = true;
+                } else {
+                    whatsappMessageContainer.style.display = 'none';
+                    finalizeBtn.style.display = 'block';
+                }
+
+            } else {
+                transactionSummaryDiv.innerHTML = '<p>No se encontraron detalles de la transacción. Por favor, regresa a la página de inicio.</p>';
+                finalizeBtn.style.display = 'none';
+                whatsappMessageContainer.style.display = 'none';
+                gamePaymentHeader.style.display = 'none'; // Oculta el header si no hay detalles
+            }
+
+            // Nueva función para actualizar el encabezado del juego
+            function updateGameHeader() {
+                if (transactionDetails && transactionDetails.game) {
+                    gamePaymentHeader.style.display = 'block';
+                    gameTitleDisplay.textContent = `Confirmar Recarga para ${transactionDetails.game}`;
+                    if (transactionDetails.gameBanner) {
+                        gameBannerDisplay.src = transactionDetails.gameBanner;
+                        gameBannerDisplay.style.display = 'block';
+                    } else {
+                        gameBannerDisplay.style.display = 'none'; // Oculta si no hay banner
+                    }
+                } else {
+                    gamePaymentHeader.style.display = 'none';
+                }
+            }
+
+            function updateTransactionSummary() {
+                if (!transactionDetails) return;
+
+                const displayAmount = parseFloat(transactionDetails.finalPrice);
+                const displayCurrency = transactionDetails.currency;
+                
+                let otherCurrencyDisplay = '';
+                if (transactionDetails.priceUSD && transactionDetails.priceVES) {
+                    if (displayCurrency === 'VES') {
+                        otherCurrencyDisplay = ` (~ $${parseFloat(transactionDetails.priceUSD).toFixed(2)} USD)`;
+                    } else if (displayCurrency === 'USD') {
+                        otherCurrencyDisplay = ` (~ Bs. ${parseFloat(transactionDetails.priceVES).toFixed(2)} VES)`;
+                    }
+                }
+
+                const playerIdHtml = transactionDetails.playerId ? `<p><strong>ID de Jugador:</strong> ${transactionDetails.playerId}</p>` : '';
+
+                transactionSummaryDiv.innerHTML = `
+                    <p><strong>Juego:</strong> ${transactionDetails.game}</p>
+                    ${playerIdHtml}
+                    <p><strong>Plan Seleccionado:</strong> ${transactionDetails.package}</p>
+                    <p><strong>Total a Pagar:</strong> <span class="amount">${displayCurrency === 'VES' ? 'Bs.' : '$'} ${displayAmount.toFixed(2)} ${displayCurrency}</span>${otherCurrencyDisplay}</p>
+                    <p>Por favor, realiza el pago por el monto exacto y selecciona tu método a continuación.</p>
+                `;
+            }
+
+            function updatePaymentMethods() {
+                paymentMethodsDiv.innerHTML = '';
+                const currentCurrency = transactionDetails.currency;
+                const methods = currentCurrency === 'VES' ? paymentMethodsVES : paymentMethodsUSD;
+
+                methods.forEach(method => {
+                    const methodItem = document.createElement('div');
+                    methodItem.classList.add('payment-method-option');
+                    methodItem.innerHTML = `
+                        <input type="radio" id="method-${method.id}" name="paymentMethod" value="${method.id}" data-type="${method.type}">
+                        <label for="method-${method.id}">
+                            <i class="${method.icon}"></i>
+                            <span>${method.name}</span>
+                        </label>
+                    `;
+                    paymentMethodsDiv.appendChild(methodItem);
+                });
+
+                paymentMethodsDiv.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
+                    radio.addEventListener('change', (event) => {
+                        const selectedMethodId = event.target.value;
+                        loadPaymentDetails(selectedMethodId);
+                        checkFormValidity();
+                    });
+                });
+                checkFormValidity();
+            }
+
+            function loadPaymentDetails(methodId) {
+                let methodHtml = paymentDetailsTemplates[methodId];
+
+                if (methodHtml) {
+                    paymentDetailsFormDiv.innerHTML = methodHtml;
+
+                    if (transactionDetails.game === "TikTok") {
+                        const fieldsContainer = paymentDetailsFormDiv.querySelector('.payment-fields-container');
+                        if (fieldsContainer) {
+                            fieldsContainer.style.display = 'none'; // Oculta la subida del comprobante para TikTok
+                        }
+                    } else {
+                        // Only add event listener for the file input if it's not TikTok
+                        const fileInput = document.getElementById('payment-receipt');
+                        if (fileInput) {
+                            fileInput.addEventListener('change', checkFormValidity);
+                            fileInput.required = true; // Asegura que el archivo es requerido para otros juegos
+                        }
+                    }
+
+                    const copyButton = paymentDetailsFormDiv.querySelector('.copy-button');
+                    if (copyButton) {
+                        copyButton.addEventListener('click', handleCopyButtonClick);
+                    }
+
+                } else {
+                    paymentDetailsFormDiv.innerHTML = '<p>Selecciona un método de pago para ver los detalles.</p>';
+                }
+                checkFormValidity();
+
+                // Add event listeners to email and whatsapp inputs for validity check
+                document.getElementById('email').addEventListener('input', checkFormValidity);
+                document.getElementById('whatsappNumber').addEventListener('input', checkFormValidity);
+            }
+
+            async function handleCopyButtonClick(event) {
+                const button = event.currentTarget;
+                const targetId = button.dataset.copyTarget;
+                const textToCopyElement = document.getElementById(targetId);
+                const feedbackElement = document.getElementById(`${targetId}-copy-feedback`);
+
+                if (textToCopyElement && navigator.clipboard) {
+                    try {
+                        await navigator.clipboard.writeText(textToCopyElement.textContent);
+                        if (feedbackElement) {
+                            feedbackElement.textContent = '¡Copiado!';
+                            feedbackElement.style.display = 'inline-block';
+                            setTimeout(() => {
+                                feedbackElement.style.display = 'none';
+                            }, 1500);
+                        }
+                    } catch (err) {
+                        console.error('Error al copiar: ', err);
+                        if (feedbackElement) {
+                            feedbackElement.textContent = 'Error al copiar';
+                            feedbackElement.style.display = 'inline-block';
+                            setTimeout(() => {
+                                feedbackElement.style.display = 'none';
+                            }, 1500);
+                        }
+                        alert('No se pudo copiar el texto. Por favor, cópialo manualmente.');
+                    }
+                } else {
+                    alert('Tu navegador no soporta la copia automática o no se encontró el elemento. Por favor, selecciona y copia la dirección manualmente.');
+                }
+            }
+
+
+            function checkFormValidity() {
+                const selectedRadio = document.querySelector('input[name="paymentMethod"]:checked');
+                const isMethodSelected = selectedRadio !== null;
+                
+                // Check if email is filled (it's always required now)
+                const emailInput = document.getElementById('email');
+                const isEmailFilled = emailInput && emailInput.value.trim() !== '';
+                const isEmailValid = emailInput && emailInput.checkValidity(); // Check HTML5 validation for email
+
+                let areDetailsFilled = true;
+
+                if (transactionDetails && transactionDetails.game === "TikTok") {
+                    areDetailsFilled = true; // No required fields for TikTok, instructions are for WhatsApp
+                } else if (isMethodSelected) {
+                    // Only check the file input for non-TikTok games
+                    const fileInput = document.getElementById('payment-receipt');
+                    if (fileInput && fileInput.files.length === 0) {
+                        areDetailsFilled = false;
+                    }
+                } else {
+                    areDetailsFilled = false;
+                }
+                
+                // Finalize button depends on method selected, details, and email
+                if (transactionDetails.game !== "TikTok") {
+                    finalizeBtn.disabled = !(isMethodSelected && areDetailsFilled && isEmailFilled && isEmailValid);
+                } else {
+                    // For TikTok, button depends only on email being filled and valid
+                    finalizeBtn.disabled = !(isEmailFilled && isEmailValid); 
+                }
+            }
+
+
+            document.getElementById('payment-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                // Get form data using FormData API
+                const formData = new FormData(paymentForm);
+
+                // Add transactionDetails to formData (these are not direct form inputs)
+                for (const key in transactionDetails) {
+                    formData.append(key, transactionDetails[key]);
+                }
+
+                // Check for email again as it's now universally required and must be valid
+                const emailInput = document.getElementById('email');
+                if (!emailInput || emailInput.value.trim() === '' || !emailInput.checkValidity()) {
+                    alert('Por favor, ingresa un correo electrónico válido para recibir notificaciones.');
+                    emailInput.focus();
+                    return;
+                }
+                
+                // Check for payment receipt if it's not a TikTok game
+                if (transactionDetails.game !== "TikTok") {
+                    const paymentReceipt = document.getElementById('payment-receipt');
+                    if (!paymentReceipt || paymentReceipt.files.length === 0) {
+                        alert('Por favor, sube tu comprobante de pago.');
+                        return;
+                    }
+                }
+
+                // Log FormData entries for debugging (not the file content itself)
+                console.log('Datos a enviar (FormData):');
+                for (let pair of formData.entries()) {
+                   console.log(pair[0]+ ': ' + pair[1]);
+                }
+                
+                // Disable button and show loading message
+                finalizeBtn.disabled = true;
+                finalizeBtn.textContent = 'Enviando...';
+                
+                try {
+                    // Send FormData directly; fetch will set Content-Type header to multipart/form-data automatically
+                    const response = await fetch('/.netlify/functions/process-payment', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        // Show success message and hide form
+                        paymentForm.style.display = 'none';
+                        whatsappMessageContainer.style.display = 'none'; // Hide TikTok specific message if shown
+                        successMessageDisplay.style.display = 'block';
+                        gamePaymentHeader.style.display = 'none'; // Oculta el encabezado del juego al completar
+
+                        localStorage.removeItem('transactionDetails'); // Clear stored details
+
+                        // Redirect after a short delay
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 5000); // 5 seconds
+                    } else {
+                        const errorData = await response.json();
+                        alert(`Ocurrió un error: ${errorData.message || response.statusText}. Por favor, verifica tus datos e inténtalo de nuevo.`);
+                        console.error('Server error:', errorData);
+                        finalizeBtn.disabled = false;
+                        finalizeBtn.textContent = 'Finalizar Recarga';
+                    }
+                } catch (error) {
+                    alert('Hubo un problema de conexión. Por favor, inténtalo de nuevo más tarde.');
+                    console.error('Network or client error:', error);
+                    finalizeBtn.disabled = false;
+                    finalizeBtn.textContent = 'Finalizar Recarga';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
