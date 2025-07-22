@@ -27,6 +27,12 @@ exports.handler = async function(event, context) {
     // --- Configuración de Supabase ---
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+
+    // AÑADIDAS LÍNEAS DE DEPURACIÓN
+    console.log("DEBUG: SUPABASE_URL vista por la función:", supabaseUrl);
+    console.log("DEBUG: SUPABASE_SERVICE_KEY vista por la función:", supabaseServiceKey);
+    // FIN LÍNEAS DE DEPURACIÓN
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // --- Parsing de FormData con formidable ---
@@ -89,6 +95,16 @@ exports.handler = async function(event, context) {
 
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !SMTP_HOST || isNaN(parseInt(SMTP_PORT, 10)) || !SMTP_USER || !SMTP_PASS || !supabaseUrl || !supabaseServiceKey) {
         console.error("Faltan variables de entorno requeridas o SMTP_PORT no es un número válido.");
+        // Añadimos más detalle para depuración en caso de error
+        console.error(`Missing TELEGRAM_BOT_TOKEN: ${!TELEGRAM_BOT_TOKEN}`);
+        console.error(`Missing TELEGRAM_CHAT_ID: ${!TELEGRAM_CHAT_ID}`);
+        console.error(`Missing SMTP_HOST: ${!SMTP_HOST}`);
+        console.error(`Invalid SMTP_PORT: ${isNaN(parseInt(SMTP_PORT, 10))}`);
+        console.error(`Missing SMTP_USER: ${!SMTP_USER}`);
+        console.error(`Missing SMTP_PASS: ${!SMTP_PASS}`);
+        console.error(`Missing SUPABASE_URL: ${!supabaseUrl}`);
+        console.error(`Missing SUPABASE_SERVICE_KEY: ${!supabaseServiceKey}`);
+
         return {
             statusCode: 500,
             body: JSON.stringify({ message: "Error de configuración del servidor: Faltan credenciales o configuración inválida." })
