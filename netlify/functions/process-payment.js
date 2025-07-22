@@ -186,7 +186,8 @@ exports.handler = async function(event, context) {
         console.log("Transacción guardada en Supabase con ID interno:", newTransactionData.id);
 
     } catch (supabaseError) {
-        console.error("Error al guardar la transacción en Supabase:", supabaseError.message);
+        // CAMBIO: Imprimir el objeto de error completo para una mejor depuración
+        console.error("Error al guardar la transacción en Supabase:", supabaseError);
         return {
             statusCode: 500,
             body: JSON.stringify({ message: "Error al guardar la transacción en la base de datos." })
