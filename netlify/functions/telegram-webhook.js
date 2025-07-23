@@ -177,7 +177,7 @@ Aquí tienes los detalles de tu recarga:
                     const shortWhatsappMessage = `
 🎉 ¡Hola! 👋
 
-¡Tu recarga ha sido *COMPLETADA* por GamingKings!
+¡Tu recarga con la ID de transaccion: ${transaction.id_transaccion} ha sido *COMPLETADA* por GamingKings!
 
 Puedes ver los detalles de tu factura aquí: ${invoiceLink}
 
