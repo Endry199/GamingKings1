@@ -1,0 +1,14 @@
+# netlify.toml
+[build]
+  command = "npm run build" # O tu comando de build si tienes uno (e.g. "npm install")
+  publish = "public" # Tu carpeta de publicación, si aplica. Si no tienes frontend, puedes omitir o dejar vacía.
+
+[[plugins]]
+  package = "@netlify/plugin-node-bundler"
+
+[[plugins]]
+  package = "netlify-plugin-chromium"
+  [plugins.inputs]
+    # Opcional: Especifica la versión de Chromium si tienes problemas.
+    # chromium_version = "1090000" # Por ejemplo
+    # args = ["--no-sandbox", "--disable-setuid-sandbox"] # Recomendado para entornos serverless
