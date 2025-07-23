@@ -4,9 +4,8 @@ const { Formidable } = require('formidable');
 const { createClient } = require('@supabase/supabase-js');
 const { Readable } = require('stream');
 const fs = require('fs');
-// Importar las nuevas librerías para la generación de imagen
 const nodeHtmlToImage = require('node-html-to-image');
-const path = require('path'); // Necesario para la ruta de Chromium
+const path = require('path');
 
 // Función para escapar caracteres especiales de MarkdownV2 para Telegram
 function escapeMarkdownV2(text) {
@@ -18,7 +17,9 @@ function escapeMarkdownV2(text) {
 }
 
 exports.handler = async function(event, context) {
+    console.log("FUNCTION START: process-payment.js initiated.");
     if (event.httpMethod !== "POST") {
+        console.log("METHOD NOT ALLOWED: Only POST method is accepted.");
         return { statusCode: 405, body: "Method Not Allowed" };
     }
 
@@ -50,10 +51,11 @@ exports.handler = async function(event, context) {
 
     try {
         if (event.headers['content-type'] && event.headers['content-type'].includes('multipart/form-data')) {
+            console.log("DEBUG: Request is multipart/form-data. Parsing with formidable.");
             const { fields, files } = await new Promise((resolve, reject) => {
                 form.parse(reqStream, (err, fields, files) => {
                     if (err) {
-                        console.error('Formidable parse error:', err);
+                        console.error('ERROR: Formidable parse error:', err);
                         return reject(err);
                     }
                     resolve({ fields, files });
@@ -62,19 +64,23 @@ exports.handler = async function(event, context) {
 
             fieldsData = Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]));
             paymentReceiptFile = files['paymentReceipt'] ? files['paymentReceipt'][0] : null;
+            console.log("DEBUG: Formidable parsing complete. fieldsData:", JSON.stringify(fieldsData));
+            if (paymentReceiptFile) {
+                console.log(`DEBUG: Payment receipt file detected: ${paymentReceiptFile.originalFilename}, path: ${paymentReceiptFile.filepath}`);
+            }
 
         } else if (event.headers['content-type'] && event.headers['content-type'].includes('application/json')) {
+            console.log("DEBUG: Request is application/json.");
             fieldsData = JSON.parse(event.body);
         } else {
+            console.log("DEBUG: Request is x-www-form-urlencoded.");
             const { parse } = require('querystring');
             fieldsData = parse(event.body);
         }
-        console.log("DEBUG: fieldsData al inicio de la función:", fieldsData);
-        console.log("DEBUG: whatsappNumber recibido:", fieldsData.whatsappNumber);
-        console.log("DEBUG: fullName recibido:", fieldsData.fullName);
+        console.log("DEBUG: Parsed fieldsData:", fieldsData);
 
     } catch (parseError) {
-        console.error("Error al procesar los datos de la solicitud:", parseError);
+        console.error("ERROR: Failed to parse request body:", parseError);
         return {
             statusCode: 400,
             body: JSON.stringify({ message: `Error al procesar los datos de la solicitud: ${parseError.message || 'Unknown error'}. Por favor, verifica tus datos e inténtalo de nuevo.` })
@@ -84,22 +90,24 @@ exports.handler = async function(event, context) {
     const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
     const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
     const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR;
-    // URL de tu logo para la factura (SUSTITUIR ESTA URL o configurar en Netlify como LOGO_URL)
-    const LOGO_URL = process.env.LOGO_URL || 'https://example.com/your-logo.png'; // Reemplaza con la URL pública de tu logo
+    // URL de tu logo para la factura (CRÍTICO: ASEGÚRATE DE QUE ESTÉ PÚBLICA Y ACCESIBLE)
+    const LOGO_URL = process.env.LOGO_URL; 
 
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !supabaseUrl || !supabaseServiceKey || !WHATSAPP_NUMBER_RECARGADOR || !LOGO_URL) {
-        console.error("Faltan variables de entorno requeridas.");
+        console.error("CONFIGURATION ERROR: Missing required environment variables.");
         console.error(`Missing TELEGRAM_BOT_TOKEN: ${!TELEGRAM_BOT_TOKEN}`);
         console.error(`Missing TELEGRAM_CHAT_ID: ${!TELEGRAM_CHAT_ID}`);
         console.error(`Missing SUPABASE_URL: ${!supabaseUrl}`);
         console.error(`Missing SUPABASE_SERVICE_KEY: ${!supabaseServiceKey}`);
         console.error(`Missing WHATSAPP_NUMBER_RECARGADOR: ${!WHATSAPP_NUMBER_RECARGADOR}`);
-        console.error(`Missing LOGO_URL: ${!LOGO_URL}`); // Verifica que esta esté presente
+        console.error(`Missing LOGO_URL: ${!LOGO_URL}`); 
         return {
             statusCode: 500,
             body: JSON.stringify({ message: "Error de configuración del servidor: Faltan credenciales o configuración inválida." })
         };
     }
+    console.log(`DEBUG: LOGO_URL configured: ${LOGO_URL}`);
+
 
     const { 
         game, 
@@ -115,17 +123,18 @@ exports.handler = async function(event, context) {
         txid 
     } = fieldsData;
 
-    let receiptUrl = null; // URL del comprobante de pago subido por el cliente
-    let invoiceImageUrl = null; // URL de la factura generada
+    let receiptUrl = null; 
+    let invoiceImageUrl = null; 
     let newTransactionData;
     let id_transaccion_generado;
 
     try {
         id_transaccion_generado = `GMK-${Date.now()}`; 
+        console.log(`DEBUG: Generated transaction ID: ${id_transaccion_generado}`);
 
-        // --- Subir comprobante del cliente a Supabase Storage PRIMERO ---
-        if (paymentReceiptFile && paymentReceiptFile.filepath && game !== "TikTok") {
-            console.log(`Intentando subir comprobante del cliente: ${paymentReceiptFile.originalFilename} (${paymentReceiptFile.mimetype})`);
+        // --- Subir comprobante del cliente a Supabase Storage ---
+        if (paymentReceiptFile && paymentReceiptFile.filepath && fs.existsSync(paymentReceiptFile.filepath) && game !== "TikTok") {
+            console.log(`DEBUG: Attempting to upload client receipt: ${paymentReceiptFile.originalFilename}`);
             const fileBuffer = fs.readFileSync(paymentReceiptFile.filepath);
             const fileName = `${id_transaccion_generado}_comprobante_${Date.now()}_${paymentReceiptFile.originalFilename}`;
             const { data: uploadData, error: uploadError } = await supabase.storage
@@ -136,14 +145,16 @@ exports.handler = async function(event, context) {
                 });
 
             if (uploadError) {
-                console.error("Error al subir el comprobante del cliente a Supabase Storage:", uploadError);
+                console.error("ERROR: Supabase Storage upload failed for client receipt:", uploadError);
             } else {
                 const { data: publicUrlData } = supabase.storage
                     .from('comprobantes')
                     .getPublicUrl(fileName);
                 receiptUrl = publicUrlData.publicUrl;
-                console.log("Comprobante del cliente subido a Supabase Storage:", receiptUrl);
+                console.log("DEBUG: Client receipt uploaded to Supabase Storage:", receiptUrl);
             }
+        } else {
+            console.log("DEBUG: No payment receipt file to upload or game is TikTok. Skipping receipt upload.");
         }
 
         // --- Generar la Imagen de la Factura ---
@@ -153,7 +164,6 @@ exports.handler = async function(event, context) {
             day: '2-digit', month: '2-digit', year: 'numeric' 
         });
 
-        // Plantilla HTML de la factura (con tu diseño y placeholders)
         const invoiceHtmlTemplate = `
 <!DOCTYPE html>
 <html lang="es">
@@ -166,18 +176,18 @@ exports.handler = async function(event, context) {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #f0f0f0; /* Gris claro de fondo */
+            background-color: #f0f0f0;
             color: #333;
         }
         .invoice-container {
-            width: 350px; /* Ancho fijo para la imagen */
+            width: 350px; 
             margin: 0 auto;
             background-color: #fff;
             border-radius: 10px;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
             overflow: hidden;
             padding: 20px;
-            border-top: 5px solid #8e44ad; /* Morado superior */
+            border-top: 5px solid #8e44ad; 
         }
         .header {
             text-align: center;
@@ -188,9 +198,12 @@ exports.handler = async function(event, context) {
         .header img {
             max-width: 120px;
             margin-bottom: 10px;
+            display: block; /* Ensures it's block-level for margin auto */
+            margin-left: auto;
+            margin-right: auto;
         }
         .header h1 {
-            color: #8e44ad; /* Morado */
+            color: #8e44ad; 
             font-size: 24px;
             margin: 0;
         }
@@ -203,7 +216,7 @@ exports.handler = async function(event, context) {
             margin-bottom: 20px;
         }
         .details-section h2 {
-            color: #e91e63; /* Rosa */
+            color: #e91e63; 
             font-size: 18px;
             border-bottom: 2px solid #e91e63;
             padding-bottom: 5px;
@@ -235,7 +248,7 @@ exports.handler = async function(event, context) {
             font-size: 12px;
         }
         .highlight {
-            color: #e91e63; /* Rosa para resaltar valores */
+            color: #e91e63; 
             font-weight: bold;
         }
     </style>
@@ -299,49 +312,63 @@ exports.handler = async function(event, context) {
 
         let browserPath = null;
         // La siguiente línea es crucial para Puppeteer en Netlify
-        // Netlify-plugin-chromium asegura que el ejecutable esté en este PATH
+        // netlify-plugin-chromium asegura que el ejecutable esté en este PATH
         if (process.env.LAMBDA_TASK_ROOT) {
             browserPath = path.join(process.env.LAMBDA_TASK_ROOT, 'node_modules', '.bin', 'chromium');
+            console.log(`DEBUG: Running in Lambda. Chromium executablePath: ${browserPath}`);
         } else {
-            // Para desarrollo local, puedes apuntar a tu propio Chromium
-            // O dejarlo null para que puppeteer-core lo intente encontrar
-            console.warn("No en entorno Lambda, browserPath será null para desarrollo local.");
+            console.warn("WARN: Not in Lambda environment. browserPath will be null for local development.");
         }
 
         try {
-            console.log("DEBUG: Intentando generar imagen de factura...");
+            console.log("DEBUG INVOICE: Starting invoice image generation process.");
+            console.log(`DEBUG INVOICE: HTML template size: ${invoiceHtmlTemplate.length} characters.`);
+            console.log(`DEBUG INVOICE: Attempting to use browserPath: ${browserPath}`);
+            
             const imageBuffer = await nodeHtmlToImage({
                 html: invoiceHtmlTemplate,
-                quality: 90, // Calidad de la imagen JPG
-                type: 'jpeg', // O 'png' si prefieres
+                quality: 90, 
+                type: 'jpeg', 
                 puppeteerArgs: {
                     executablePath: browserPath,
-                    args: ['--no-sandbox', '--disable-setuid-sandbox'] // Importante para entornos serverless
+                    args: ['--no-sandbox', '--disable-setuid-sandbox', '--single-process', '--disable-dev-shm-usage', '--no-zygote'] // Added more args for serverless
                 }
             });
-            console.log("DEBUG: Imagen de factura generada. Subiendo a Supabase...");
+            console.log("DEBUG INVOICE: Image generated successfully by node-html-to-image. Buffer size:", imageBuffer ? imageBuffer.length : 'null');
 
-            const invoiceFileName = `${id_transaccion_generado}_factura.jpg`; // O .png
+            if (!imageBuffer) {
+                console.error("ERROR INVOICE: imageBuffer is null or empty after nodeHtmlToImage. Invoice will not be uploaded.");
+                throw new Error("Invoice image buffer is empty. Generation failed."); // Force catch block
+            }
+
+            const invoiceFileName = `${id_transaccion_generado}_factura.jpg`; 
+            console.log(`DEBUG INVOICE: Attempting to upload invoice file: ${invoiceFileName}`);
             const { data: invoiceUploadData, error: invoiceUploadError } = await supabase.storage
-                .from('comprobantes') // Puedes crear un bucket 'facturas' si quieres separarlos
+                .from('comprobantes') // Asegúrate de que este bucket existe y tiene políticas de R/W adecuadas
                 .upload(invoiceFileName, imageBuffer, {
-                    contentType: 'image/jpeg', // O 'image/png'
+                    contentType: 'image/jpeg', 
                     upsert: false 
                 });
 
             if (invoiceUploadError) {
-                console.error("Error al subir la imagen de la factura a Supabase Storage:", invoiceUploadError);
+                console.error("ERROR INVOICE: Supabase Storage upload failed for invoice image:", invoiceUploadError);
             } else {
                 const { data: invoicePublicUrlData } = supabase.storage
                     .from('comprobantes')
                     .getPublicUrl(invoiceFileName);
                 invoiceImageUrl = invoicePublicUrlData.publicUrl;
-                console.log("Imagen de la factura subida a Supabase Storage:", invoiceImageUrl);
+                console.log("DEBUG INVOICE: Invoice image uploaded to Supabase Storage and public URL obtained:", invoiceImageUrl);
+                if (!invoiceImageUrl) {
+                    console.error("WARN INVOICE: Public URL for invoice image is null or empty after Supabase getPublicUrl, despite successful upload.");
+                }
             }
 
         } catch (invoiceGenError) {
-            console.error("ERROR: Fallo al generar o subir la imagen de la factura:", invoiceGenError);
-            // Continúa sin la factura si hay un error crítico aquí
+            console.error("CRITICAL ERROR INVOICE GENERATION/UPLOAD:", invoiceGenError.message);
+            if (invoiceGenError.stack) {
+                console.error("CRITICAL ERROR INVOICE STACK:", invoiceGenError.stack);
+            }
+            invoiceImageUrl = null; // Ensure it remains null if error occurs
         }
 
         // --- PREPARANDO DATOS PARA LA INSERCIÓN ---
@@ -359,10 +386,11 @@ exports.handler = async function(event, context) {
             whatsapp_number: whatsappNumber || null, 
             reference_number: referenceNumber || null, 
             txid: txid || null, 
-            receipt_url: receiptUrl, // Comprobante subido por el cliente
-            invoice_image_url: invoiceImageUrl, // URL de la factura generada
+            receipt_url: receiptUrl, 
+            invoice_image_url: invoiceImageUrl, 
             telegram_chat_id: TELEGRAM_CHAT_ID, 
         };
+        console.log("DEBUG: Data prepared for Supabase insertion:", JSON.stringify(dataToInsert));
 
         const { data: insertedData, error: insertError } = await supabase
             .from('transactions') 
@@ -370,26 +398,27 @@ exports.handler = async function(event, context) {
             .select(); 
 
         if (insertError) {
-            console.error("DEBUG: Supabase insertError capturado directamente:", JSON.stringify(insertError, null, 2));
+            console.error("ERROR: Supabase insertError captured:", JSON.stringify(insertError, null, 2));
             throw insertError; 
         }
         
         if (!insertedData || insertedData.length === 0) {
-            console.error("DEBUG: Supabase insert successful but returned empty data. Response:", JSON.stringify({ insertedData, insertError }, null, 2));
+            console.error("ERROR: Supabase insert successful but returned empty data. Response:", JSON.stringify({ insertedData, insertError }, null, 2));
             throw new Error("Supabase insert did not return expected data.");
         }
 
         newTransactionData = insertedData[0];
-        console.log("Transacción guardada en Supabase con ID interno:", newTransactionData.id);
+        console.log("DEBUG: Transaction saved to Supabase with internal ID:", newTransactionData.id);
 
     } catch (supabaseError) {
-        console.error("Error al guardar la transacción en Supabase (catch block):", JSON.stringify(supabaseError, null, 2));
+        console.error("ERROR: Failed to save transaction to Supabase (catch block):", JSON.stringify(supabaseError, null, 2));
         return {
             statusCode: 500,
             body: JSON.stringify({ message: "Error al guardar la transacción en la base de datos." })
         };
     }
 
+    // ... (El resto del código para Telegram y WhatsApp permanece igual) ...
     let whatsappLinkCustomer = null;
     if (whatsappNumber && whatsappNumber.trim() !== '') {
         const customerNamePart = fullName && fullName.trim() !== '' ? `${fullName.split(' ')[0]}` : '';
@@ -405,9 +434,9 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
         `.trim();
         const customerWhatsappNumberClean = whatsappNumber.replace(/\D/g, ''); 
         whatsappLinkCustomer = `https://wa.me/${customerWhatsappNumberClean}?text=${encodeURIComponent(whatsappMessageCustomer)}`;
-        console.log("DEBUG: whatsappLinkCustomer generado para el cliente:", whatsappLinkCustomer);
+        console.log("DEBUG: whatsappLinkCustomer generated for client:", whatsappLinkCustomer);
     } else {
-        console.log(`DEBUG: No se pudo generar whatsappLinkCustomer (cliente). whatsappNumber: '${whatsappNumber}'.`);
+        console.log(`DEBUG: No whatsappNumber provided. Skipping whatsappLinkCustomer generation.`);
     }
 
     let whatsappLinkRecargador = null;
@@ -420,11 +449,10 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
         whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageName}\n`; 
         
         whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumberClean}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
-        console.log("DEBUG: whatsappLinkRecargador generado:", whatsappLinkRecargador);
+        console.log("DEBUG: whatsappLinkRecargador generated for recargador:", whatsappLinkRecargador);
     } else {
-        console.log(`DEBUG: No se generará el enlace de WhatsApp para el recargador porque el juego no es Free Fire o falta WHATSAPP_NUMBER_RECARGADOR. Juego: ${game}`);
+        console.log(`DEBUG: Skipping whatsappLinkRecargador because game is not Free Fire or WHATSAPP_NUMBER_RECARGADOR is missing. Game: ${game}`);
     }
-
 
     let messageText = `✨ *NUEVA RECARGA PENDIENTE* ✨\n\n`; 
     messageText += `*ID de Transacción:* \`${escapeMarkdownV2(id_transaccion_generado || 'N/A')}\`\n`;
@@ -482,7 +510,7 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
             reply_markup: replyMarkup,
             disable_web_page_preview: true
         });
-        console.log("Mensaje de Telegram con botones de acción enviado con éxito.");
+        console.log("DEBUG: Telegram message with action buttons sent successfully.");
 
         // Envío del comprobante del cliente (si existe) como archivo
         if (receiptUrl) { 
@@ -495,9 +523,9 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
                     caption: escapeMarkdownV2(`Comprobante de pago para la transacción ${id_transaccion_generado}`),
                     parse_mode: 'MarkdownV2'
                 });
-                console.log("Comprobante de pago enviado a Telegram usando URL de Supabase.");
+                console.log("DEBUG: Client receipt sent to Telegram using Supabase URL.");
             } catch (fileSendError) {
-                console.error("ERROR: Fallo al enviar el comprobante del cliente a Telegram desde URL:", fileSendError.response ? fileSendError.response.data : fileSendError.message);
+                console.error("ERROR: Failed to send client receipt to Telegram from URL:", fileSendError.response ? fileSendError.response.data : fileSendError.message);
             }
         }
         
@@ -512,9 +540,9 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
                     caption: escapeMarkdownV2(`Factura de Recarga para la transacción ${id_transaccion_generado}`),
                     parse_mode: 'MarkdownV2'
                 });
-                console.log("Factura generada enviada a Telegram usando URL de Supabase.");
+                console.log("DEBUG: Generated invoice sent to Telegram using Supabase URL.");
             } catch (invoiceSendError) {
-                console.error("ERROR: Fallo al enviar la factura generada a Telegram desde URL:", invoiceSendError.response ? invoiceSendError.response.data : invoiceSendError.message);
+                console.error("ERROR: Failed to send generated invoice to Telegram from URL:", invoiceSendError.response ? invoiceSendError.response.data : invoiceSendError.message);
             }
         }
 
@@ -524,30 +552,31 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
                 .from('transactions')
                 .update({ 
                     telegram_message_id: telegramMessageResponse.data.result.message_id,
-                    invoice_image_url: invoiceImageUrl // Asegúrate de guardar la URL de la factura generada en la DB
+                    invoice_image_url: invoiceImageUrl 
                 })
                 .eq('id', newTransactionData.id); 
 
             if (updateError) {
-                console.error("Error al actualizar la transacción en Supabase con telegram_message_id/invoice_image_url:", updateError.message);
+                console.error("ERROR: Failed to update transaction in Supabase with telegram_message_id/invoice_image_url:", updateError.message);
             } else {
-                console.log("Transaction actualizada en Supabase con telegram_message_id y invoice_image_url:", telegramMessageResponse.data.result.message_id, invoiceImageUrl);
+                console.log("DEBUG: Transaction updated in Supabase with telegram_message_id and invoice_image_url:", telegramMessageResponse.data.result.message_id, invoiceImageUrl);
             }
         }
 
     } catch (telegramError) {
-        console.error("Error al enviar mensaje de Telegram o comprobante:", telegramError.response ? telegramError.response.data : telegramError.message);
+        console.error("ERROR: Failed to send Telegram message or file:", telegramError.response ? telegramError.response.data : telegramError.message);
     }
 
     if (paymentReceiptFile && paymentReceiptFile.filepath && fs.existsSync(paymentReceiptFile.filepath)) {
         try {
             fs.unlinkSync(paymentReceiptFile.filepath);
-            console.log("Archivo temporal del comprobante eliminado al finalizar la función.");
+            console.log("DEBUG: Temporary receipt file deleted.");
         } catch (unlinkError) {
-            console.error("Error al eliminar el archivo temporal del comprobante:", unlinkError);
+            console.error("ERROR: Failed to delete temporary receipt file:", unlinkError);
         }
     }
 
+    console.log("FUNCTION END: process-payment.js finished.");
     return {
         statusCode: 200,
         body: JSON.stringify({ message: "Solicitud de pago recibida exitosamente. ¡Te enviaremos una confirmación pronto!" }),
