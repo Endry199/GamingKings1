@@ -1,6 +1,6 @@
 // netlify/functions/telegram-webhook.js
 const axios = require('axios');
-const { createClient } = require('@supabase/supabase-js');
+const { createClient } = require('@supabase/supabase/js');
 
 // Función para escapar caracteres especiales de MarkdownV2 para Telegram
 function escapeMarkdownV2(text) {
@@ -20,12 +20,17 @@ exports.handler = async function(event, context) {
     const SUPABASE_URL = process.env.SUPABASE_URL;
     const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
     const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR; 
+    // Usaremos la URL de tu sitio Netlify como base para la función de factura
+    // Esta variable ya debería estar disponible en el entorno de Netlify como process.env.URL
+    const NETLIFY_SITE_URL = process.env.URL || 'https://gamingkings.netlify.app'; 
 
-    if (!TELEGRAM_BOT_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) { 
+
+    if (!TELEGRAM_BOT_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_KEY || !NETLIFY_SITE_URL) { 
         console.error("Faltan variables de entorno requeridas para el webhook de Telegram.");
         console.error(`Missing TELEGRAM_BOT_TOKEN: ${!TELEGRAM_BOT_TOKEN}`);
         console.error(`Missing SUPABASE_URL: ${!SUPABASE_URL}`);
         console.error(`Missing SUPABASE_SERVICE_KEY: ${!SUPABASE_SERVICE_KEY}`);
+        console.error(`Missing NETLIFY_SITE_URL: ${!NETLIFY_SITE_URL}`);
         return { statusCode: 500, body: "Error de configuración del servidor." };
     }
 
@@ -46,7 +51,7 @@ exports.handler = async function(event, context) {
             async function getTransaction(id) {
                 const { data: transaction, error: fetchError } = await supabase
                     .from('transactions')
-                    .select('id_transaccion, game, player_id, package_name, final_price, currency, payment_method, status, email, full_name, whatsapp_number, receipt_url, invoice_image_url') 
+                    .select('id_transaccion, game, player_id, package_name, final_price, currency, payment_method, status, email, full_name, whatsapp_number, receipt_url, invoice_text_content')
                     .eq('id_transaccion', id)
                     .single();
 
@@ -101,12 +106,41 @@ exports.handler = async function(event, context) {
                     show_alert: false
                 });
 
+                const now = new Date();
+                const day = String(now.getDate()).padStart(2, '0');
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const year = now.getFullYear();
+                const formattedDate = `${day}/${month}/${year}`;
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const formattedTime = `${hours}:${minutes}`;
+                
+                // --- Construimos la factura de texto para guardar ---
+                let invoiceTextContent = `
+🎉 ¡Hola! 👋
+
+¡Tu recarga ha sido *COMPLETADA* por GamingKings!
+
+Aquí tienes los detalles de tu recarga:
+---
+*Factura #${escapeMarkdownV2(transaction.id_transaccion)}*
+*Estado: REALIZADA ✅* 📅 Fecha: ${escapeMarkdownV2(formattedDate)} ${escapeMarkdownV2(formattedTime)}
+🎮 Juego: ${escapeMarkdownV2(transaction.game)}
+👤 ID de Jugador: ${escapeMarkdownV2(transaction.player_id || 'N/A')}
+📦 Paquete: ${escapeMarkdownV2(transaction.package_name)}
+💰 Monto Pagado: ${escapeMarkdownV2(transaction.final_price)} ${escapeMarkdownV2(transaction.currency)}
+💳 Método de Pago: ${escapeMarkdownV2(transaction.payment_method.replace('-', ' ').toUpperCase())}
+---
+¡Gracias por tu compra! ✨
+                `.trim();
+
                 const { error: updateError } = await supabase
                     .from('transactions')
                     .update({
                         status: 'realizada',
                         completed_at: new Date().toISOString(),
-                        completed_by: userName
+                        completed_by: userName,
+                        invoice_text_content: invoiceTextContent // Guardamos la factura de texto
                     })
                     .eq('id_transaccion', transactionId);
 
@@ -120,48 +154,33 @@ exports.handler = async function(event, context) {
                     return { statusCode: 200, body: "Error updating transaction status" };
                 }
                 
-                console.log(`Transacción ${transactionId} marcada como realizada en Supabase.`);
+                console.log(`Transacción ${transactionId} marcada como realizada en Supabase y factura generada.`);
 
                 let newCaption = callbackQuery.message.text;
                 newCaption = newCaption.replace('Estado: `PENDIENTE`', 'Estado: `REALIZADA` ✅');
-                
-                const now = new Date();
-                const day = String(now.getDate()).padStart(2, '0');
-                const month = String(now.getMonth() + 1).padStart(2, '0');
-                const year = now.getFullYear();
-                const formattedDate = `${day}/${month}/${year}`;
-
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                const formattedTime = `${hours}:${minutes}`;
-                
                 newCaption += `\n\nRecarga marcada por: *${userName}* (${formattedTime} ${formattedDate})`;
 
-                // --- Generar enlace de WhatsApp para el cliente (Factura Completada) ---
+                // --- Generar el enlace corto de WhatsApp para el cliente ---
                 let whatsappLinkCompletedCustomer = null;
                 if (transaction.whatsapp_number && transaction.whatsapp_number.trim() !== '') {
-                    const customerName = transaction.full_name && transaction.full_name.trim() !== '' ? transaction.full_name.split(' ')[0] : 'Cliente';
+                    const cleanedCustomerWhatsappNumber = transaction.whatsapp_number.replace(/\D/g, '');
                     
-                    let whatsappMessageCustomer = `
-🎉 ¡Hola ${customerName}! 👋
+                    // Construimos la URL de la función Netlify que servirá la factura
+                    // Usamos NETLIFY_SITE_URL para el dominio de tu sitio
+                    const invoiceLink = `${NETLIFY_SITE_URL}/.netlify/functions/get-invoice?id=${transaction.id_transaccion}`;
+                    
+                    // Mensaje corto para WhatsApp
+                    const shortWhatsappMessage = `
+🎉 ¡Hola! 👋
 
 ¡Tu recarga ha sido *COMPLETADA* por GamingKings!
-Aquí tienes tu factura digital de la transacción \`${escapeMarkdownV2(transaction.id_transaccion)}\`:
+
+Puedes ver los detalles de tu factura aquí: ${invoiceLink}
+
+¡Gracias por tu compra! ✨
                     `.trim();
 
-                    // === NUEVA LÓGICA PARA ASEGURAR QUE SOLO SE ENVÍA LA FACTURA ===
-                    if (transaction.invoice_image_url) {
-                        whatsappMessageCustomer += `\n${transaction.invoice_image_url}`; 
-                    } else {
-                        // En caso de que, por alguna razón, no haya invoice_image_url
-                        whatsappMessageCustomer += `\n⚠️ No se pudo generar la factura digital.`;
-                        if (transaction.receipt_url) {
-                            whatsappMessageCustomer += ` Puedes ver el comprobante de pago que subiste aquí: ${transaction.receipt_url}`;
-                        }
-                    }
-
-                    const cleanedCustomerWhatsappNumber = transaction.whatsapp_number.replace(/\D/g, '');
-                    whatsappLinkCompletedCustomer = `https://wa.me/${cleanedCustomerWhatsappNumber}?text=${encodeURIComponent(whatsappMessageCustomer)}`;
+                    whatsappLinkCompletedCustomer = `https://wa.me/${cleanedCustomerWhatsappNumber}?text=${encodeURIComponent(shortWhatsappMessage)}`;
                     
                     console.log(`Enlace de WhatsApp 'Factura Completada' generado para cliente ${transaction.whatsapp_number}.`);
                 } else {
@@ -198,7 +217,7 @@ Aquí tienes tu factura digital de la transacción \`${escapeMarkdownV2(transact
                        (telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message is not modified'))) {
                         console.log(`DEBUG: Mensaje ${messageId} para ${transactionId} no modificado o ya editado. Ignorando este error ya que la DB fue actualizada.`);
                     } else if (telegramEditError.response && telegramEditError.response.status === 400 &&
-                               (telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message to edit not found'))) {
+                                telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message to edit not found')) {
                         console.log(`DEBUG: Mensaje ${messageId} para ${transactionId} no encontrado, probablemente eliminado. Ignorando este error.`);
                     } else {
                         await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
@@ -212,18 +231,18 @@ Aquí tienes tu factura digital de la transacción \`${escapeMarkdownV2(transact
             else if (data.startsWith('send_whatsapp_')) { 
                const transactionId = data.replace('send_whatsapp_', '');
                const transaction = await getTransaction(transactionId);
- 
+               
                if (!transaction) {
                    return { statusCode: 200, body: "Error fetching transaction for send_whatsapp" };
                }
-                
+               
                const recargadorWhatsappNumber = WHATSAPP_NUMBER_RECARGADOR.replace(/\D/g, ''); 
                let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
                whatsappMessageRecargador += `*ID de Jugador:* ${transaction.player_id || 'N/A'}\n`;
                whatsappMessageRecargador += `*Paquete a Recargar:* ${transaction.package_name.replace(/\+/g, '%2B') || 'N/A'}\n`; 
                
                const whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumber}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
- 
+
                await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
                    callback_query_id: callbackQuery.id,
                    text: `Generando enlace de WhatsApp para el recargador...`,
@@ -236,9 +255,10 @@ Aquí tienes tu factura digital de la transacción \`${escapeMarkdownV2(transact
                    parse_mode: 'MarkdownV2',
                    disable_web_page_preview: true
                });
- 
+
                console.log(`Enlace de WhatsApp para recargador generado (desde viejo callback) para transacción ${transactionId}: ${whatsappLinkRecargador}`);
-           } else if (data.startsWith('completed_status_') || data.startsWith('no_whatsapp_factura_')) {
+           }
+            else if (data.startsWith('completed_status_') || data.startsWith('no_whatsapp_factura_')) {
                 await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
                     callback_query_id: callbackQuery.id,
                     text: "Acción ya completada o informativa.",
@@ -252,10 +272,10 @@ Aquí tienes tu factura digital de la transacción \`${escapeMarkdownV2(transact
         console.error("Error en el webhook de Telegram:", error.response ? error.response.data : error.message);
         if (body && body.message && body.message.chat && body.message.chat.id) {
              await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                chat_id: body.message.chat.id,
-                text: escapeMarkdownV2(`❌ Ha ocurrido un error inesperado al procesar la solicitud. Por favor, revisa los logs de Netlify.`),
-                parse_mode: 'MarkdownV2'
-            }).catch(e => console.error("Error sending generic error message to Telegram:", e.message));
+                 chat_id: body.message.chat.id,
+                 text: escapeMarkdownV2(`❌ Ha ocurrido un error inesperado al procesar la solicitud. Por favor, revisa los logs de Netlify.`),
+                 parse_mode: 'MarkdownV2'
+             }).catch(e => console.error("Error sending generic error message to Telegram:", e.message));
         }
         return { statusCode: 500, body: `Error en el webhook: ${error.message}` };
     }
