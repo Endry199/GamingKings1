@@ -60,10 +60,11 @@ exports.handler = async function(event, context) {
 
                 if (fetchError || !transaction) {
                     console.error("Error al obtener la transacción de Supabase:", fetchError ? fetchError.message : "Transacción no encontrada.");
-                    await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                        chat_id: chatId,
-                        text: escapeMarkdownV2(`❌ Error: No se pudo encontrar la transacción ${id}.`),
-                        parse_mode: 'MarkdownV2'
+                    // Acknowledge the callback query even if transaction not found.
+                    await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
+                        callback_query_id: callbackQuery.id,
+                        text: "❌ Error: Transacción no encontrada.",
+                        show_alert: true
                     });
                     return null;
                 }
@@ -76,11 +77,10 @@ exports.handler = async function(event, context) {
                 const transaction = await getTransaction(transactionId); // Fetches the transaction
 
                 if (!transaction) {
-                    console.error(`DEBUG: Transacción ${transactionId} no encontrada para marcar como realizada.`);
+                    // La función getTransaction ya maneja el answerCallbackQuery si no se encuentra
                     return { statusCode: 200, body: "Error fetching transaction for mark_done" };
                 }
 
-                // --- NUEVO LOG PARA DEPURACIÓN ---
                 console.log(`DEBUG: Estado actual de la transacción ${transactionId} al hacer clic: ${transaction.status}`);
 
                 // Verificar si ya está marcada para evitar re-procesamiento
@@ -94,6 +94,14 @@ exports.handler = async function(event, context) {
                     return { statusCode: 200, body: "Already completed" };
                 }
 
+                // --- ¡IMPORTANTE CAMBIO AQUÍ! Mover answerCallbackQuery antes de operaciones largas. ---
+                // Esto responde a Telegram inmediatamente para evitar reintentos y mostrar feedback.
+                await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
+                    callback_query_id: callbackQuery.id,
+                    text: `Procesando recarga ${transactionId}...`, // Mensaje breve para el usuario en Telegram
+                    show_alert: false
+                });
+
                 // 2. Actualizar el estado en Supabase
                 const { error: updateError } = await supabase
                     .from('transactions')
@@ -106,9 +114,10 @@ exports.handler = async function(event, context) {
 
                 if (updateError) {
                     console.error("Error al actualizar la transacción en Supabase:", updateError.message);
+                    // Si falla la actualización de DB, enviar un mensaje nuevo al chat (no editar el original)
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                         chat_id: chatId,
-                        text: escapeMarkdownV2(`❌ Error al procesar la recarga ${transactionId}: ${updateError.message}. Consulta los logs de Netlify.`),
+                        text: escapeMarkdownV2(`❌ Error al procesar la recarga ${transactionId}: ${updateError.message}. Por favor, inténtalo de nuevo o revisa los logs.`),
                         parse_mode: 'MarkdownV2'
                     });
                     return { statusCode: 200, body: "Error updating transaction" };
@@ -128,22 +137,35 @@ exports.handler = async function(event, context) {
                     [{ text: "✅ Recarga Realizada", callback_data: `completed_${transactionId}` }]
                 ];
 
-                await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
-                    chat_id: chatId,
-                    message_id: messageId,
-                    text: newCaption, // El texto ya debe estar escapado por process-payment.js y las adiciones de escapeMarkdownV2
-                    parse_mode: 'MarkdownV2',
-                    reply_markup: {
-                        inline_keyboard: updatedButtons
+                try {
+                    await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
+                        chat_id: chatId,
+                        message_id: messageId,
+                        text: newCaption, // El texto ya debe estar escapado por process-payment.js y las adiciones de escapeMarkdownV2
+                        parse_mode: 'MarkdownV2',
+                        reply_markup: {
+                            inline_keyboard: updatedButtons
+                        }
+                    });
+                    console.log(`DEBUG: Mensaje de Telegram para ${transactionId} editado con éxito.`);
+                } catch (telegramEditError) {
+                    console.error(`ERROR: Fallo al editar mensaje de Telegram para ${transactionId}:`, telegramEditError.response ? telegramEditError.response.data : telegramEditError.message);
+                    // Comprobar si el error es por "message not modified" (ya editado, común en race conditions)
+                    if (telegramEditError.response && telegramEditError.response.status === 400 && 
+                       (telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message is not modified'))) {
+                        console.log(`DEBUG: Mensaje ${messageId} para ${transactionId} no modificado o ya editado. Ignorando este error ya que la DB fue actualizada.`);
+                    } else if (telegramEditError.response && telegramEditError.response.status === 400 &&
+                               (telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message to edit not found'))) {
+                        console.log(`DEBUG: Mensaje ${messageId} para ${transactionId} no encontrado, probablemente eliminado. Ignorando este error.`);
+                    } else {
+                        // Para otros errores 400 o cualquier otro tipo de error, notificar al chat
+                        await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                            chat_id: chatId,
+                            text: escapeMarkdownV2(`⚠️ Advertencia: Recarga ${transactionId} marcada como *REALIZADA* en la base de datos, pero hubo un problema al editar el mensaje de Telegram.`),
+                            parse_mode: 'MarkdownV2'
+                        });
                     }
-                });
-
-                // 4. Enviar un feedback al usuario que presionó el botón
-                await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-                    callback_query_id: callbackQuery.id,
-                    text: `Recarga ${transactionId} marcada como realizada por ${userName}.`,
-                    show_alert: false // No mostrar una alerta grande
-                });
+                }
 
                 // --- Enviar correo de confirmación de recarga completada ---
                 if (transaction.email) { // Asegúrate de que haya un correo al que enviar
