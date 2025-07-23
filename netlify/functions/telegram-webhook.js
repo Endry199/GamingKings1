@@ -21,7 +21,6 @@ exports.handler = async function(event, context) {
     const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
     const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR; 
 
-    // Validar variables de entorno críticas
     if (!TELEGRAM_BOT_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) { 
         console.error("Faltan variables de entorno requeridas para el webhook de Telegram.");
         console.error(`Missing TELEGRAM_BOT_TOKEN: ${!TELEGRAM_BOT_TOKEN}`);
@@ -44,7 +43,6 @@ exports.handler = async function(event, context) {
             const userName = callbackQuery.from.first_name || `Usuario ${userId}`;
             const data = callbackQuery.data;
 
-            // Función auxiliar para obtener transacción y manejar errores comunes
             async function getTransaction(id) {
                 const { data: transaction, error: fetchError } = await supabase
                     .from('transactions')
@@ -64,7 +62,6 @@ exports.handler = async function(event, context) {
                 return transaction;
             }
 
-            // Manejar el botón "Marcar como Realizada"
             if (data.startsWith('mark_done_')) {
                 const transactionId = data.replace('mark_done_', '');
                 const transaction = await getTransaction(transactionId);
@@ -145,38 +142,35 @@ exports.handler = async function(event, context) {
                 if (transaction.whatsapp_number && transaction.whatsapp_number.trim() !== '') {
                     const customerName = transaction.full_name && transaction.full_name.trim() !== '' ? transaction.full_name.split(' ')[0] : 'Cliente';
                     
-                    let whatsappInvoiceMessage = `
+                    let whatsappMessageCustomer = `
 🎉 ¡Hola ${customerName}! 👋
 
-Tu recarga de *${escapeMarkdownV2(transaction.package_name)}* para *${escapeMarkdownV2(transaction.game)}* (ID: \`${escapeMarkdownV2(transaction.player_id || 'N/A')}\`) ha sido *COMPLETADA* por GamingKings! Ya puedes disfrutar de tu juego.
-
-Aquí tienes tu factura digital:
+¡Tu recarga ha sido *COMPLETADA* por GamingKings!
+Aquí tienes tu factura digital de la transacción \`${escapeMarkdownV2(transaction.id_transaccion)}\`:
                     `.trim();
 
-                    // === CAMBIO CRÍTICO AQUÍ ===
-                    // Queremos la URL de la factura generada específicamente.
-                    const finalInvoiceUrl = transaction.invoice_image_url; 
-                    
-                    if (finalInvoiceUrl) {
-                        whatsappInvoiceMessage += `\n${finalInvoiceUrl}`; // Agrega la URL directamente al mensaje
+                    // === NUEVA LÓGICA PARA ASEGURAR QUE SOLO SE ENVÍA LA FACTURA ===
+                    if (transaction.invoice_image_url) {
+                        whatsappMessageCustomer += `\n${transaction.invoice_image_url}`; 
                     } else {
-                        whatsappInvoiceMessage += `\n⚠️ No se pudo generar la factura digital.`;
+                        // En caso de que, por alguna razón, no haya invoice_image_url
+                        whatsappMessageCustomer += `\n⚠️ No se pudo generar la factura digital.`;
                         if (transaction.receipt_url) {
-                            whatsappInvoiceMessage += ` Puedes ver tu comprobante aquí: ${transaction.receipt_url}`;
+                            whatsappMessageCustomer += ` Puedes ver el comprobante de pago que subiste aquí: ${transaction.receipt_url}`;
                         }
                     }
 
                     const cleanedCustomerWhatsappNumber = transaction.whatsapp_number.replace(/\D/g, '');
-                    whatsappLinkCompletedCustomer = `https://wa.me/${cleanedCustomerWhatsappNumber}?text=${encodeURIComponent(whatsappInvoiceMessage)}`;
+                    whatsappLinkCompletedCustomer = `https://wa.me/${cleanedCustomerWhatsappNumber}?text=${encodeURIComponent(whatsappMessageCustomer)}`;
                     
-                    console.log(`Enlace de WhatsApp 'Factura Completada' (Corta) generado para cliente ${transaction.whatsapp_number}.`);
+                    console.log(`Enlace de WhatsApp 'Factura Completada' generado para cliente ${transaction.whatsapp_number}.`);
                 } else {
                     console.log(`No hay número de WhatsApp para el cliente de la transacción ${transactionId}. No se generará el enlace de WhatsApp de factura.`);
                 }
 
                 // Definir los nuevos botones para el mensaje editado
                 let updatedInlineKeyboard = [];
-                updatedInlineKeyboard.push([{ text: "✅ Recarga Realizada", callback_data: `completed_status_${transactionId}` }]); // Botón de estado deshabilitado (simplemente informativo)
+                updatedInlineKeyboard.push([{ text: "✅ Recarga Realizada", callback_data: `completed_status_${transactionId}` }]); 
 
                 if (whatsappLinkCompletedCustomer) {
                     updatedInlineKeyboard.push([{ text: "📲 WhatsApp Cliente (Factura)", url: whatsappLinkCompletedCustomer }]);
@@ -215,8 +209,7 @@ Aquí tienes tu factura digital:
                     }
                 }
             }
-            // --- Lógica para manejar botones que no modifican el estado (send_whatsapp_legacy y nuevos informativos) ---
-            else if (data.startsWith('send_whatsapp_')) { // Antiguo callback_data para recargador (legacy)
+            else if (data.startsWith('send_whatsapp_')) { 
                const transactionId = data.replace('send_whatsapp_', '');
                const transaction = await getTransaction(transactionId);
  
