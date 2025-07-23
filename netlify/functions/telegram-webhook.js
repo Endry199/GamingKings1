@@ -129,11 +129,18 @@ exports.handler = async function(event, context) {
                 // Reemplaza "Estado: PENDIENTE" con "Estado: REALIZADA"
                 newCaption = newCaption.replace('Estado: `PENDIENTE`', 'Estado: `REALIZADA` ✅');
                 
-                const completionTime = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
-                // --- CAMBIO CLAVE AQUÍ: Formatear la fecha para usar barras y luego escapar ---
-                const completionDate = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/-/g, '/');
+                // --- CAMBIO CLAVE AQUÍ: Construir la fecha y hora manualmente y escapar ---
+                const now = new Date();
+                const day = String(now.getDate()).padStart(2, '0');
+                const month = String(now.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+                const year = now.getFullYear();
+                const formattedDate = `${day}/${month}/${year}`;
+
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const formattedTime = `${hours}:${minutes}`;
                 
-                newCaption += `\n\nRecarga marcada por: *${escapeMarkdownV2(userName)}* (${escapeMarkdownV2(completionTime)} ${escapeMarkdownV2(completionDate)})`;
+                newCaption += `\n\nRecarga marcada por: *${escapeMarkdownV2(userName)}* (${escapeMarkdownV2(formattedTime)} ${escapeMarkdownV2(formattedDate)})`;
 
                 // Definir los nuevos botones después de completar
                 const updatedButtons = [
@@ -208,7 +215,7 @@ exports.handler = async function(event, context) {
                                     <li><strong>Monto Pagado:</strong> ${transaction.final_price} ${transaction.currency}</li>
                                     <li><strong>Método de Pago:</strong> ${transaction.payment_method.replace('-', ' ').toUpperCase()}</li>
                                     <li><strong>Estado:</strong> <span style="color: #28a745; font-weight: bold;">REALIZADA</span></li>
-                                    <li><strong>Completada por:</strong> ${userName} el ${completionTime} ${completionDate}</li>
+                                    <li><strong>Completada por:</strong> ${userName} el ${formattedTime} ${formattedDate}</li>
                                 </ul>
                                 <p style="margin-top: 20px;">Si tienes alguna pregunta o necesitas asistencia, no dudes en contactarnos a través de nuestro WhatsApp: <a href="https://wa.me/${WHATSAPP_CONTACT_CLIENTE}" style="color: #28a745; text-decoration: none;">+${WHATSAPP_CONTACT_CLIENTE}</a></p>
                                 <p>¡Gracias por elegir GamingKings!</p> <p style="font-size: 0.9em; color: #777;">Este es un correo automático, por favor no respondas a este mensaje.</p>
