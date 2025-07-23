@@ -19,7 +19,7 @@ exports.handler = async function(event, context) {
     const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
     const SUPABASE_URL = process.env.SUPABASE_URL;
     const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-    const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR; // Aunque no se usa directamente para enviar en esta función, es bueno mantenerlo si se necesita para otra lógica.
+    const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR; 
 
     // Validar variables de entorno críticas
     if (!TELEGRAM_BOT_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) { 
@@ -48,7 +48,7 @@ exports.handler = async function(event, context) {
             async function getTransaction(id) {
                 const { data: transaction, error: fetchError } = await supabase
                     .from('transactions')
-                    .select('id_transaccion, game, player_id, package_name, final_price, currency, payment_method, status, email, full_name, whatsapp_number, receipt_url, invoice_image_url') // AGREGAR invoice_image_url
+                    .select('id_transaccion, game, player_id, package_name, final_price, currency, payment_method, status, email, full_name, whatsapp_number, receipt_url, invoice_image_url') 
                     .eq('id_transaccion', id)
                     .single();
 
@@ -148,14 +148,22 @@ exports.handler = async function(event, context) {
                     let whatsappInvoiceMessage = `
 🎉 ¡Hola ${customerName}! 👋
 
-Tu recarga ha sido *COMPLETADA* por GamingKings.
-ID de Transacción: \`${escapeMarkdownV2(transaction.id_transaccion)}\`
+Tu recarga de *${escapeMarkdownV2(transaction.package_name)}* para *${escapeMarkdownV2(transaction.game)}* (ID: \`${escapeMarkdownV2(transaction.player_id || 'N/A')}\`) ha sido *COMPLETADA* por GamingKings! Ya puedes disfrutar de tu juego.
+
+Aquí tienes tu factura digital:
                     `.trim();
 
-                    // Usar la nueva URL de la factura generada si existe, de lo contrario, el comprobante del cliente
-                    const finalReceiptOrInvoiceUrl = transaction.invoice_image_url || transaction.receipt_url;
-                    if (finalReceiptOrInvoiceUrl) {
-                        whatsappInvoiceMessage += `\n\nVer tu factura: ${finalReceiptOrInvoiceUrl}`;
+                    // === CAMBIO CRÍTICO AQUÍ ===
+                    // Queremos la URL de la factura generada específicamente.
+                    const finalInvoiceUrl = transaction.invoice_image_url; 
+                    
+                    if (finalInvoiceUrl) {
+                        whatsappInvoiceMessage += `\n${finalInvoiceUrl}`; // Agrega la URL directamente al mensaje
+                    } else {
+                        whatsappInvoiceMessage += `\n⚠️ No se pudo generar la factura digital.`;
+                        if (transaction.receipt_url) {
+                            whatsappInvoiceMessage += ` Puedes ver tu comprobante aquí: ${transaction.receipt_url}`;
+                        }
                     }
 
                     const cleanedCustomerWhatsappNumber = transaction.whatsapp_number.replace(/\D/g, '');
@@ -219,7 +227,7 @@ ID de Transacción: \`${escapeMarkdownV2(transaction.id_transaccion)}\`
                const recargadorWhatsappNumber = WHATSAPP_NUMBER_RECARGADOR.replace(/\D/g, ''); 
                let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
                whatsappMessageRecargador += `*ID de Jugador:* ${transaction.player_id || 'N/A'}\n`;
-               whatsappMessageRecargador += `*Paquete a Recargar:* ${transaction.package_name.replace(/\+/g, '%2B') || 'N/A'}\n`; // Asegúrate de usar package_name de la transacción
+               whatsappMessageRecargador += `*Paquete a Recargar:* ${transaction.package_name.replace(/\+/g, '%2B') || 'N/A'}\n`; 
                
                const whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumber}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
  
@@ -238,9 +246,6 @@ ID de Transacción: \`${escapeMarkdownV2(transaction.id_transaccion)}\`
  
                console.log(`Enlace de WhatsApp para recargador generado (desde viejo callback) para transacción ${transactionId}: ${whatsappLinkRecargador}`);
            } else if (data.startsWith('completed_status_') || data.startsWith('no_whatsapp_factura_')) {
-                // Si el usuario hace clic en el botón de "Recarga Realizada" o "Cliente sin WhatsApp para factura"
-                // después de que el mensaje ya fue editado a "Realizada", simplemente responde al callback
-                // para que el botón no parezca "pegado".
                 await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
                     callback_query_id: callbackQuery.id,
                     text: "Acción ya completada o informativa.",
@@ -252,7 +257,6 @@ ID de Transacción: \`${escapeMarkdownV2(transaction.id_transaccion)}\`
         return { statusCode: 200, body: "Webhook processed" };
     } catch (error) {
         console.error("Error en el webhook de Telegram:", error.response ? error.response.data : error.message);
-        // Envía un mensaje de error genérico al chat de Telegram si el error es crítico y no se pudo manejar antes.
         if (body && body.message && body.message.chat && body.message.chat.id) {
              await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                 chat_id: body.message.chat.id,
