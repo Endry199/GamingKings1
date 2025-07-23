@@ -1,12 +1,14 @@
 // netlify/functions/telegram-webhook.js
 const axios = require('axios');
-const { createClient } = require('@supabase/supabase-js'); // <-- ¡Así es como debe ser!
+const { createClient } = require('@supabase/supabase-js'); // Correcto: @supabase/supabase-js
 
 // Función para escapar caracteres especiales de MarkdownV2 para Telegram
+// Esta función SÍ se usa para los mensajes de Telegram, pero NO para el contenido de la factura
 function escapeMarkdownV2(text) {
     if (typeof text !== 'string') {
         text = String(text);
     }
+    // Caracteres especiales que Telegram MarkdownV2 requiere escapar
     const specialChars = /[_*\[\]()~`>#+\-={}.!]/g; 
     return text.replace(specialChars, '\\$&');
 }
@@ -116,6 +118,7 @@ exports.handler = async function(event, context) {
                 const formattedTime = `${hours}:${minutes}`;
                 
                 // --- Construimos la factura de texto para guardar ---
+                // *** AQUÍ ES DONDE SE QUITA el escapeMarkdownV2 para el contenido de la factura ***
                 let invoiceTextContent = `
 🎉 ¡Hola! 👋
 
@@ -123,13 +126,14 @@ exports.handler = async function(event, context) {
 
 Aquí tienes los detalles de tu recarga:
 ---
-*Factura #${escapeMarkdownV2(transaction.id_transaccion)}*
-*Estado: REALIZADA ✅* 📅 Fecha: ${escapeMarkdownV2(formattedDate)} ${escapeMarkdownV2(formattedTime)}
-🎮 Juego: ${escapeMarkdownV2(transaction.game)}
-👤 ID de Jugador: ${escapeMarkdownV2(transaction.player_id || 'N/A')}
-📦 Paquete: ${escapeMarkdownV2(transaction.package_name)}
-💰 Monto Pagado: ${escapeMarkdownV2(transaction.final_price)} ${escapeMarkdownV2(transaction.currency)}
-💳 Método de Pago: ${escapeMarkdownV2(transaction.payment_method.replace('-', ' ').toUpperCase())}
+*Factura #${transaction.id_transaccion}*
+*Estado: REALIZADA ✅* 
+📅 Fecha: ${formattedDate}
+🎮 Juego: ${transaction.game}
+👤 ID de Jugador: ${transaction.player_id || 'N/A'}
+📦 Paquete: ${transaction.package_name}
+💰 Monto Pagado: ${transaction.final_price} ${transaction.currency}
+💳 Método de Pago: ${transaction.payment_method.replace('-', ' ').toUpperCase()}
 ---
 ¡Gracias por tu compra! ✨
                 `.trim();
@@ -140,7 +144,7 @@ Aquí tienes los detalles de tu recarga:
                         status: 'realizada',
                         completed_at: new Date().toISOString(),
                         completed_by: userName,
-                        invoice_text_content: invoiceTextContent // Guardamos la factura de texto
+                        invoice_text_content: invoiceTextContent // Guardamos la factura de texto limpia
                     })
                     .eq('id_transaccion', transactionId);
 
@@ -169,7 +173,7 @@ Aquí tienes los detalles de tu recarga:
                     // Usamos NETLIFY_SITE_URL para el dominio de tu sitio
                     const invoiceLink = `${NETLIFY_SITE_URL}/.netlify/functions/get-invoice?id=${transaction.id_transaccion}`;
                     
-                    // Mensaje corto para WhatsApp
+                    // Mensaje corto para WhatsApp (este SÍ usa escapeMarkdownV2 para los asteriscos, etc.)
                     const shortWhatsappMessage = `
 🎉 ¡Hola! 👋
 
@@ -205,7 +209,7 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
                         chat_id: chatId,
                         message_id: messageId,
-                        text: escapeMarkdownV2(newCaption), 
+                        text: escapeMarkdownV2(newCaption), // Este mensaje de Telegram SÍ necesita escape
                         parse_mode: 'MarkdownV2',
                         reply_markup: updatedReplyMarkup,
                         disable_web_page_preview: true
