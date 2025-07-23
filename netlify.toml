@@ -1,17 +1,17 @@
 # netlify.toml
 [build]
   functions = "netlify/functions"
-  command = "npm install" 
-  publish = "public" 
+  command = "npm install"
+  publish = "public"
 
 [build.environment]
-  NODE_VERSION = "18" 
+  NODE_VERSION = "18" # ¡Asegúrate de que esto esté aquí!
 
-# [[plugins]]                                     <-- ¡ELIMINA O COMENTA TODA ESTA SECCIÓN!
-#   package = "@netlify/plugin-node-bundler"    <-- ¡ELIMINA O COMENTA TODA ESTA SECCIÓN!
+[[plugins]]
+  package = "@netlify/plugin-node-bundler"
 
 [[plugins]]
   package = "netlify-plugin-chromium"
   [plugins.inputs]
-    chromium_version = "1090000" 
+    chromium_version = "1090000" # Versión específica de Chromium
     args = ["--no-sandbox", "--disable-setuid-sandbox", "--single-process", "--disable-dev-shm-usage", "--no-zygote"]
