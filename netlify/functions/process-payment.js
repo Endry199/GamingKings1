@@ -1,11 +1,9 @@
 // netlify/functions/process-payment.js
 const axios = require('axios');
 const { Formidable } = require('formidable');
-const nodemailer = require('nodemailer');
 const { createClient } = require('@supabase/supabase-js');
 const { Readable } = require('stream');
 const fs = require('fs');
-const FormData = require('form-data'); 
 
 // Función para escapar caracteres especiales de MarkdownV2 para Telegram
 function escapeMarkdownV2(text) {
@@ -27,9 +25,6 @@ exports.handler = async function(event, context) {
     // --- Configuración de Supabase ---
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
-
-    console.log("DEBUG: SUPABASE_URL vista por la función:", supabaseUrl);
-    console.log("DEBUG: SUPABASE_SERVICE_KEY vista por la función:", supabaseServiceKey);
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -81,23 +76,13 @@ exports.handler = async function(event, context) {
 
     // --- Validar y cargar variables de entorno ---
     const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-    const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-    const SMTP_HOST = process.env.SMTP_HOST;
-    const SMTP_PORT = process.env.SMTP_PORT;
-    const SMTP_USER = process.env.SMTP_USER;
-    const SMTP_PASS = process.env.SMTP_PASS;
-    const SENDER_EMAIL = process.env.SENDER_EMAIL || SMTP_USER;
-    const WHATSAPP_CONTACT_CLIENTE = process.env.WHATSAPP_CONTACT_CLIENTE || '584126949631'; // Usamos WHATSAPP_CONTACT_CLIENTE para el email
-    const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR; // Validamos que esta también esté
+    const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID; // Usamos esta misma para todas las notificaciones
+    const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR;
 
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !SMTP_HOST || isNaN(parseInt(SMTP_PORT, 10)) || !SMTP_USER || !SMTP_PASS || !supabaseUrl || !supabaseServiceKey || !WHATSAPP_NUMBER_RECARGADOR) {
-        console.error("Faltan variables de entorno requeridas o SMTP_PORT no es un número válido.");
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !supabaseUrl || !supabaseServiceKey || !WHATSAPP_NUMBER_RECARGADOR) {
+        console.error("Faltan variables de entorno requeridas.");
         console.error(`Missing TELEGRAM_BOT_TOKEN: ${!TELEGRAM_BOT_TOKEN}`);
         console.error(`Missing TELEGRAM_CHAT_ID: ${!TELEGRAM_CHAT_ID}`);
-        console.error(`Missing SMTP_HOST: ${!SMTP_HOST}`);
-        console.error(`Invalid SMTP_PORT: ${isNaN(parseInt(SMTP_PORT, 10))}`);
-        console.error(`Missing SMTP_USER: ${!SMTP_USER}`);
-        console.error(`Missing SMTP_PASS: ${!!SMTP_PASS}`);
         console.error(`Missing SUPABASE_URL: ${!supabaseUrl}`);
         console.error(`Missing SUPABASE_SERVICE_KEY: ${!supabaseServiceKey}`);
         console.error(`Missing WHATSAPP_NUMBER_RECARGADOR: ${!WHATSAPP_NUMBER_RECARGADOR}`);
@@ -108,7 +93,6 @@ exports.handler = async function(event, context) {
         };
     }
 
-    // Aquí se utilizan todos los campos recibidos del formulario
     const { game, playerId, package: packageName, finalPrice, currency, paymentMethod, email, fullName, whatsappNumber, referenceNumber, txid } = fieldsData;
 
     let receiptUrl = null;
@@ -141,7 +125,7 @@ exports.handler = async function(event, context) {
             }
         }
 
-        // --- PREPARANDO DATOS PARA LA INSERCIÓN - AHORA CON TODOS LOS CAMPOS ---
+        // --- PREPARANDO DATOS PARA LA INSERCIÓN ---
         const dataToInsert = {
             id_transaccion: id_transaccion_generado,
             game: game,                       
@@ -159,7 +143,6 @@ exports.handler = async function(event, context) {
             receipt_url: receiptUrl,          
             telegram_chat_id: TELEGRAM_CHAT_ID, 
         };
-        console.log("DEBUG: Datos preparados para insertar en Supabase:", JSON.stringify(dataToInsert, null, 2));
 
         // --- Guardar Transacción en Supabase ---
         const { data: insertedData, error: insertError } = await supabase
@@ -188,8 +171,7 @@ exports.handler = async function(event, context) {
         };
     }
 
-    // --- Enviar Notificación a Telegram ---
-    // (Este bloque se ejecuta solo si la inserción en Supabase fue exitosa)
+    // --- Enviar Notificación a Telegram (al chat principal de notificaciones) ---
     let messageText = `✨ *NUEVA RECARGA PENDIENTE* ✨\n\n`; 
     messageText += `*ID de Transacción:* \`${escapeMarkdownV2(id_transaccion_generado || 'N/A')}\`\n`;
     messageText += `*Estado:* \`PENDIENTE\`\n\n`;
@@ -206,7 +188,6 @@ exports.handler = async function(event, context) {
         messageText += `📱 WhatsApp Cliente: ${escapeMarkdownV2(whatsappNumber)}\n`;
     }
 
-    // Asegurarse de que las referencias de pago se añadan correctamente
     if (paymentMethod === 'pago-movil' && referenceNumber) {
         messageText += `📊 Referencia Pago Móvil: ${escapeMarkdownV2(referenceNumber)}\n`;
     } else if (paymentMethod === 'binance' && txid) {
@@ -214,17 +195,14 @@ exports.handler = async function(event, context) {
     } else if (paymentMethod === 'zinli' && referenceNumber) {
         messageText += `📊 Referencia Zinli: ${escapeMarkdownV2(referenceNumber)}\n`;
     }
-    // Añadir el URL del comprobante si existe
     if (receiptUrl) {
         messageText += `📎 Comprobante: ${escapeMarkdownV2(receiptUrl)}\n`;
     }
 
-    // --- LÓGICA DE BOTONES CONDICIONAL ---
     const inlineKeyboard = [
         [{ text: "✅ Marcar como Realizada", callback_data: `mark_done_${id_transaccion_generado}` }]
     ];
 
-    // Solo añadir el botón de WhatsApp si el juego es "Free Fire"
     if (game && game.toLowerCase() === 'free fire') {
         inlineKeyboard[0].unshift({ text: "📲 Enviar a WhatsApp", callback_data: `send_whatsapp_${id_transaccion_generado}` });
     }
@@ -238,7 +216,7 @@ exports.handler = async function(event, context) {
 
     try {
         telegramMessageResponse = await axios.post(telegramApiUrl, {
-            chat_id: TELEGRAM_CHAT_ID,
+            chat_id: TELEGRAM_CHAT_ID, // Usamos el TELEGRAM_CHAT_ID para enviar la notificación
             text: messageText,
             parse_mode: 'MarkdownV2', 
             reply_markup: replyMarkup
@@ -246,7 +224,6 @@ exports.handler = async function(event, context) {
         console.log("Mensaje de Telegram enviado con éxito.");
 
         if (receiptUrl) { 
-            console.log("DEBUG: Intentando enviar comprobante a Telegram desde Supabase URL.");
             try {
                 const sendFileUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument`;
                 
@@ -289,62 +266,44 @@ exports.handler = async function(event, context) {
         console.error("Error al enviar mensaje de Telegram o comprobante:", telegramError.response ? telegramError.response.data : telegramError.message);
     }
 
-    // --- Enviar Confirmación por Correo Electrónico al Cliente (con Nodemailer) ---
-    if (email) {
-        let transporter;
+    // --- ¡LÓGICA ACTUALIZADA! Enviar mensaje de "Procesando" al cliente vía WhatsApp (enlace para que TÚ hagas clic y envíes) ---
+    if (whatsappNumber && fullName) { 
+        const customerName = fullName.split(' ')[0]; // Solo el primer nombre
+        const whatsappMessageProcessing = `
+¡Hola ${customerName}! 👋
+
+Tu solicitud de recarga para *${game}* de *${packageName}* ha sido recibida y está siendo *PROCESADA* bajo el número de transacción: \`${id_transaccion_generado}\`.
+
+Te enviaremos una notificación de confirmación cuando la recarga se haga efectiva. ¡Gracias por tu paciencia!
+        `.trim();
+
+        const whatsappLinkProcessing = `https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(whatsappMessageProcessing)}`;
+
         try {
-            transporter = nodemailer.createTransport({
-                host: SMTP_HOST,
-                port: parseInt(SMTP_PORT, 10),
-                secure: parseInt(SMTP_PORT, 10) === 465, 
-                auth: {
-                    user: SMTP_USER,
-                    pass: SMTP_PASS,
-                },
-                tls: {
-                    rejectUnauthorized: false 
-                }
+            // Envía un mensaje al MISMO chat de Telegram (TELEGRAM_CHAT_ID) con el enlace para el cliente
+            await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                chat_id: TELEGRAM_CHAT_ID, // Usa el TELEGRAM_CHAT_ID principal
+                text: escapeMarkdownV2(`
+🆕 *¡SOLICITUD RECIBIDA!* 🆕
+Transacción: \`${id_transaccion_generado}\`
+Cliente: *${escapeMarkdownV2(fullName)}*
+WhatsApp: \`${escapeMarkdownV2(whatsappNumber)}\`
+
+👉 *Para el cliente:*
+[Haz clic aquí para enviar mensaje de WhatsApp 'En Proceso'](${whatsappLinkProcessing})
+                `),
+                parse_mode: 'MarkdownV2',
+                disable_web_page_preview: true 
             });
-        } catch (createTransportError) {
-            console.error("Error al crear el transportador de Nodemailer:", createTransportError);
+            console.log(`Enlace de WhatsApp "Procesando" para cliente (${whatsappNumber}) enviado al chat de Telegram.`);
+        } catch (whatsappSendError) {
+            console.error(`ERROR: Fallo al enviar enlace de WhatsApp "Procesando" para cliente ${whatsappNumber}:`, whatsappSendError.response ? whatsappSendError.response.data : whatsappSendError.message);
         }
-
-        const mailOptions = {
-            from: SENDER_EMAIL,
-            to: email,
-            subject: `🎉 Tu Solicitud de Recarga de ${game} con GamingKings ha sido Recibida! 🎉`, 
-            html: `
-                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                    <h2 style="color: #007bff;">¡Hola ${fullName || email}!</h2>
-                    <p>Hemos recibido tu solicitud de recarga para <strong>${game}</strong> con ID: <strong>${id_transaccion_generado}</strong>.</p>
-                    <p>Aquí están los detalles que nos proporcionaste:</p>
-                    <ul style="list-style: none; padding: 0;">
-                        <li><strong>Juego:</strong> ${game}</li>
-                        ${playerId ? `<li><strong>ID de Jugador:</strong> ${playerId}</li>` : ''}
-                        <li><strong>Paquete:</strong> ${packageName}</li>
-                        <li><strong>Monto a Pagar:</strong> ${finalPrice} ${currency}</li>
-                        <li><strong>Método de Pago Seleccionado:</strong> ${paymentMethod.replace('-', ' ').toUpperCase()}</li>
-                        ${whatsappNumber ? `<li><strong>Número de WhatsApp Proporcionado:</strong> ${whatsappNumber}</li>` : ''}
-                    </ul>
-                    <p>Tu solicitud está actualmente en estado: <strong>PENDIENTE</strong>.</p>
-                    <p>Estamos procesando tu recarga. Te enviaremos un <strong>correo de confirmación de la recarga completada y tu factura virtual una vez que tu recarga sea procesada</strong> por nuestro equipo.</p>
-                    <p style="margin-top: 20px;">¡Gracias por confiar en GamingKings!</p> <p style="font-size: 0.9em; color: #777;">Si tienes alguna pregunta, contáctanos a través de nuestro WhatsApp: <a href="https://wa.me/${WHATSAPP_CONTACT_CLIENTE}" style="color: #28a745; text-decoration: none;">+${WHATSAPP_CONTACT_CLIENTE}</a></p>
-                </div>
-            `,
-        };
-
-        try {
-            await transporter.sendMail(mailOptions);
-            console.log("Correo de confirmación inicial enviado al cliente:", email);
-        } catch (emailError) {
-            console.error("Error al enviar el correo de confirmación inicial:", emailError.message);
-            if (emailError.response) {
-                console.error("Detalles del error SMTP:", emailError.response);
-            }
-        }
+    } else {
+        console.log(`No se puede enviar mensaje de "Procesando" porque falta whatsappNumber o fullName para transacción ${id_transaccion_generado}.`);
     }
 
-    // --- Limpieza del archivo temporal después de todo procesamiento ---
+    // --- Limpieza del archivo temporal ---
     if (paymentReceiptFile && paymentReceiptFile.filepath && fs.existsSync(paymentReceiptFile.filepath)) {
         try {
             fs.unlinkSync(paymentReceiptFile.filepath);
