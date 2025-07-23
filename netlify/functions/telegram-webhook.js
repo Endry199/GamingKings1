@@ -1,6 +1,6 @@
 // netlify/functions/telegram-webhook.js
 const axios = require('axios');
-const { createClient } = require('@supabase/supabase/js');
+const { createClient } = require('@supabase/supabase-js'); // <-- ¡Así es como debe ser!
 
 // Función para escapar caracteres especiales de MarkdownV2 para Telegram
 function escapeMarkdownV2(text) {
