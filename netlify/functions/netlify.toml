@@ -7,8 +7,8 @@
   package = "@netlify/plugin-node-bundler"
 
 [[plugins]]
-  package = "netlify-plugin-chromium"
+  package = "netlify-plugin-puppeteer" # <--- ¡CAMBIA ESTO!
   [plugins.inputs]
-    # Opcional: Especifica la versión de Chromium si tienes problemas.
-    # chromium_version = "1090000" # Por ejemplo
-    # args = ["--no-sandbox", "--disable-setuid-sandbox"] # Recomendado para entornos serverless
+    # Opcional: para usar una version específica de puppeteer (si la que instalamos arriba no funciona)
+    # browser_version = "latest" # o una version exacta de Chromium
+    # args = ["--no-sandbox", "--disable-setuid-sandbox"] # Estos son importantes para entornos serverless
