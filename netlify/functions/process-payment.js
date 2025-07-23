@@ -4,15 +4,15 @@ const { Formidable } = require('formidable');
 const { createClient } = require('@supabase/supabase-js');
 const { Readable } = require('stream');
 const fs = require('fs');
-const nodeHtmlToImage = require('node-html-to-image');
-const path = require('path');
+// const nodeHtmlToImage = require('node-html-to-image'); // ELIMINADO: Ya no se usa
+// const path = require('path'); // ELIMINADO: Ya no se usa
 
 // Función para escapar caracteres especiales de MarkdownV2 para Telegram
 function escapeMarkdownV2(text) {
     if (typeof text !== 'string') {
         text = String(text);
     }
-    const specialChars = /[_*\[\]()~`>#+\-={}.!]/g;
+    const specialChars = /[_*[\]()~`>#+\-={}.!]/g;
     return text.replace(specialChars, '\\$&');
 }
 
@@ -90,24 +90,23 @@ exports.handler = async function(event, context) {
     const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
     const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
     const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR;
-    // URL de tu logo para la factura (CRÍTICO: ASEGÚRATE DE QUE ESTÉ PÚBLICA Y ACCESIBLE)
-    const LOGO_URL = process.env.LOGO_URL; 
+    // const LOGO_URL = process.env.LOGO_URL; // ELIMINADO: Ya no se usa para generar imagen
 
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !supabaseUrl || !supabaseServiceKey || !WHATSAPP_NUMBER_RECARGADOR || !LOGO_URL) {
+    // NOTA: LOGO_URL ya no es estrictamente necesario si no generas la imagen de factura
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !supabaseUrl || !supabaseServiceKey || !WHATSAPP_NUMBER_RECARGADOR) {
         console.error("CONFIGURATION ERROR: Missing required environment variables.");
         console.error(`Missing TELEGRAM_BOT_TOKEN: ${!TELEGRAM_BOT_TOKEN}`);
         console.error(`Missing TELEGRAM_CHAT_ID: ${!TELEGRAM_CHAT_ID}`);
         console.error(`Missing SUPABASE_URL: ${!supabaseUrl}`);
         console.error(`Missing SUPABASE_SERVICE_KEY: ${!supabaseServiceKey}`);
         console.error(`Missing WHATSAPP_NUMBER_RECARGADOR: ${!WHATSAPP_NUMBER_RECARGADOR}`);
-        console.error(`Missing LOGO_URL: ${!LOGO_URL}`); 
+        // console.error(`Missing LOGO_URL: ${!LOGO_URL}`); // ELIMINADO
         return {
             statusCode: 500,
             body: JSON.stringify({ message: "Error de configuración del servidor: Faltan credenciales o configuración inválida." })
         };
     }
-    console.log(`DEBUG: LOGO_URL configured: ${LOGO_URL}`);
-
+    // console.log(`DEBUG: LOGO_URL configured: ${LOGO_URL}`); // ELIMINADO
 
     const { 
         game, 
@@ -124,7 +123,7 @@ exports.handler = async function(event, context) {
     } = fieldsData;
 
     let receiptUrl = null; 
-    let invoiceImageUrl = null; 
+    let invoiceText = null; // Cambiado para almacenar el texto de la factura
     let newTransactionData;
     let id_transaccion_generado;
 
@@ -157,219 +156,39 @@ exports.handler = async function(event, context) {
             console.log("DEBUG: No payment receipt file to upload or game is TikTok. Skipping receipt upload.");
         }
 
-        // --- Generar la Imagen de la Factura ---
+        // --- Generar la Factura como Texto Plano ---
         const now = new Date();
         const rechargeTime = now.toLocaleString('es-VE', { 
             hour: '2-digit', minute: '2-digit', second: '2-digit', 
             day: '2-digit', month: '2-digit', year: 'numeric' 
         });
 
-        const invoiceHtmlTemplate = `
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Factura GamingKings</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f0f0f0;
-            color: #333;
-        }
-        .invoice-container {
-            width: 350px; 
-            margin: 0 auto;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            padding: 20px;
-            border-top: 5px solid #8e44ad; 
-        }
-        .header {
-            text-align: center;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
-            margin-bottom: 20px;
-        }
-        .header img {
-            max-width: 120px;
-            margin-bottom: 10px;
-            display: block; /* Ensures it's block-level for margin auto */
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .header h1 {
-            color: #8e44ad; 
-            font-size: 24px;
-            margin: 0;
-        }
-        .header p {
-            color: #666;
-            font-size: 14px;
-            margin-top: 5px;
-        }
-        .details-section {
-            margin-bottom: 20px;
-        }
-        .details-section h2 {
-            color: #e91e63; 
-            font-size: 18px;
-            border-bottom: 2px solid #e91e63;
-            padding-bottom: 5px;
-            margin-bottom: 15px;
-        }
-        .detail-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 15px;
-            line-height: 1.4;
-        }
-        .detail-item .label {
-            font-weight: bold;
-            color: #555;
-            width: 45%;
-        }
-        .detail-item .value {
-            text-align: right;
-            width: 55%;
-            word-wrap: break-word; 
-        }
-        .footer {
-            text-align: center;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-            margin-top: 20px;
-            color: #777;
-            font-size: 12px;
-        }
-        .highlight {
-            color: #e91e63; 
-            font-weight: bold;
-        }
-    </style>
-</head>
-<body>
-    <div class="invoice-container">
-        <div class="header">
-            <img src="${LOGO_URL}" alt="GamingKings Logo">
-            <h1>Factura de Recarga</h1>
-            <p>GamingKings</p>
-        </div>
+        invoiceText = `
+*FACTURA DE RECARGA - GamingKings*
 
-        <div class="details-section">
-            <h2>Detalles de la Transacción</h2>
-            <div class="detail-item">
-                <span class="label">Hora de Recarga:</span>
-                <span class="value"><span class="highlight">${rechargeTime}</span></span>
-            </div>
-            <div class="detail-item">
-                <span class="label">ID de Transacción:</span>
-                <span class="value"><span class="highlight">${id_transaccion_generado}</span></span>
-            </div>
-            <div class="detail-item">
-                <span class="label">ID de Jugador:</span>
-                <span class="value">${playerId || 'N/A'}</span>
-            </div>
-            <div class="detail-item">
-                <span class="label">Correo Cliente:</span>
-                <span class="value">${email || 'N/A'}</span>
-            </div>
-            <div class="detail-item">
-                <span class="label">Número de Teléfono:</span>
-                <span class="value">${whatsappNumber || 'N/A'}</span>
-            </div>
-            <div class="detail-item">
-                <span class="label">Juego Recargado:</span>
-                <span class="value"><span class="highlight">${game}</span></span>
-            </div>
-            <div class="detail-item">
-                <span class="label">Paquete Recargado:</span>
-                <span class="value"><span class="highlight">${packageName}</span></span>
-            </div>
-            <div class="detail-item">
-                <span class="label">Monto:</span>
-                <span class="value"><span class="highlight">${finalPrice} ${currency}</span></span>
-            </div>
-            <div class="detail-item">
-                <span class="label">Método de Pago:</span>
-                <span class="value">${paymentMethod.replace('-', ' ').toUpperCase()}</span>
-            </div>
-        </div>
+-------------------------------------
+*ID Transacción:* ${escapeMarkdownV2(id_transaccion_generado)}
+*Fecha y Hora:* ${escapeMarkdownV2(rechargeTime)}
+-------------------------------------
+*Detalles del Cliente:*
+Nombre Completo: ${escapeMarkdownV2(fullName || 'N/A')}
+ID de Jugador: ${escapeMarkdownV2(playerId || 'N/A')}
+Correo Electrónico: ${escapeMarkdownV2(email || 'N/A')}
+Número WhatsApp: ${escapeMarkdownV2(whatsappNumber || 'N/A')}
+-------------------------------------
+*Detalles de la Recarga:*
+Juego: ${escapeMarkdownV2(game)}
+Paquete: ${escapeMarkdownV2(packageName)}
+Monto: ${escapeMarkdownV2(finalPrice)} ${escapeMarkdownV2(currency)}
+Método de Pago: ${escapeMarkdownV2(paymentMethod.replace('-', ' ').toUpperCase())}
+${referenceNumber ? `Referencia/TXID: ${escapeMarkdownV2(referenceNumber)}` : ''}
+${txid ? `TXID Binance: ${escapeMarkdownV2(txid)}` : ''}
+-------------------------------------
+¡Gracias por elegir GamingKings! Tu recarga está siendo procesada.
+`;
+        console.log("DEBUG: Invoice generated as plain text.");
 
-        <div class="footer">
-            <p>¡Gracias por elegir GamingKings!</p>
-            <p>&copy; ${new Date().getFullYear()} GamingKings. Todos los derechos reservados.</p>
-        </div>
-    </div>
-</body>
-</html>
-        `;
-
-        let browserPath = null;
-        // Aquí volvemos a la lógica para netlify-plugin-chromium.
-        // Este plugin coloca el ejecutable de Chromium en este path.
-        if (process.env.LAMBDA_TASK_ROOT) {
-            browserPath = path.join(process.env.LAMBDA_TASK_ROOT, 'node_modules', '.bin', 'chromium');
-            console.log(`DEBUG: Running in Lambda. Chromium executablePath: ${browserPath}`);
-        } else {
-            console.warn("WARN: Not in Lambda environment. browserPath will be null for local development.");
-        }
-
-        try {
-            console.log("DEBUG INVOICE: Starting invoice image generation process.");
-            console.log(`DEBUG INVOICE: HTML template size: ${invoiceHtmlTemplate.length} characters.`);
-            console.log(`DEBUG INVOICE: Attempting to use browserPath: ${browserPath}`);
-            
-            const imageBuffer = await nodeHtmlToImage({
-                html: invoiceHtmlTemplate,
-                quality: 90, 
-                type: 'jpeg', 
-                puppeteerArgs: {
-                    executablePath: browserPath, // ¡Crucial para netlify-plugin-chromium!
-                    args: ['--no-sandbox', '--disable-setuid-sandbox', '--single-process', '--disable-dev-shm-usage', '--no-zygote'] // Added more args for serverless
-                }
-            });
-            console.log("DEBUG INVOICE: Image generated successfully by node-html-to-image. Buffer size:", imageBuffer ? imageBuffer.length : 'null');
-
-            if (!imageBuffer) {
-                console.error("ERROR INVOICE: imageBuffer is null or empty after nodeHtmlToImage. Invoice will not be uploaded.");
-                throw new Error("Invoice image buffer is empty. Generation failed."); // Force catch block
-            }
-
-            const invoiceFileName = `${id_transaccion_generado}_factura.jpg`; 
-            console.log(`DEBUG INVOICE: Attempting to upload invoice file: ${invoiceFileName}`);
-            const { data: invoiceUploadData, error: invoiceUploadError } = await supabase.storage
-                .from('comprobantes') // Asegúrate de que este bucket existe y tiene políticas de R/W adecuadas
-                .upload(invoiceFileName, imageBuffer, {
-                    contentType: 'image/jpeg', 
-                    upsert: false 
-                });
-
-            if (invoiceUploadError) {
-                console.error("ERROR INVOICE: Supabase Storage upload failed for invoice image:", invoiceUploadError);
-            } else {
-                const { data: invoicePublicUrlData } = supabase.storage
-                    .from('comprobantes')
-                    .getPublicUrl(invoiceFileName);
-                invoiceImageUrl = invoicePublicUrlData.publicUrl;
-                console.log("DEBUG INVOICE: Invoice image uploaded to Supabase Storage and public URL obtained:", invoiceImageUrl);
-                if (!invoiceImageUrl) {
-                    console.error("WARN INVOICE: Public URL for invoice image is null or empty after Supabase getPublicUrl, despite successful upload.");
-                }
-            }
-
-        } catch (invoiceGenError) {
-            console.error("CRITICAL ERROR INVOICE GENERATION/UPLOAD:", invoiceGenError.message);
-            if (invoiceGenError.stack) {
-                console.error("CRITICAL ERROR INVOICE STACK:", invoiceGenError.stack);
-            }
-            invoiceImageUrl = null; // Ensure it remains null if error occurs
-        }
+        // invoiceImageUrl = null; // Se asegura de que no se intente usar una URL de imagen
 
         // --- PREPARANDO DATOS PARA LA INSERCIÓN ---
         const dataToInsert = {
@@ -387,7 +206,7 @@ exports.handler = async function(event, context) {
             reference_number: referenceNumber || null, 
             txid: txid || null, 
             receipt_url: receiptUrl, 
-            invoice_image_url: invoiceImageUrl, 
+            // invoice_image_url: invoiceImageUrl, // ELIMINADO: Ya no se guarda URL de imagen de factura
             telegram_chat_id: TELEGRAM_CHAT_ID, 
         };
         console.log("DEBUG: Data prepared for Supabase insertion:", JSON.stringify(dataToInsert));
@@ -418,12 +237,12 @@ exports.handler = async function(event, context) {
         };
     }
 
-    // ... (El resto del código para Telegram y WhatsApp permanece igual) ...
+    // ... (El resto del código para Telegram y WhatsApp permanece igual, pero usará invoiceText) ...
     let whatsappLinkCustomer = null;
     if (whatsappNumber && whatsappNumber.trim() !== '') {
         const customerNamePart = fullName && fullName.trim() !== '' ? `${fullName.split(' ')[0]}` : '';
         const greeting = customerNamePart ? `¡Hola ${customerNamePart}! 👋` : `¡Hola! 👋`;
-        const gameAndPlayerId = playerId ? ` para *${game}* (ID: \`${escapeMarkdownV2(playerId)}\`)` : ` para *${game}*`;
+        const gameAndPlayerId = playerId ? ` para *${escapeMarkdownV2(game)}* (ID: \`${escapeMarkdownV2(playerId)}\`)` : ` para *${escapeMarkdownV2(game)}*`;
         
         const whatsappMessageCustomer = `
 ${greeting}
@@ -431,7 +250,8 @@ ${greeting}
 Tu solicitud de recarga de *${escapeMarkdownV2(packageName)}*${gameAndPlayerId} ha sido recibida y está siendo *PROCESADA* bajo el número de transacción: \`${escapeMarkdownV2(id_transaccion_generado)}\`.
 
 Te enviaremos una notificación de confirmación cuando la recarga se haga efectiva. ¡Gracias por tu paciencia!
-        `.trim();
+${invoiceText}
+        `.trim(); // Incluye el texto de la factura aquí
         const customerWhatsappNumberClean = whatsappNumber.replace(/\D/g, ''); 
         whatsappLinkCustomer = `https://wa.me/${customerWhatsappNumberClean}?text=${encodeURIComponent(whatsappMessageCustomer)}`;
         console.log("DEBUG: whatsappLinkCustomer generated for client:", whatsappLinkCustomer);
@@ -445,8 +265,13 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
         const cleanedPackageName = (packageName || 'N/A').replace(/\+/g, '%2B');
 
         let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
-        whatsappMessageRecargador += `*ID de Jugador:* ${playerId || 'N/A'}\n`;
-        whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageName}\n`; 
+        whatsappMessageRecargador += `*ID de Jugador:* ${escapeMarkdownV2(playerId || 'N/A')}\n`;
+        whatsappMessageRecargador += `*Paquete a Recargar:* ${escapeMarkdownV2(cleanedPackageName)}\n`; 
+        whatsappMessageRecargador += `*Monto:* ${escapeMarkdownV2(finalPrice)} ${escapeMarkdownV2(currency)}\n`;
+        whatsappMessageRecargador += `*Método de Pago:* ${escapeMarkdownV2(paymentMethod.replace('-', ' ').toUpperCase())}\n`;
+        whatsappMessageRecargador += `*ID Transacción:* \`${escapeMarkdownV2(id_transaccion_generado)}\`\n`;
+        whatsappMessageRecargador += `*Comprobante:* ${receiptUrl ? escapeMarkdownV2(receiptUrl) : 'N/A'}\n\n`;
+        whatsappMessageRecargador += `*Factura (Texto):*\n${invoiceText}`; // Incluye el texto de la factura aquí
         
         whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumberClean}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
         console.log("DEBUG: whatsappLinkRecargador generated for recargador:", whatsappLinkRecargador);
@@ -477,6 +302,8 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
     } else if (paymentMethod === 'zinli' && referenceNumber) {
         messageText += `📊 Referencia Zinli: ${escapeMarkdownV2(referenceNumber)}\n`;
     }
+
+    messageText += `\n*Factura de Recarga:*\n${invoiceText}`; // Añade la factura de texto al mensaje de Telegram
 
     let inlineKeyboard = [];
     let currentRow = []; 
@@ -529,22 +356,10 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
             }
         }
         
-        // Envío de la FACTURA GENERADA como archivo (si existe)
-        if (invoiceImageUrl) { 
-            try {
-                const sendFileUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument`;
-                
-                await axios.post(sendFileUrl, {
-                    chat_id: TELEGRAM_CHAT_ID,
-                    document: invoiceImageUrl, 
-                    caption: escapeMarkdownV2(`Factura de Recarga para la transacción ${id_transaccion_generado}`),
-                    parse_mode: 'MarkdownV2'
-                });
-                console.log("DEBUG: Generated invoice sent to Telegram using Supabase URL.");
-            } catch (invoiceSendError) {
-                console.error("ERROR: Failed to send generated invoice to Telegram from URL:", invoiceSendError.response ? invoiceSendError.response.data : invoiceSendError.message);
-            }
-        }
+        // ELIMINADO: Ya no se envía la factura generada como imagen
+        // if (invoiceImageUrl) { 
+        //    ... (código eliminado)
+        // }
 
 
         if (newTransactionData && telegramMessageResponse && telegramMessageResponse.data && telegramMessageResponse.data.result) {
@@ -552,14 +367,14 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
                 .from('transactions')
                 .update({ 
                     telegram_message_id: telegramMessageResponse.data.result.message_id,
-                    invoice_image_url: invoiceImageUrl 
+                    // invoice_image_url: invoiceImageUrl // ELIMINADO: Ya no se actualiza la URL de imagen de factura
                 })
                 .eq('id', newTransactionData.id); 
 
             if (updateError) {
-                console.error("ERROR: Failed to update transaction in Supabase with telegram_message_id/invoice_image_url:", updateError.message);
+                console.error("ERROR: Failed to update transaction in Supabase with telegram_message_id:", updateError.message);
             } else {
-                console.log("DEBUG: Transaction updated in Supabase with telegram_message_id and invoice_image_url:", telegramMessageResponse.data.result.message_id, invoiceImageUrl);
+                console.log("DEBUG: Transaction updated in Supabase with telegram_message_id:", telegramMessageResponse.data.result.message_id);
             }
         }
 
