@@ -215,19 +215,14 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
     let whatsappLinkRecargador = null;
     if (game && game.toLowerCase() === 'free fire' && WHATSAPP_NUMBER_RECARGADOR) {
         const recargadorWhatsappNumberClean = WHATSAPP_NUMBER_RECARGADOR.replace(/\D/g, ''); 
-        const packageNameForWhatsapp = encodeURIComponent(packageName || 'N/A'); 
+        // CAMBIO AQUÍ: Mensaje más conciso para el recargador
         let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
-        whatsappMessageRecargador += `*ID de Transacción:* ${id_transaccion_generado}\n`;
-        whatsappMessageRecargador += `*Juego:* ${game}\n`;
         whatsappMessageRecargador += `*ID de Jugador:* ${playerId || 'N/A'}\n`;
         whatsappMessageRecargador += `*Paquete a Recargar:* ${packageName}\n`;
-        whatsappMessageRecargador += `*Monto Pagado:* ${finalPrice} ${currency}\n`;
-        if (whatsappNumber) {
-            whatsappMessageRecargador += `*WhatsApp Cliente:* ${whatsappNumber}\n`;
-        }
-        if (receiptUrl) {
-            whatsappMessageRecargador += `*Comprobante:* ${receiptUrl}\n`;
-        }
+        // Eliminado: ID de Transacción, Juego, Monto Pagado, WhatsApp Cliente, Comprobante
+        // Si necesitas el ID de Transacción para referencia interna del recargador, puedes añadirlo de nuevo
+        // pero la petición era "solo pedi id y paquete a recargar".
+        
         whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumberClean}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
         console.log("DEBUG: whatsappLinkRecargador generado:", whatsappLinkRecargador);
     } else {
@@ -275,6 +270,7 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
     }
     
     // Botón para WhatsApp del recargador (solo para Free Fire, o puedes generalizarlo)
+    // Este botón se convierte en una URL directa, no un callback_data
     if (whatsappLinkRecargador) { 
         currentRow.push({ text: "📲 WhatsApp Recargador", url: whatsappLinkRecargador });
     }
