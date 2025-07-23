@@ -67,10 +67,9 @@ exports.handler = async function(event, context) {
             const { parse } = require('querystring');
             fieldsData = parse(event.body);
         }
-        // DEBUG: Añadir logs para verificar los datos recibidos
         console.log("DEBUG: fieldsData al inicio de la función:", fieldsData);
         console.log("DEBUG: whatsappNumber recibido:", fieldsData.whatsappNumber);
-        console.log("DEBUG: fullName recibido:", fieldsData.fullName); // fullName puede ser undefined si no hay campo en el frontend
+        console.log("DEBUG: fullName recibido:", fieldsData.fullName);
 
     } catch (parseError) {
         console.error("Error al procesar los datos de la solicitud:", parseError);
@@ -80,7 +79,6 @@ exports.handler = async function(event, context) {
         };
     }
 
-    // --- Validar y cargar variables de entorno ---
     const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
     const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
     const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR;
@@ -99,7 +97,6 @@ exports.handler = async function(event, context) {
         };
     }
 
-    // Desestructurar datos del formulario
     const { 
         game, 
         playerId, 
@@ -108,7 +105,7 @@ exports.handler = async function(event, context) {
         currency, 
         paymentMethod, 
         email, 
-        fullName, // Este será undefined si no hay campo en el frontend
+        fullName, 
         whatsappNumber, 
         referenceNumber, 
         txid 
@@ -121,8 +118,6 @@ exports.handler = async function(event, context) {
     try {
         id_transaccion_generado = `GMK-${Date.now()}`; 
 
-        // --- Subir comprobante a Supabase Storage PRIMERO ---
-        // Solo intenta subir si hay un archivo de comprobante Y no es una transacción de TikTok (que no lo requiere)
         if (paymentReceiptFile && paymentReceiptFile.filepath && game !== "TikTok") {
             console.log(`Intentando subir archivo: ${paymentReceiptFile.originalFilename} (${paymentReceiptFile.mimetype})`);
             const fileBuffer = fs.readFileSync(paymentReceiptFile.filepath);
@@ -145,7 +140,6 @@ exports.handler = async function(event, context) {
             }
         }
 
-        // --- PREPARANDO DATOS PARA LA INSERCIÓN ---
         const dataToInsert = {
             id_transaccion: id_transaccion_generado,
             game: game, 
@@ -156,7 +150,7 @@ exports.handler = async function(event, context) {
             email: email, 
             status: 'pendiente', 
             player_id: playerId || null, 
-            full_name: fullName || null, //fullName puede ser undefined, se guardará como null
+            full_name: fullName || null, 
             whatsapp_number: whatsappNumber || null, 
             reference_number: referenceNumber || null, 
             txid: txid || null, 
@@ -190,10 +184,9 @@ exports.handler = async function(event, context) {
         };
     }
 
-    // --- Generar enlace de WhatsApp para el CLIENTE ---
     let whatsappLinkCustomer = null;
     if (whatsappNumber && whatsappNumber.trim() !== '') {
-        const customerNamePart = fullName && fullName.trim() !== '' ? `${fullName.split(' ')[0]}` : ''; // Usa el primer nombre si existe
+        const customerNamePart = fullName && fullName.trim() !== '' ? `${fullName.split(' ')[0]}` : '';
         const greeting = customerNamePart ? `¡Hola ${customerNamePart}! 👋` : `¡Hola! 👋`;
         const gameAndPlayerId = playerId ? ` para *${game}* (ID: \`${escapeMarkdownV2(playerId)}\`)` : ` para *${game}*`;
         
@@ -211,17 +204,17 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
         console.log(`DEBUG: No se pudo generar whatsappLinkCustomer (cliente). whatsappNumber: '${whatsappNumber}'.`);
     }
 
-    // --- Generar enlace de WhatsApp para el RECARGADOR (si aplica para Free Fire) ---
     let whatsappLinkRecargador = null;
     if (game && game.toLowerCase() === 'free fire' && WHATSAPP_NUMBER_RECARGADOR) {
         const recargadorWhatsappNumberClean = WHATSAPP_NUMBER_RECARGADOR.replace(/\D/g, ''); 
-        // CAMBIO AQUÍ: Mensaje más conciso para el recargador
+        
+        // --- CAMBIO CLAVE AQUÍ PARA EL SIGNO '+' ---
+        // Reemplazamos todos los '+' con '%2B' antes de encodeURIComponent
+        const cleanedPackageName = (packageName || 'N/A').replace(/\+/g, '%2B');
+
         let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
         whatsappMessageRecargador += `*ID de Jugador:* ${playerId || 'N/A'}\n`;
-        whatsappMessageRecargador += `*Paquete a Recargar:* ${packageName}\n`;
-        // Eliminado: ID de Transacción, Juego, Monto Pagado, WhatsApp Cliente, Comprobante
-        // Si necesitas el ID de Transacción para referencia interna del recargador, puedes añadirlo de nuevo
-        // pero la petición era "solo pedi id y paquete a recargar".
+        whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageName}\n`; // Usamos la versión limpia
         
         whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumberClean}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
         console.log("DEBUG: whatsappLinkRecargador generado:", whatsappLinkRecargador);
@@ -230,16 +223,15 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
     }
 
 
-    // --- Enviar Notificación a Telegram con TODOS los botones ---
     let messageText = `✨ *NUEVA RECARGA PENDIENTE* ✨\n\n`; 
     messageText += `*ID de Transacción:* \`${escapeMarkdownV2(id_transaccion_generado || 'N/A')}\`\n`;
     messageText += `*Estado:* \`PENDIENTE\`\n\n`;
     messageText += `🎮 Juego: *${escapeMarkdownV2(game)}*\n`;
     messageText += `👤 ID de Jugador: *${escapeMarkdownV2(playerId || 'N/A')}*\n`;
-    messageText += `📦 Paquete: *${escapeMarkdownV2(packageName)}*\n`;
+    messageText += `📦 Paquete: *${escapeMarkdownV2(packageName)}*\n`; // Aquí en Telegram puedes dejar el packageName original
     messageText += `💰 Total a Pagar: *${escapeMarkdownV2(finalPrice)} ${escapeMarkdownV2(currency)}*\n`;
     messageText += `💳 Método de Pago: *${escapeMarkdownV2(paymentMethod.replace('-', ' ').toUpperCase())}*\n`;
-    messageText += `📧 Correo Cliente: ${escapeMarkdownV2(email || 'N/A')}\n`; // Asegura "N/A" si es null
+    messageText += `📧 Correo Cliente: ${escapeMarkdownV2(email || 'N/A')}\n`; 
     if (fullName) {
         messageText += `🧑‍💻 Nombre Cliente: ${escapeMarkdownV2(fullName)}\n`;
     }
@@ -254,33 +246,22 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
     } else if (paymentMethod === 'zinli' && referenceNumber) {
         messageText += `📊 Referencia Zinli: ${escapeMarkdownV2(referenceNumber)}\n`;
     }
-    // No incluir la URL del recibo directamente en el texto si se va a enviar como archivo adjunto,
-    // a menos que sea muy necesario por claridad y se maneje el preview deshabilitado.
-    // if (receiptUrl) {
-    //     messageText += `📎 Comprobante: ${escapeMarkdownV2(receiptUrl)}\n`;
-    // }
 
-    // Definición de los botones
     let inlineKeyboard = [];
     let currentRow = []; 
 
-    // Botón para CHATEAR CON EL CLIENTE (WhatsApp del cliente)
     if (whatsappLinkCustomer) {
         currentRow.push({ text: "💬 Chatear con el Cliente", url: whatsappLinkCustomer });
     }
     
-    // Botón para WhatsApp del recargador (solo para Free Fire, o puedes generalizarlo)
-    // Este botón se convierte en una URL directa, no un callback_data
     if (whatsappLinkRecargador) { 
         currentRow.push({ text: "📲 WhatsApp Recargador", url: whatsappLinkRecargador });
     }
 
-    // Si hay botones en la fila actual, añadirla al teclado
     if (currentRow.length > 0) {
         inlineKeyboard.push(currentRow);
     }
     
-    // Siempre añadir el botón de "Marcar como Realizada" en una NUEVA fila
     inlineKeyboard.push([{ text: "✅ Marcar como Realizada", callback_data: `mark_done_${id_transaccion_generado}` }]);
 
     const replyMarkup = {
@@ -296,12 +277,10 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
             text: messageText,
             parse_mode: 'MarkdownV2', 
             reply_markup: replyMarkup,
-            disable_web_page_preview: true // Para evitar que Telegram genere vistas previas de los enlaces WA y el comprobante
+            disable_web_page_preview: true
         });
         console.log("Mensaje de Telegram con botones de acción enviado con éxito.");
 
-        // Envío de comprobante separado si existe y se adjunta
-        // IMPORTANTE: Si receiptUrl es undefined (e.g., para TikTok), esto no se ejecutará.
         if (receiptUrl) { 
             try {
                 const sendFileUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument`;
@@ -335,7 +314,6 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
         console.error("Error al enviar mensaje de Telegram o comprobante:", telegramError.response ? telegramError.response.data : telegramError.message);
     }
 
-    // --- Limpieza del archivo temporal ---
     if (paymentReceiptFile && paymentReceiptFile.filepath && fs.existsSync(paymentReceiptFile.filepath)) {
         try {
             fs.unlinkSync(paymentReceiptFile.filepath);
