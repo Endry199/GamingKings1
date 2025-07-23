@@ -118,15 +118,18 @@ exports.handler = async function(event, context) {
                 const completionDate = new Date().toLocaleDateString('es-VE');
                 newCaption += `\n\nRecarga marcada por: *${escapeMarkdownV2(userName)}* (${completionTime} ${completionDate})`;
 
+                // Definir los nuevos botones después de completar
+                const updatedButtons = [
+                    [{ text: "✅ Recarga Realizada", callback_data: `completed_${transactionId}` }]
+                ];
+
                 await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
                     chat_id: chatId,
                     message_id: messageId,
                     text: newCaption, // El texto ya debe estar escapado por process-payment.js y las adiciones de escapeMarkdownV2
                     parse_mode: 'MarkdownV2',
                     reply_markup: {
-                        inline_keyboard: [
-                            [{ text: "✅ Recarga Realizada", callback_data: `completed_${transactionId}` }] // Cambiar el botón para indicar que ya está completa
-                        ]
+                        inline_keyboard: updatedButtons
                     }
                 });
 
@@ -206,32 +209,16 @@ exports.handler = async function(event, context) {
                 const recargadorWhatsappNumber = WHATSAPP_NUMBER_RECARGADOR.replace(/\D/g, ''); // Limpiar el número de cualquier caracter no numérico
 
                 // Mensaje pre-rellenado para WhatsApp de tu primo (el recargador)
-                let whatsappMessageRecargador = `¡Hola! 👋 Necesito que recargues esto:\n\n`;
+                let whatsappMessageRecargador = `¡Hola! Por favor, realiza esta recarga lo antes posible:\n\n`;
                 whatsappMessageRecargador += `*ID de Transacción:* ${transaction.id_transaccion}\n`;
-                whatsappMessageRecargador += `*Juego:* ${transaction.game}\n`;
-                whatsappMessageRecargador += `*ID de Jugador:* ${transaction.player_id || 'N/A'}\n`;
-                whatsappMessageRecargador += `*Paquete:* ${transaction.package_name}\n`;
-                whatsappMessageRecargador += `*Monto:* ${transaction.final_price} ${transaction.currency}\n`;
-                whatsappMessageRecargador += `*Método de Pago del Cliente:* ${transaction.payment_method.replace('-', ' ').toUpperCase()}\n`;
-                if (transaction.reference_number) {
-                    whatsappMessageRecargador += `*Ref. de Pago Cliente:* ${transaction.reference_number}\n`;
-                }
-                if (transaction.txid) {
-                    whatsappMessageRecargador += `*TXID Cliente:* ${transaction.txid}\n`;
-                }
-                if (transaction.receipt_url) {
-                    whatsappMessageRecargador += `*Comprobante:* ${transaction.receipt_url}\n`;
-                }
-                whatsappMessageRecargador += `\nCliente: ${transaction.full_name || transaction.email}\n`;
-                if (transaction.whatsapp_number) {
-                    whatsappMessageRecargador += `WhatsApp Cliente: ${transaction.whatsapp_number}\n`;
-                }
-                whatsappMessageRecargador += `\nPor favor, recarga esto lo antes posible y marca la transacción como realizada en Telegram cuando hayas terminado. ¡Gracias!`;
-
+                whatsappMessageRecargador += `*Paquete a Recargar:* ${transaction.package_name}\n`;
+                // Eliminamos el resto de detalles para el primo según tu solicitud.
 
                 const whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumber}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
 
-                // Editar el mensaje original de Telegram para añadir el botón de WhatsApp al recargador
+                // Los botones deben recrearse según el juego, aunque aquí el botón de WhatsApp ya fue presionado.
+                // Es importante que la lógica en process-payment.js ya decida si el botón de WhatsApp debe estar o no.
+                // Aquí solo necesitamos asegurarnos de que el botón de "Marcar como Realizada" se mantenga.
                 const newReplyMarkup = {
                     inline_keyboard: [
                         [

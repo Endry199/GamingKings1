@@ -219,14 +219,18 @@ exports.handler = async function(event, context) {
         messageText += `📎 Comprobante: ${escapeMarkdownV2(receiptUrl)}\n`;
     }
 
-    // AHORA CON LOS DOS BOTONES INICIALES
+    // --- LÓGICA DE BOTONES CONDICIONAL ---
+    const inlineKeyboard = [
+        [{ text: "✅ Marcar como Realizada", callback_data: `mark_done_${id_transaccion_generado}` }]
+    ];
+
+    // Solo añadir el botón de WhatsApp si el juego es "Free Fire"
+    if (game && game.toLowerCase() === 'free fire') {
+        inlineKeyboard[0].unshift({ text: "📲 Enviar a WhatsApp", callback_data: `send_whatsapp_${id_transaccion_generado}` });
+    }
+
     const replyMarkup = {
-        inline_keyboard: [
-            [
-                { text: "📲 Enviar a WhatsApp", callback_data: `send_whatsapp_${id_transaccion_generado}` },
-                { text: "✅ Marcar como Realizada", callback_data: `mark_done_${id_transaccion_generado}` }
-            ]
-        ]
+        inline_keyboard: inlineKeyboard
     };
 
     const telegramApiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
