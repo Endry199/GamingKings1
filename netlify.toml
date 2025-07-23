@@ -5,13 +5,10 @@
   publish = "public"
 
 [build.environment]
-  NODE_VERSION = "18" # ¡Asegúrate de que esto esté aquí!
-
-[[plugins]]
-  package = "@netlify/plugin-node-bundler"
+  NODE_VERSION = "18"
 
 [[plugins]]
   package = "netlify-plugin-chromium"
   [plugins.inputs]
-    chromium_version = "1090000" # Versión específica de Chromium
+    chromium_version = "1090000"
     args = ["--no-sandbox", "--disable-setuid-sandbox", "--single-process", "--disable-dev-shm-usage", "--no-zygote"]

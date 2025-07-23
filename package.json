@@ -18,7 +18,6 @@
     "nodemailer": "^6.10.1",
     "puppeteer-core": "^24.15.0",
     "stream": "^0.0.2",
-    "netlify-plugin-chromium": "0.5.8",           
-    "@netlify/plugin-node-bundler": "^4.5.0"      
+    "netlify-plugin-chromium": "0.5.8"
   }
 }
