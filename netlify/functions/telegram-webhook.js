@@ -73,14 +73,19 @@ exports.handler = async function(event, context) {
             // Manejar el botón "Marcar como Realizada"
             if (data.startsWith('mark_done_')) {
                 const transactionId = data.replace('mark_done_', '');
-                const transaction = await getTransaction(transactionId);
+                const transaction = await getTransaction(transactionId); // Fetches the transaction
 
                 if (!transaction) {
+                    console.error(`DEBUG: Transacción ${transactionId} no encontrada para marcar como realizada.`);
                     return { statusCode: 200, body: "Error fetching transaction for mark_done" };
                 }
 
+                // --- NUEVO LOG PARA DEPURACIÓN ---
+                console.log(`DEBUG: Estado actual de la transacción ${transactionId} al hacer clic: ${transaction.status}`);
+
                 // Verificar si ya está marcada para evitar re-procesamiento
                 if (transaction.status === 'realizada') {
+                    console.log(`DEBUG: Transacción ${transactionId} ya marcada como 'realizada'. Enviando alerta.`);
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
                         callback_query_id: callbackQuery.id,
                         text: "¡Esta recarga ya fue marcada como realizada!",
@@ -208,7 +213,6 @@ exports.handler = async function(event, context) {
 
                 const recargadorWhatsappNumber = WHATSAPP_NUMBER_RECARGADOR.replace(/\D/g, ''); // Limpiar el número de cualquier caracter no numérico
 
-                // --- MODIFICACIÓN CLAVE AQUÍ PARA EL MENSAJE DE WHATSAPP ---
                 // Para el signo '+' en package_name: reemplazamos '+' por su equivalente URL-encoded '%2B'
                 const packageNameForWhatsapp = (transaction.package_name || 'N/A').replace(/\+/g, '%2B');
 
