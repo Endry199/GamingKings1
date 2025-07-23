@@ -177,7 +177,8 @@ exports.handler = async function(event, context) {
 
     // --- Generar mensajes de WhatsApp (URL) ---
     let whatsappLinkProcessingCustomer = null;
-    if (whatsappNumber && fullName) {
+    // Asegurarse de que whatsappNumber y fullName no sean cadenas vacías o null/undefined
+    if (whatsappNumber && whatsappNumber.trim() !== '' && fullName && fullName.trim() !== '') {
         const customerName = fullName.split(' ')[0];
         const whatsappMessageProcessing = `
 ¡Hola ${customerName}! 👋
@@ -188,8 +189,9 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
         `.trim();
         const customerWhatsappNumberClean = whatsappNumber.replace(/\D/g, ''); 
         whatsappLinkProcessingCustomer = `https://wa.me/${customerWhatsappNumberClean}?text=${encodeURIComponent(whatsappMessageProcessing)}`;
+        console.log("DEBUG: whatsappLinkProcessingCustomer generado:", whatsappLinkProcessingCustomer);
     } else {
-        console.log(`No se puede generar el enlace de WhatsApp 'Solicitud en Proceso' para el cliente porque falta whatsappNumber o fullName para transacción ${id_transaccion_generado}.`);
+        console.log(`DEBUG: No se pudo generar whatsappLinkProcessingCustomer. whatsappNumber: '${whatsappNumber}', fullName: '${fullName}'.`);
     }
 
     let whatsappLinkRecargador = null;
@@ -200,8 +202,9 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
         whatsappMessageRecargador += `*ID de Jugador:* ${playerId || 'N/A'}\n`;
         whatsappMessageRecargador += `*Paquete a Recargar:* ${packageNameForWhatsapp}\n`;
         whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumber}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
+        console.log("DEBUG: whatsappLinkRecargador generado:", whatsappLinkRecargador);
     } else {
-        console.log(`No se generará el enlace de WhatsApp para el recargador porque el juego no es Free Fire o falta WHATSAPP_NUMBER_RECARGADOR.`);
+        console.log(`DEBUG: No se generará el enlace de WhatsApp para el recargador porque el juego no es Free Fire o falta WHATSAPP_NUMBER_RECARGADOR. Juego: ${game}`);
     }
 
     // --- Enviar Notificación a Telegram con TODOS los botones ---
@@ -234,19 +237,21 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
 
     // Definición de los botones
     let inlineKeyboard = [];
-    let row1 = [];
+    let currentRow = []; // Usamos un nombre más claro para la fila actual
 
     if (whatsappLinkProcessingCustomer) {
-        row1.push({ text: "📲 WhatsApp Cliente (Recibido)", url: whatsappLinkProcessingCustomer });
+        currentRow.push({ text: "📲 WhatsApp Cliente (Recibido)", url: whatsappLinkProcessingCustomer });
     }
     if (whatsappLinkRecargador) { // Solo si es Free Fire
-        row1.push({ text: "📲 WhatsApp Recargador", url: whatsappLinkRecargador });
+        currentRow.push({ text: "📲 WhatsApp Recargador", url: whatsappLinkRecargador });
     }
-    if (row1.length > 0) {
-        inlineKeyboard.push(row1);
+
+    // Si hay botones en la fila actual, añadirla al teclado
+    if (currentRow.length > 0) {
+        inlineKeyboard.push(currentRow);
     }
     
-    // Siempre añadir el botón de "Marcar como Realizada" en una nueva fila
+    // Siempre añadir el botón de "Marcar como Realizada" en una NUEVA fila
     inlineKeyboard.push([{ text: "✅ Marcar como Realizada", callback_data: `mark_done_${id_transaccion_generado}` }]);
 
     const replyMarkup = {

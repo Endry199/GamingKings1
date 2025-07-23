@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detalles de Pago - Malok Recargas</title>
-                <link rel="icon" href="images/favicon.ico" type="image/x-icon">
-            <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -156,13 +156,13 @@
                 <div class="form-section-step">
                     <h3>Paso 3: Información de Contacto para Notificaciones</h3>
                     <div class="input-group">
-                        <label for="email">Correo Electrónico (Para notificaciones y factura):</label>
-                        <input type="email" id="email" name="email" placeholder="tu_correo@ejemplo.com" required>
+                        <label for="email">Correo Electrónico (Opcional, para factura):</label>
+                        <input type="email" id="email" name="email" placeholder="tu_correo@ejemplo.com">
                     </div>
 
                     <div class="input-group">
-                        <label for="whatsappNumber">Número de WhatsApp (Opcional, para contacto):</label>
-                        <input type="tel" id="whatsappNumber" name="whatsappNumber" placeholder="Ej: 584121234567">
+                        <label for="whatsappNumber">Número de WhatsApp (Para contacto):</label>
+                        <input type="tel" id="whatsappNumber" name="whatsappNumber" placeholder="Ej: 584121234567" required>
                     </div>
                 </div>
                 <div id="whatsapp-message-container" class="payment-confirmation-message" style="margin-top: 30px; margin-bottom: 20px; text-align: center; display: none;">
@@ -288,8 +288,7 @@
                 if (transactionDetails.game === "TikTok") {
                     whatsappMessageContainer.style.display = 'block';
                     finalizeBtn.style.display = 'none';
-                    const emailInput = document.getElementById('email');
-                    if (emailInput) emailInput.required = true;
+                    // El email ya no es requerido por defecto en el HTML, por lo que no hace falta setearlo aquí.
                 } else {
                     whatsappMessageContainer.style.display = 'none';
                     finalizeBtn.style.display = 'block';
@@ -388,7 +387,9 @@
                         const fileInput = document.getElementById('payment-receipt');
                         if (fileInput) {
                             fileInput.addEventListener('change', checkFormValidity);
-                            fileInput.required = true; // Asegura que el archivo es requerido para otros juegos
+                            // El atributo 'required' ya está en el template HTML de paymentDetailsTemplates,
+                            // por lo que no es necesario setearlo aquí, pero no hace daño.
+                            fileInput.required = true; 
                         }
                     }
 
@@ -439,36 +440,44 @@
                 }
             }
 
-
             function checkFormValidity() {
                 const selectedRadio = document.querySelector('input[name="paymentMethod"]:checked');
                 const isMethodSelected = selectedRadio !== null;
                 
-                // Check if email is filled (it's always required now)
+                // Nuevo: El campo de WhatsApp ahora es requerido
+                const whatsappInput = document.getElementById('whatsappNumber');
+                const isWhatsappFilled = whatsappInput && whatsappInput.value.trim() !== '';
+                
+                // El campo de email ahora es opcional, solo verificamos si es válido SI se llenó
                 const emailInput = document.getElementById('email');
-                const isEmailFilled = emailInput && emailInput.value.trim() !== '';
-                const isEmailValid = emailInput && emailInput.checkValidity(); // Check HTML5 validation for email
+                const isEmailValidIfFilled = (!emailInput || emailInput.value.trim() === '' || emailInput.checkValidity());
 
                 let areDetailsFilled = true;
 
                 if (transactionDetails && transactionDetails.game === "TikTok") {
-                    areDetailsFilled = true; // No required fields for TikTok, instructions are for WhatsApp
+                    // Para TikTok, no se requiere comprobante, pero sí WhatsApp
+                    areDetailsFilled = isWhatsappFilled; 
                 } else if (isMethodSelected) {
-                    // Only check the file input for non-TikTok games
+                    // Para otros juegos, se requiere comprobante Y WhatsApp
                     const fileInput = document.getElementById('payment-receipt');
                     if (fileInput && fileInput.files.length === 0) {
                         areDetailsFilled = false;
                     }
+                    // areDetailsFilled se combinará con isWhatsappFilled
+                    areDetailsFilled = areDetailsFilled && isWhatsappFilled;
                 } else {
                     areDetailsFilled = false;
                 }
                 
-                // Finalize button depends on method selected, details, and email
+                // El botón finalizar se habilita si:
+                // 1. Hay un método seleccionado (excepto para TikTok, donde no hay comprobante)
+                // 2. Los detalles de pago (comprobante) están llenos (si aplica) Y WhatsApp está lleno.
+                // 3. El email es válido (si se llenó).
                 if (transactionDetails.game !== "TikTok") {
-                    finalizeBtn.disabled = !(isMethodSelected && areDetailsFilled && isEmailFilled && isEmailValid);
+                    finalizeBtn.disabled = !(isMethodSelected && areDetailsFilled && isEmailValidIfFilled);
                 } else {
-                    // For TikTok, button depends only on email being filled and valid
-                    finalizeBtn.disabled = !(isEmailFilled && isEmailValid); 
+                    // Para TikTok, el botón depende de que WhatsApp esté lleno y email sea válido si se llenó
+                    finalizeBtn.disabled = !(isWhatsappFilled && isEmailValidIfFilled); 
                 }
             }
 
@@ -484,10 +493,18 @@
                     formData.append(key, transactionDetails[key]);
                 }
 
-                // Check for email again as it's now universally required and must be valid
+                // Nuevo: Verificar si WhatsApp está lleno (ahora es requerido)
+                const whatsappInput = document.getElementById('whatsappNumber');
+                if (!whatsappInput || whatsappInput.value.trim() === '') {
+                    alert('Por favor, ingresa tu número de WhatsApp para poder contactarte.');
+                    whatsappInput.focus();
+                    return;
+                }
+
+                // El email es opcional, solo se valida si está lleno
                 const emailInput = document.getElementById('email');
-                if (!emailInput || emailInput.value.trim() === '' || !emailInput.checkValidity()) {
-                    alert('Por favor, ingresa un correo electrónico válido para recibir notificaciones.');
+                if (emailInput && emailInput.value.trim() !== '' && !emailInput.checkValidity()) {
+                    alert('Por favor, ingresa un correo electrónico válido si deseas recibir la factura.');
                     emailInput.focus();
                     return;
                 }
