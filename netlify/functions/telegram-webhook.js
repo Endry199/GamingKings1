@@ -126,39 +126,8 @@ exports.handler = async function(event, context) {
 
                 const escapedNewCaption = escapeMarkdownV2(newCaption);
 
-                const updatedButtons = [
-                    [{ text: "✅ Recarga Realizada", callback_data: `completed_${transactionId}` }]
-                ];
-
-                try {
-                    await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
-                        chat_id: chatId,
-                        message_id: messageId,
-                        text: escapedNewCaption,
-                        parse_mode: 'MarkdownV2',
-                        reply_markup: {
-                            inline_keyboard: updatedButtons
-                        }
-                    });
-                    console.log(`DEBUG: Mensaje de Telegram para ${transactionId} editado con éxito.`);
-                } catch (telegramEditError) {
-                    console.error(`ERROR: Fallo al editar mensaje de Telegram para ${transactionId}:`, telegramEditError.response ? telegramEditError.response.data : telegramEditError.message);
-                    if (telegramEditError.response && telegramEditError.response.status === 400 && 
-                       (telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message is not modified'))) {
-                        console.log(`DEBUG: Mensaje ${messageId} para ${transactionId} no modificado o ya editado. Ignorando este error ya que la DB fue actualizada.`);
-                    } else if (telegramEditError.response && telegramEditError.response.status === 400 &&
-                               (telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message to edit not found'))) {
-                        console.log(`DEBUG: Mensaje ${messageId} para ${transactionId} no encontrado, probablemente eliminado. Ignorando este error.`);
-                    } else {
-                        await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                            chat_id: chatId,
-                            text: escapeMarkdownV2(`⚠️ Advertencia: Recarga ${transactionId} marcada como *REALIZADA* en la base de datos, pero hubo un problema al editar el mensaje de Telegram.`),
-                            parse_mode: 'MarkdownV2'
-                        });
-                    }
-                }
-
-                // --- ¡LÓGICA ACTUALIZADA! Enviar enlace de WhatsApp para el cliente (con "factura" de texto) ---
+                // --- Generar enlace de WhatsApp para el cliente (Factura Completada) ---
+                let whatsappLinkCompletedCustomer = null;
                 if (transaction.whatsapp_number && transaction.full_name) {
                     const customerName = transaction.full_name.split(' ')[0];
                     const gameName = transaction.game;
@@ -170,7 +139,7 @@ exports.handler = async function(event, context) {
                     const paymentMethod = transaction.payment_method;
                     const receiptUrl = transaction.receipt_url || 'No disponible';
 
-                    const customerWhatsappNumber = transaction.whatsapp_number.replace(/\D/g, ''); 
+                    const customerWhatsappNumberClean = transaction.whatsapp_number.replace(/\D/g, ''); 
 
                     const whatsappMessageCustomer = `
 🎉 ¡Hola ${customerName}! 🎉
@@ -189,86 +158,100 @@ ${receiptUrl !== 'No disponible' ? `*Comprobante:* [Ver aquí](${escapeMarkdownV
 ¡Gracias por elegir GamingKings!
                     `.trim();
 
-                    const whatsappLinkCustomer = `https://wa.me/${customerWhatsappNumber}?text=${encodeURIComponent(whatsappMessageCustomer)}`;
+                    whatsappLinkCompletedCustomer = `https://wa.me/${customerWhatsappNumberClean}?text=${encodeURIComponent(whatsappMessageCustomer)}`;
+                    console.log(`Enlace de WhatsApp 'Factura Completada' generado para cliente ${transaction.whatsapp_number}.`);
+                } else {
+                    console.log(`No hay número de WhatsApp o nombre completo para el cliente de la transacción ${transactionId}. No se generará el enlace de WhatsApp de factura.`);
+                }
 
-                    try {
-                        await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                            chat_id: chatId, // Envía al mismo chat donde se presionó el botón (el chat principal)
-                            text: escapeMarkdownV2(`
-✅ *¡RECARGA COMPLETADA!* ✅
-Transacción: \`${transactionId}\`
+                // Definir los nuevos botones para el mensaje editado
+                let updatedInlineKeyboard = [];
+                updatedInlineKeyboard.push([{ text: "✅ Recarga Realizada", callback_data: `completed_status_${transactionId}` }]); // Botón de estado
 
-👉 Para notificar al cliente (incluye 'factura'):
-[Haz clic aquí para enviar mensaje de WhatsApp](${whatsappLinkCustomer})
+                if (whatsappLinkCompletedCustomer) {
+                    // Nuevo botón de factura como URL directa
+                    updatedInlineKeyboard.push([{ text: "📲 WhatsApp Cliente (Factura)", url: whatsappLinkCompletedCustomer }]);
+                } else {
+                     // Si no se puede generar el enlace, puedes añadir un mensaje informativo o un botón que lo indique
+                     updatedInlineKeyboard.push([{ text: "⚠️ Cliente sin WhatsApp para factura", callback_data: `no_whatsapp_factura_${transactionId}` }]);
+                }
 
-*Cliente:* ${escapeMarkdownV2(transaction.full_name)}
-*WhatsApp:* \`${escapeMarkdownV2(transaction.whatsapp_number)}\`
-                            `),
-                            parse_mode: 'MarkdownV2',
-                            disable_web_page_preview: true 
-                        });
-                        console.log(`Enlace de WhatsApp para cliente (${transaction.whatsapp_number}) enviado al chat de Telegram para transacción ${transactionId}.`);
-                    } catch (whatsappSendError) {
-                        console.error(`ERROR: Fallo al enviar el enlace de WhatsApp al admin para el cliente ${transaction.whatsapp_number}:`, whatsappSendError.response ? whatsappSendError.response.data : whatsappSendError.message);
+                const updatedReplyMarkup = {
+                    inline_keyboard: updatedInlineKeyboard
+                };
+
+                try {
+                    await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
+                        chat_id: chatId,
+                        message_id: messageId,
+                        text: escapedNewCaption,
+                        parse_mode: 'MarkdownV2',
+                        reply_markup: updatedReplyMarkup,
+                        disable_web_page_preview: true
+                    });
+                    console.log(`DEBUG: Mensaje de Telegram para ${transactionId} editado con éxito, incluyendo botón de factura.`);
+                } catch (telegramEditError) {
+                    console.error(`ERROR: Fallo al editar mensaje de Telegram para ${transactionId}:`, telegramEditError.response ? telegramEditError.response.data : telegramEditError.message);
+                    if (telegramEditError.response && telegramEditError.response.status === 400 && 
+                       (telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message is not modified'))) {
+                        console.log(`DEBUG: Mensaje ${messageId} para ${transactionId} no modificado o ya editado. Ignorando este error ya que la DB fue actualizada.`);
+                    } else if (telegramEditError.response && telegramEditError.response.status === 400 &&
+                               (telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message to edit not found'))) {
+                        console.log(`DEBUG: Mensaje ${messageId} para ${transactionId} no encontrado, probablemente eliminado. Ignorando este error.`);
+                    } else {
                         await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                             chat_id: chatId,
-                            text: escapeMarkdownV2(`⚠️ Advertencia: Recarga ${transactionId} completada, pero no se pudo enviar el enlace de WhatsApp para el cliente ${transaction.whatsapp_number} al chat de Telegram. Por favor, envía el mensaje manualmente.`),
+                            text: escapeMarkdownV2(`⚠️ Advertencia: Recarga ${transactionId} marcada como *REALIZADA* en la base de datos, pero hubo un problema al editar el mensaje de Telegram.`),
                             parse_mode: 'MarkdownV2'
                         });
                     }
-                } else {
-                    console.log(`No hay número de WhatsApp o nombre completo para el cliente de la transacción ${transactionId}. No se enviará enlace de WhatsApp de factura.`);
-                    await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                        chat_id: chatId,
-                        text: escapeMarkdownV2(`⚠️ *Recarga ${transactionId} completada*, pero no se encontró un número de WhatsApp o nombre completo del cliente para generar el enlace de la factura. Asegúrate de que el cliente proporcione su número en el formulario.`),
-                        parse_mode: 'MarkdownV2'
-                    });
                 }
             }
-            // --- Lógica: Manejar el botón "Enviar a WhatsApp" al recargador ---
-            else if (data.startsWith('send_whatsapp_')) {
-                const transactionId = data.replace('send_whatsapp_', '');
-                const transaction = await getTransaction(transactionId);
-
-                if (!transaction) {
-                    return { statusCode: 200, body: "Error fetching transaction for send_whatsapp" };
-                }
-
-                const recargadorWhatsappNumber = WHATSAPP_NUMBER_RECARGADOR.replace(/\D/g, ''); 
-
-                const packageNameForWhatsapp = (transaction.package_name || 'N/A').replace(/\+/g, '%2B');
-
-                let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
-                whatsappMessageRecargador += `*ID de Jugador:* ${transaction.player_id || 'N/A'}\n`;
-                whatsappMessageRecargador += `*Paquete a Recargar:* ${packageNameForWhatsapp}\n`;
-
-                const whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumber}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
-
-                const newReplyMarkup = {
-                    inline_keyboard: [
-                        [
-                            { text: "💬 Abrir WhatsApp del Recargador", url: whatsappLinkRecargador }, 
-                        ],
-                        [
-                            { text: "✅ Marcar como Realizada", callback_data: `mark_done_${transactionId}` }
-                        ]
-                    ]
-                };
-
-                await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageReplyMarkup`, {
+            // --- Lógica: Manejar el botón "send_whatsapp_" (ESTO ES PARA BOTONES ANTIGUOS) ---
+            // Si el proceso-payment ahora genera URLs directas, este bloque solo se activaría si se presiona
+            // un botón de una notificación vieja que aún use 'send_whatsapp_' como callback_data.
+            // Para las nuevas notificaciones, el botón de Recargador es una URL directa.
+            else if (data.startsWith('send_whatsapp_')) { // Antiguo callback_data para recargador, por si acaso
+                 const transactionId = data.replace('send_whatsapp_', '');
+                 const transaction = await getTransaction(transactionId);
+ 
+                 if (!transaction) {
+                     return { statusCode: 200, body: "Error fetching transaction for send_whatsapp" };
+                 }
+                 
+                 // Construir el mensaje de WhatsApp para el recargador
+                 const recargadorWhatsappNumber = WHATSAPP_NUMBER_RECARGADOR.replace(/\D/g, ''); 
+                 const packageNameForWhatsapp = (transaction.package_name || 'N/A').replace(/\+/g, '%2B');
+                 let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
+                 whatsappMessageRecargador += `*ID de Jugador:* ${transaction.player_id || 'N/A'}\n`;
+                 whatsappMessageRecargador += `*Paquete a Recargar:* ${packageNameForWhatsapp}\n`;
+                 const whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumber}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
+ 
+                 // Simplemente responder al callback y enviar el enlace al chat (ya que el botón original era un callback_data)
+                 await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
+                     callback_query_id: callbackQuery.id,
+                     text: `Generando enlace de WhatsApp para el recargador...`,
+                     show_alert: false
+                 });
+                 
+                 await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                     chat_id: chatId,
-                    message_id: messageId,
-                    reply_markup: newReplyMarkup
-                });
+                    text: escapeMarkdownV2(`👉 *Enlace para el recargador de la transacción ${transactionId}:* [Haz clic aquí](${whatsappLinkRecargador})`),
+                    parse_mode: 'MarkdownV2',
+                    disable_web_page_preview: true
+                 });
 
+                 console.log(`Enlace de WhatsApp para recargador generado (desde viejo callback) para transacción ${transactionId}: ${whatsappLinkRecargador}`);
+             } else if (data.startsWith('completed_status_') || data.startsWith('no_whatsapp_factura_')) {
+                // Si el usuario hace clic en el botón de "Recarga Realizada" o "Cliente sin WhatsApp para factura"
+                // después de que el mensaje ya fue editado a "Realizada", simplemente responde al callback
+                // para que el botón no parezca "pegado".
                 await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
                     callback_query_id: callbackQuery.id,
-                    text: `Enlace de WhatsApp al recargador generado para ${transactionId}.`,
+                    text: "Acción ya completada o informativa.",
                     show_alert: false
                 });
-
-                console.log(`Enlace de WhatsApp para recargador generado para transacción ${transactionId}: ${whatsappLinkRecargador}`);
-            }
+             }
         }
 
         return { statusCode: 200, body: "Webhook processed" };

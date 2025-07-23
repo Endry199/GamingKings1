@@ -66,6 +66,11 @@ exports.handler = async function(event, context) {
             const { parse } = require('querystring');
             fieldsData = parse(event.body);
         }
+        // DEBUG: Añadir logs para verificar los datos recibidos
+        console.log("DEBUG: fieldsData al inicio de la función:", fieldsData);
+        console.log("DEBUG: whatsappNumber recibido:", fieldsData.whatsappNumber);
+        console.log("DEBUG: fullName recibido:", fieldsData.fullName);
+
     } catch (parseError) {
         console.error("Error al procesar los datos de la solicitud:", parseError);
         return {
@@ -76,7 +81,7 @@ exports.handler = async function(event, context) {
 
     // --- Validar y cargar variables de entorno ---
     const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-    const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID; // Usamos esta misma para todas las notificaciones
+    const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
     const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR;
 
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !supabaseUrl || !supabaseServiceKey || !WHATSAPP_NUMBER_RECARGADOR) {
@@ -144,7 +149,6 @@ exports.handler = async function(event, context) {
             telegram_chat_id: TELEGRAM_CHAT_ID, 
         };
 
-        // --- Guardar Transacción en Supabase ---
         const { data: insertedData, error: insertError } = await supabase
             .from('transactions') 
             .insert(dataToInsert)
@@ -171,7 +175,36 @@ exports.handler = async function(event, context) {
         };
     }
 
-    // --- Enviar Notificación a Telegram (al chat principal de notificaciones) ---
+    // --- Generar mensajes de WhatsApp (URL) ---
+    let whatsappLinkProcessingCustomer = null;
+    if (whatsappNumber && fullName) {
+        const customerName = fullName.split(' ')[0];
+        const whatsappMessageProcessing = `
+¡Hola ${customerName}! 👋
+
+Tu solicitud de recarga para *${game}* de *${packageName}* ha sido recibida y está siendo *PROCESADA* bajo el número de transacción: \`${id_transaccion_generado}\`.
+
+Te enviaremos una notificación de confirmación cuando la recarga se haga efectiva. ¡Gracias por tu paciencia!
+        `.trim();
+        const customerWhatsappNumberClean = whatsappNumber.replace(/\D/g, ''); 
+        whatsappLinkProcessingCustomer = `https://wa.me/${customerWhatsappNumberClean}?text=${encodeURIComponent(whatsappMessageProcessing)}`;
+    } else {
+        console.log(`No se puede generar el enlace de WhatsApp 'Solicitud en Proceso' para el cliente porque falta whatsappNumber o fullName para transacción ${id_transaccion_generado}.`);
+    }
+
+    let whatsappLinkRecargador = null;
+    if (game && game.toLowerCase() === 'free fire') {
+        const recargadorWhatsappNumber = WHATSAPP_NUMBER_RECARGADOR.replace(/\D/g, ''); 
+        const packageNameForWhatsapp = (packageName || 'N/A').replace(/\+/g, '%2B'); // Escape '+' for URL
+        let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
+        whatsappMessageRecargador += `*ID de Jugador:* ${playerId || 'N/A'}\n`;
+        whatsappMessageRecargador += `*Paquete a Recargar:* ${packageNameForWhatsapp}\n`;
+        whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumber}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
+    } else {
+        console.log(`No se generará el enlace de WhatsApp para el recargador porque el juego no es Free Fire o falta WHATSAPP_NUMBER_RECARGADOR.`);
+    }
+
+    // --- Enviar Notificación a Telegram con TODOS los botones ---
     let messageText = `✨ *NUEVA RECARGA PENDIENTE* ✨\n\n`; 
     messageText += `*ID de Transacción:* \`${escapeMarkdownV2(id_transaccion_generado || 'N/A')}\`\n`;
     messageText += `*Estado:* \`PENDIENTE\`\n\n`;
@@ -199,13 +232,22 @@ exports.handler = async function(event, context) {
         messageText += `📎 Comprobante: ${escapeMarkdownV2(receiptUrl)}\n`;
     }
 
-    const inlineKeyboard = [
-        [{ text: "✅ Marcar como Realizada", callback_data: `mark_done_${id_transaccion_generado}` }]
-    ];
+    // Definición de los botones
+    let inlineKeyboard = [];
+    let row1 = [];
 
-    if (game && game.toLowerCase() === 'free fire') {
-        inlineKeyboard[0].unshift({ text: "📲 Enviar a WhatsApp", callback_data: `send_whatsapp_${id_transaccion_generado}` });
+    if (whatsappLinkProcessingCustomer) {
+        row1.push({ text: "📲 WhatsApp Cliente (Recibido)", url: whatsappLinkProcessingCustomer });
     }
+    if (whatsappLinkRecargador) { // Solo si es Free Fire
+        row1.push({ text: "📲 WhatsApp Recargador", url: whatsappLinkRecargador });
+    }
+    if (row1.length > 0) {
+        inlineKeyboard.push(row1);
+    }
+    
+    // Siempre añadir el botón de "Marcar como Realizada" en una nueva fila
+    inlineKeyboard.push([{ text: "✅ Marcar como Realizada", callback_data: `mark_done_${id_transaccion_generado}` }]);
 
     const replyMarkup = {
         inline_keyboard: inlineKeyboard
@@ -216,13 +258,15 @@ exports.handler = async function(event, context) {
 
     try {
         telegramMessageResponse = await axios.post(telegramApiUrl, {
-            chat_id: TELEGRAM_CHAT_ID, // Usamos el TELEGRAM_CHAT_ID para enviar la notificación
+            chat_id: TELEGRAM_CHAT_ID,
             text: messageText,
             parse_mode: 'MarkdownV2', 
-            reply_markup: replyMarkup
+            reply_markup: replyMarkup,
+            disable_web_page_preview: true // Para evitar que Telegram genere vistas previas de los enlaces WA
         });
-        console.log("Mensaje de Telegram enviado con éxito.");
+        console.log("Mensaje de Telegram con botones de acción enviado con éxito.");
 
+        // Envío de comprobante separado si existe y se adjunta
         if (receiptUrl) { 
             try {
                 const sendFileUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument`;
@@ -235,18 +279,8 @@ exports.handler = async function(event, context) {
                 });
                 console.log("Comprobante de pago enviado a Telegram usando URL de Supabase.");
             } catch (fileSendError) {
-                console.error("ERROR: Fallo al enviar el comprobante a Telegram desde URL.");
-                if (fileSendError.response) {
-                    console.error("Detalles del error de respuesta de Telegram:", fileSendError.response.data);
-                    console.error("Estado del error de respuesta:", fileSendError.response.status);
-                } else if (fileSendError.request) {
-                    console.error("No se recibió respuesta de Telegram (la solicitud fue enviada):", fileSendError.request);
-                } else {
-                    console.error("Error al configurar la solicitud:", fileSendError.message);
-                }
+                console.error("ERROR: Fallo al enviar el comprobante a Telegram desde URL:", fileSendError.response ? fileSendError.response.data : fileSendError.message);
             }
-        } else {
-            console.log("DEBUG: No hay URL de comprobante de pago para enviar a Telegram.");
         }
 
         if (newTransactionData && telegramMessageResponse && telegramMessageResponse.data && telegramMessageResponse.data.result) {
@@ -264,43 +298,6 @@ exports.handler = async function(event, context) {
 
     } catch (telegramError) {
         console.error("Error al enviar mensaje de Telegram o comprobante:", telegramError.response ? telegramError.response.data : telegramError.message);
-    }
-
-    // --- ¡LÓGICA ACTUALIZADA! Enviar mensaje de "Procesando" al cliente vía WhatsApp (enlace para que TÚ hagas clic y envíes) ---
-    if (whatsappNumber && fullName) { 
-        const customerName = fullName.split(' ')[0]; // Solo el primer nombre
-        const whatsappMessageProcessing = `
-¡Hola ${customerName}! 👋
-
-Tu solicitud de recarga para *${game}* de *${packageName}* ha sido recibida y está siendo *PROCESADA* bajo el número de transacción: \`${id_transaccion_generado}\`.
-
-Te enviaremos una notificación de confirmación cuando la recarga se haga efectiva. ¡Gracias por tu paciencia!
-        `.trim();
-
-        const whatsappLinkProcessing = `https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(whatsappMessageProcessing)}`;
-
-        try {
-            // Envía un mensaje al MISMO chat de Telegram (TELEGRAM_CHAT_ID) con el enlace para el cliente
-            await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                chat_id: TELEGRAM_CHAT_ID, // Usa el TELEGRAM_CHAT_ID principal
-                text: escapeMarkdownV2(`
-🆕 *¡SOLICITUD RECIBIDA!* 🆕
-Transacción: \`${id_transaccion_generado}\`
-Cliente: *${escapeMarkdownV2(fullName)}*
-WhatsApp: \`${escapeMarkdownV2(whatsappNumber)}\`
-
-👉 *Para el cliente:*
-[Haz clic aquí para enviar mensaje de WhatsApp 'En Proceso'](${whatsappLinkProcessing})
-                `),
-                parse_mode: 'MarkdownV2',
-                disable_web_page_preview: true 
-            });
-            console.log(`Enlace de WhatsApp "Procesando" para cliente (${whatsappNumber}) enviado al chat de Telegram.`);
-        } catch (whatsappSendError) {
-            console.error(`ERROR: Fallo al enviar enlace de WhatsApp "Procesando" para cliente ${whatsappNumber}:`, whatsappSendError.response ? whatsappSendError.response.data : whatsappSendError.message);
-        }
-    } else {
-        console.log(`No se puede enviar mensaje de "Procesando" porque falta whatsappNumber o fullName para transacción ${id_transaccion_generado}.`);
     }
 
     // --- Limpieza del archivo temporal ---
