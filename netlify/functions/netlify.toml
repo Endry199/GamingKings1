@@ -1,14 +1,20 @@
 # netlify.toml
 [build]
+  functions = "netlify/functions"
   command = "npm run build" # O tu comando de build si tienes uno (e.g. "npm install")
   publish = "public" # Tu carpeta de publicación, si aplica. Si no tienes frontend, puedes omitir o dejar vacía.
+
+[build.environment]
+  NODE_VERSION = "18" # O "20". Sugiero "18" que es LTS y compatible.
+  # Esto asegura que Netlify use una versión específica de Node.js y npm.
 
 [[plugins]]
   package = "@netlify/plugin-node-bundler"
 
 [[plugins]]
-  package = "netlify-plugin-puppeteer" # <--- ¡CAMBIA ESTO!
+  package = "netlify-plugin-chromium"
   [plugins.inputs]
-    # Opcional: para usar una version específica de puppeteer (si la que instalamos arriba no funciona)
-    # browser_version = "latest" # o una version exacta de Chromium
-    # args = ["--no-sandbox", "--disable-setuid-sandbox"] # Estos son importantes para entornos serverless
+    # Puedes probar con la versión por defecto o especificar una si sigue habiendo problemas.
+    # Por ahora, dejémoslo sin especificar para que use la por defecto del plugin (la más reciente compatible).
+    # chromium_version = "1090000" # Por ejemplo, si los problemas persisten
+    args = ["--no-sandbox", "--disable-setuid-sandbox", "--single-process", "--disable-dev-shm-usage", "--no-zygote"] # Args de Puppeteer

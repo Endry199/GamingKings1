@@ -5,7 +5,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { Readable } = require('stream');
 const fs = require('fs');
 const nodeHtmlToImage = require('node-html-to-image');
-const path = require('path'); // Aunque no lo usemos directamente para browserPath, es una buena práctica mantenerlo.
+const path = require('path');
 
 // Función para escapar caracteres especiales de MarkdownV2 para Telegram
 function escapeMarkdownV2(text) {
@@ -310,28 +310,28 @@ exports.handler = async function(event, context) {
 </html>
         `;
 
-        // Con netlify-plugin-puppeteer, Puppeteer debería encontrar el ejecutable
-        // a través de la variable de entorno PUPPETEER_EXECUTABLE_PATH.
-        // Ya no es necesario construir el 'browserPath' manualmente aquí.
-        // Agregamos un log para confirmar si la variable existe.
-        if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-            console.log(`DEBUG: PUPPETEER_EXECUTABLE_PATH detected: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
+        let browserPath = null;
+        // Aquí volvemos a la lógica para netlify-plugin-chromium.
+        // Este plugin coloca el ejecutable de Chromium en este path.
+        if (process.env.LAMBDA_TASK_ROOT) {
+            browserPath = path.join(process.env.LAMBDA_TASK_ROOT, 'node_modules', '.bin', 'chromium');
+            console.log(`DEBUG: Running in Lambda. Chromium executablePath: ${browserPath}`);
         } else {
-            console.warn("WARN: PUPPETEER_EXECUTABLE_PATH not set by plugin. Puppeteer might fail.");
+            console.warn("WARN: Not in Lambda environment. browserPath will be null for local development.");
         }
-        
+
         try {
             console.log("DEBUG INVOICE: Starting invoice image generation process.");
             console.log(`DEBUG INVOICE: HTML template size: ${invoiceHtmlTemplate.length} characters.`);
+            console.log(`DEBUG INVOICE: Attempting to use browserPath: ${browserPath}`);
             
             const imageBuffer = await nodeHtmlToImage({
                 html: invoiceHtmlTemplate,
                 quality: 90, 
                 type: 'jpeg', 
                 puppeteerArgs: {
-                    // Eliminamos executablePath aquí. Puppeteer debería usar PUPPETEER_EXECUTABLE_PATH
-                    // establecido por netlify-plugin-puppeteer.
-                    args: ['--no-sandbox', '--disable-setuid-sandbox', '--single-process', '--disable-dev-shm-usage', '--no-zygote']
+                    executablePath: browserPath, // ¡Crucial para netlify-plugin-chromium!
+                    args: ['--no-sandbox', '--disable-setuid-sandbox', '--single-process', '--disable-dev-shm-usage', '--no-zygote'] // Added more args for serverless
                 }
             });
             console.log("DEBUG INVOICE: Image generated successfully by node-html-to-image. Buffer size:", imageBuffer ? imageBuffer.length : 'null');
