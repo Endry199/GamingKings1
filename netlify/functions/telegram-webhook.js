@@ -9,6 +9,7 @@ function escapeMarkdownV2(text) {
         text = String(text);
     }
     // Caracteres especiales que deben ser escapados en MarkdownV2
+    // Añadimos el guion '-' aquí explícitamente, aunque la regex ya lo incluye, para énfasis.
     const specialChars = /[_*\[\]()~`>#+\-={}.!]/g; 
     return text.replace(specialChars, '\\$&');
 }
@@ -129,7 +130,7 @@ exports.handler = async function(event, context) {
                 // Reemplaza "Estado: PENDIENTE" con "Estado: REALIZADA"
                 newCaption = newCaption.replace('Estado: `PENDIENTE`', 'Estado: `REALIZADA` ✅');
                 
-                // --- CAMBIO CLAVE AQUÍ: Construir la fecha y hora manualmente y escapar ---
+                // Construir la fecha y hora manualmente con barras (/)
                 const now = new Date();
                 const day = String(now.getDate()).padStart(2, '0');
                 const month = String(now.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
@@ -140,7 +141,11 @@ exports.handler = async function(event, context) {
                 const minutes = String(now.getMinutes()).padStart(2, '0');
                 const formattedTime = `${hours}:${minutes}`;
                 
-                newCaption += `\n\nRecarga marcada por: *${escapeMarkdownV2(userName)}* (${escapeMarkdownV2(formattedTime)} ${escapeMarkdownV2(formattedDate)})`;
+                // Añadir al caption, y luego escapar el *caption completo*
+                newCaption += `\n\nRecarga marcada por: *${userName}* (${formattedTime} ${formattedDate})`;
+
+                // --- ¡CAMBIO CLAVE AQUÍ! Aplicar escapeMarkdownV2 a la cadena completa antes de enviar ---
+                const escapedNewCaption = escapeMarkdownV2(newCaption);
 
                 // Definir los nuevos botones después de completar
                 const updatedButtons = [
@@ -151,7 +156,7 @@ exports.handler = async function(event, context) {
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
                         chat_id: chatId,
                         message_id: messageId,
-                        text: newCaption, // El texto ya debe estar escapado
+                        text: escapedNewCaption, // Enviamos la cadena ya escapada
                         parse_mode: 'MarkdownV2',
                         reply_markup: {
                             inline_keyboard: updatedButtons
@@ -212,7 +217,7 @@ exports.handler = async function(event, context) {
                                     <li><strong>Juego:</strong> ${transaction.game}</li>
                                     ${transaction.player_id ? `<li><strong>ID de Jugador:</strong> ${transaction.player_id}</li>` : ''}
                                     <li><strong>Paquete:</strong> ${transaction.package_name}</li>
-                                    <li><strong>Monto Pagado:</strong> ${transaction.final_price} ${transaction.currency}</li>
+                                    <li><strong>Monto Pagado:</b> ${transaction.final_price} ${transaction.currency}</li>
                                     <li><strong>Método de Pago:</strong> ${transaction.payment_method.replace('-', ' ').toUpperCase()}</li>
                                     <li><strong>Estado:</strong> <span style="color: #28a745; font-weight: bold;">REALIZADA</span></li>
                                     <li><strong>Completada por:</strong> ${userName} el ${formattedTime} ${formattedDate}</li>
