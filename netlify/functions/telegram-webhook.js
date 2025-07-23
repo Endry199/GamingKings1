@@ -208,11 +208,14 @@ exports.handler = async function(event, context) {
 
                 const recargadorWhatsappNumber = WHATSAPP_NUMBER_RECARGADOR.replace(/\D/g, ''); // Limpiar el número de cualquier caracter no numérico
 
+                // --- MODIFICACIÓN CLAVE AQUÍ PARA EL MENSAJE DE WHATSAPP ---
+                // Para el signo '+' en package_name: reemplazamos '+' por su equivalente URL-encoded '%2B'
+                const packageNameForWhatsapp = (transaction.package_name || 'N/A').replace(/\+/g, '%2B');
+
                 // Mensaje pre-rellenado para WhatsApp de tu primo (el recargador)
-                let whatsappMessageRecargador = `¡Hola! Por favor, realiza esta recarga lo antes posible:\n\n`;
-                whatsappMessageRecargador += `*ID de Transacción:* ${transaction.id_transaccion}\n`;
-                whatsappMessageRecargador += `*Paquete a Recargar:* ${transaction.package_name}\n`;
-                // Eliminamos el resto de detalles para el primo según tu solicitud.
+                let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
+                whatsappMessageRecargador += `*ID de Jugador:* ${transaction.player_id || 'N/A'}\n`; // CORRECCIÓN: Ahora es ID de Jugador
+                whatsappMessageRecargador += `*Paquete a Recargar:* ${packageNameForWhatsapp}\n`; // USA packageNameForWhatsapp
 
                 const whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumber}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
 
