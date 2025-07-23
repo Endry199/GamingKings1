@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GamingKings - Centro De Recargas</title>
-        <link rel="icon" href="images/favicon.ico" type="image/x-icon">
-        <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
         
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -17,8 +17,89 @@
     <link rel="preload" href="images/pubg_mobile_cover.jpg" as="image">
     <link rel="preload" href="images/arena_breakout_cover.jpg" as="image">
     <link rel="preload" href="blooqstrike_banner.jpg" as="image">
+
+    <!-- INICIO: Código para el Aviso de Horario (Añadido) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        // Puedes definir colores personalizados si los necesitas más específicos
+                        // 'dark-gray': '#333333',
+                        // 'deep-purple': '#4A148C',
+                        // 'bright-pink': '#FF4081',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Estilos para el overlay del aviso */
+        .notice-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8); /* Fondo más oscuro semitransparente */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000; /* Asegura que esté por encima de todo */
+        }
+        .notice-content {
+            max-width: 90%; /* Ancho máximo para móviles */
+            width: 500px; /* Ancho preferido para escritorio */
+            background-color: #2C2C2E; /* Gris oscuro para el contenido del aviso (gray-700) */
+            padding: 1.5rem;
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3); /* Sombra más pronunciada */
+            position: relative;
+            text-align: center;
+        }
+        .close-button {
+            position: absolute;
+            top: 0.75rem; /* p-3 */
+            right: 0.75rem; /* p-3 */
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            line-height: 1;
+            cursor: pointer;
+            color: #b800dc; /* Gris claro para el botón de cerrar (gray-400) */
+            transition: color 0.2s ease-in-out;
+        }
+        .close-button:hover {
+            color: #FF69B4; /* Rosa más claro al pasar el ratón (pink-400) */
+        }
+    </style>
+    <!-- FIN: Código para el Aviso de Horario (Añadido) -->
 </head>
 <body>
+    <!-- INICIO: HTML del Aviso de Horario (Añadido) -->
+    <div id="horario-notice" class="notice-overlay hidden">
+        <div class="notice-content">
+            <button id="close-notice" class="close-button" aria-label="Cerrar aviso">
+                &times;
+            </button>
+            <h2 class="text-2xl font-bold text-gray-50 mb-4">¡Aviso Importante!</h2>
+            <p class="text-gray-100 text-lg mb-3">
+                Nuestro horario de atención es:
+            </p>
+            <p class="text-purple-400 font-semibold text-xl mb-4">
+                Todos los días de 10:30 AM a 9:30 PM
+            </p>
+            <p class="text-gray-200 text-base">
+                En caso de realizar una recarga fuera de este horario, la recarga será efectiva el día siguiente a la hora de apertura del negocio.
+            </p>
+        </div>
+    </div>
+    <!-- FIN: HTML del Aviso de Horario (Añadido) -->
+
     <header>
         <div class="header-left">
             <a href="index.html" class="logo-link">
@@ -99,5 +180,20 @@
     </footer>
 
     <script src="script.js"></script>
-</body>
-</html>
+    <!-- INICIO: JavaScript para el Aviso de Horario (Añadido) -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const noticeOverlay = document.getElementById('horario-notice');
+            const closeButton = document.getElementById('close-notice');
+            
+            // Siempre mostramos el aviso al cargar la página
+            noticeOverlay.classList.remove('hidden');
+            
+            // Event listener para el botón de cerrar
+            closeButton.addEventListener('click', () => {
+                noticeOverlay.classList.add('hidden');
+                // Ya NO guardamos en localStorage, así que aparecerá de nuevo en la próxima carga
+            });
+        });
+    </script>
+    <!-- FIN: JavaScript para el Aviso de Horario (Añadido) -->
