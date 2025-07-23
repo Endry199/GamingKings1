@@ -8,7 +8,8 @@ function escapeMarkdownV2(text) {
     if (typeof text !== 'string') {
         text = String(text);
     }
-    const specialChars = /[_*\[\]()~`>#+\-={}.!]/g; // Caracteres especiales que deben ser escapados
+    // Caracteres especiales que deben ser escapados en MarkdownV2
+    const specialChars = /[_*\[\]()~`>#+\-={}.!]/g; 
     return text.replace(specialChars, '\\$&');
 }
 
@@ -127,11 +128,11 @@ exports.handler = async function(event, context) {
                 let newCaption = callbackQuery.message.text; // Captura el texto actual del mensaje
                 // Reemplaza "Estado: PENDIENTE" con "Estado: REALIZADA"
                 newCaption = newCaption.replace('Estado: `PENDIENTE`', 'Estado: `REALIZADA` ✅');
-                // Añade la línea "Recarga marcada por:"
-                const completionTime = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
-                const completionDate = new Date().toLocaleDateString('es-VE');
                 
-                // --- CAMBIO CLAVE AQUÍ: ESCAPAR TIEMPO Y FECHA ---
+                const completionTime = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+                // --- CAMBIO CLAVE AQUÍ: Formatear la fecha para usar barras y luego escapar ---
+                const completionDate = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/-/g, '/');
+                
                 newCaption += `\n\nRecarga marcada por: *${escapeMarkdownV2(userName)}* (${escapeMarkdownV2(completionTime)} ${escapeMarkdownV2(completionDate)})`;
 
                 // Definir los nuevos botones después de completar
@@ -143,7 +144,7 @@ exports.handler = async function(event, context) {
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
                         chat_id: chatId,
                         message_id: messageId,
-                        text: newCaption, // El texto ya debe estar escapado por process-payment.js y las adiciones de escapeMarkdownV2
+                        text: newCaption, // El texto ya debe estar escapado
                         parse_mode: 'MarkdownV2',
                         reply_markup: {
                             inline_keyboard: updatedButtons
