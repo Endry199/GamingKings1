@@ -26,11 +26,14 @@ exports.handler = async function(event, context) {
     const SMTP_USER = process.env.SMTP_USER;
     const SMTP_PASS = process.env.SMTP_PASS;
     const SENDER_EMAIL = process.env.SENDER_EMAIL || SMTP_USER;
-    const WHATSAPP_CONTACT = process.env.WHATSAPP_CONTACT || '584126949631'; // Nueva variable de entorno
+    const WHATSAPP_CONTACT_CLIENTE = process.env.WHATSAPP_CONTACT_CLIENTE || '584126949631'; // Para el email al cliente
+    const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR; // ¡NUEVA VARIABLE PARA TU PRIMO!
 
     // Validar variables de entorno críticas
-    if (!TELEGRAM_BOT_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_KEY || !SMTP_HOST || isNaN(parseInt(SMTP_PORT, 10)) || !SMTP_USER || !SMTP_PASS) {
+    if (!TELEGRAM_BOT_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_KEY || !SMTP_HOST || isNaN(parseInt(SMTP_PORT, 10)) || !SMTP_USER || !SMTP_PASS || !WHATSAPP_NUMBER_RECARGADOR) {
         console.error("Faltan variables de entorno requeridas para el webhook de Telegram o SMTP_PORT inválido.");
+        // Log específico para la nueva variable
+        if (!WHATSAPP_NUMBER_RECARGADOR) console.error("Falta la variable de entorno WHATSAPP_NUMBER_RECARGADOR.");
         return { statusCode: 500, body: "Error de configuración del servidor." };
     }
 
@@ -47,25 +50,33 @@ exports.handler = async function(event, context) {
             const userName = callbackQuery.from.first_name || `Usuario ${userId}`; // Nombre del usuario
             const data = callbackQuery.data;
 
-            if (data.startsWith('mark_done_')) {
-                const transactionId = data.replace('mark_done_', '');
-
-                // 1. Obtener la transacción de Supabase
-                // Usar 'id_transaccion' para la consulta si así lo guardas en process-payment.js
+            // Función auxiliar para obtener transacción y manejar errores comunes
+            async function getTransaction(id) {
                 const { data: transaction, error: fetchError } = await supabase
-                    .from('transactions') // Asegúrate de que 'transactions' sea el nombre correcto de tu tabla
+                    .from('transactions')
                     .select('*')
-                    .eq('id_transaccion', transactionId)
+                    .eq('id_transaccion', id)
                     .single();
 
                 if (fetchError || !transaction) {
                     console.error("Error al obtener la transacción de Supabase:", fetchError ? fetchError.message : "Transacción no encontrada.");
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                         chat_id: chatId,
-                        text: escapeMarkdownV2(`❌ Error: No se pudo encontrar la transacción ${transactionId}.`),
+                        text: escapeMarkdownV2(`❌ Error: No se pudo encontrar la transacción ${id}.`),
                         parse_mode: 'MarkdownV2'
                     });
-                    return { statusCode: 200, body: "Error fetching transaction" };
+                    return null;
+                }
+                return transaction;
+            }
+
+            // Manejar el botón "Marcar como Realizada"
+            if (data.startsWith('mark_done_')) {
+                const transactionId = data.replace('mark_done_', '');
+                const transaction = await getTransaction(transactionId);
+
+                if (!transaction) {
+                    return { statusCode: 200, body: "Error fetching transaction for mark_done" };
                 }
 
                 // Verificar si ya está marcada para evitar re-procesamiento
@@ -110,8 +121,8 @@ exports.handler = async function(event, context) {
                 await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
                     chat_id: chatId,
                     message_id: messageId,
-                    text: escapeMarkdownV2(newCaption), // Escapar todo el texto
-                    parse_mode: 'MarkdownV2', // Asegúrate de usar MarkdownV2
+                    text: newCaption, // El texto ya debe estar escapado por process-payment.js y las adiciones de escapeMarkdownV2
+                    parse_mode: 'MarkdownV2',
                     reply_markup: {
                         inline_keyboard: [
                             [{ text: "✅ Recarga Realizada", callback_data: `completed_${transactionId}` }] // Cambiar el botón para indicar que ya está completa
@@ -149,11 +160,11 @@ exports.handler = async function(event, context) {
                     const mailOptionsCompleted = {
                         from: SENDER_EMAIL,
                         to: transaction.email,
-                        subject: `✅ ¡Tu Recarga de ${transaction.game} ha sido Completada con Éxito por GamingKings! ✅`, // CAMBIO: Nombre de la marca
+                        subject: `✅ ¡Tu Recarga de ${transaction.game} ha sido Completada con Éxito por GamingKings! ✅`, 
                         html: `
                             <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                                 <h2 style="color: #28a745;">¡Recarga Completada!</h2>
-                                <p>¡Hola ${transaction.email}!</p>
+                                <p>¡Hola ${transaction.full_name || transaction.email}!</p>
                                 <p>Nos complace informarte que tu recarga para <strong>${transaction.game}</strong>, con ID de transacción <strong>${transaction.id_transaccion}</strong>, ha sido <strong>completada exitosamente</strong> por nuestro equipo.</p>
                                 <p>¡Ya puedes disfrutar de tu paquete <strong>${transaction.package_name}</strong>!</p>
                                 <p>Aquí tienes un resumen de tu recarga:</p>
@@ -166,7 +177,7 @@ exports.handler = async function(event, context) {
                                     <li><strong>Estado:</strong> <span style="color: #28a745; font-weight: bold;">REALIZADA</span></li>
                                     <li><strong>Completada por:</strong> ${userName} el ${completionTime} ${completionDate}</li>
                                 </ul>
-                                <p style="margin-top: 20px;">Si tienes alguna pregunta o necesitas asistencia, no dudes en contactarnos a través de nuestro WhatsApp: <a href="https://wa.me/${WHATSAPP_CONTACT}" style="color: #28a745; text-decoration: none;">+${WHATSAPP_CONTACT}</a></p>
+                                <p style="margin-top: 20px;">Si tienes alguna pregunta o necesitas asistencia, no dudes en contactarnos a través de nuestro WhatsApp: <a href="https://wa.me/${WHATSAPP_CONTACT_CLIENTE}" style="color: #28a745; text-decoration: none;">+${WHATSAPP_CONTACT_CLIENTE}</a></p>
                                 <p>¡Gracias por elegir GamingKings!</p> <p style="font-size: 0.9em; color: #777;">Este es un correo automático, por favor no respondas a este mensaje.</p>
                             </div>
                         `,
@@ -183,7 +194,72 @@ exports.handler = async function(event, context) {
                     }
                 }
             }
+            // --- Lógica: Manejar el botón "Enviar a WhatsApp" al recargador ---
+            else if (data.startsWith('send_whatsapp_')) {
+                const transactionId = data.replace('send_whatsapp_', '');
+                const transaction = await getTransaction(transactionId);
+
+                if (!transaction) {
+                    return { statusCode: 200, body: "Error fetching transaction for send_whatsapp" };
+                }
+
+                const recargadorWhatsappNumber = WHATSAPP_NUMBER_RECARGADOR.replace(/\D/g, ''); // Limpiar el número de cualquier caracter no numérico
+
+                // Mensaje pre-rellenado para WhatsApp de tu primo (el recargador)
+                let whatsappMessageRecargador = `¡Hola! 👋 Necesito que recargues esto:\n\n`;
+                whatsappMessageRecargador += `*ID de Transacción:* ${transaction.id_transaccion}\n`;
+                whatsappMessageRecargador += `*Juego:* ${transaction.game}\n`;
+                whatsappMessageRecargador += `*ID de Jugador:* ${transaction.player_id || 'N/A'}\n`;
+                whatsappMessageRecargador += `*Paquete:* ${transaction.package_name}\n`;
+                whatsappMessageRecargador += `*Monto:* ${transaction.final_price} ${transaction.currency}\n`;
+                whatsappMessageRecargador += `*Método de Pago del Cliente:* ${transaction.payment_method.replace('-', ' ').toUpperCase()}\n`;
+                if (transaction.reference_number) {
+                    whatsappMessageRecargador += `*Ref. de Pago Cliente:* ${transaction.reference_number}\n`;
+                }
+                if (transaction.txid) {
+                    whatsappMessageRecargador += `*TXID Cliente:* ${transaction.txid}\n`;
+                }
+                if (transaction.receipt_url) {
+                    whatsappMessageRecargador += `*Comprobante:* ${transaction.receipt_url}\n`;
+                }
+                whatsappMessageRecargador += `\nCliente: ${transaction.full_name || transaction.email}\n`;
+                if (transaction.whatsapp_number) {
+                    whatsappMessageRecargador += `WhatsApp Cliente: ${transaction.whatsapp_number}\n`;
+                }
+                whatsappMessageRecargador += `\nPor favor, recarga esto lo antes posible y marca la transacción como realizada en Telegram cuando hayas terminado. ¡Gracias!`;
+
+
+                const whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumber}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
+
+                // Editar el mensaje original de Telegram para añadir el botón de WhatsApp al recargador
+                const newReplyMarkup = {
+                    inline_keyboard: [
+                        [
+                            { text: "💬 Abrir WhatsApp del Recargador", url: whatsappLinkRecargador }, // Botón para tu primo
+                        ],
+                        [
+                            { text: "✅ Marcar como Realizada", callback_data: `mark_done_${transactionId}` } // Mantener el botón de marcar como realizada
+                        ]
+                    ]
+                };
+
+                await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageReplyMarkup`, {
+                    chat_id: chatId,
+                    message_id: messageId,
+                    reply_markup: newReplyMarkup
+                });
+
+                // Enviar un feedback al usuario que presionó el botón
+                await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
+                    callback_query_id: callbackQuery.id,
+                    text: `Enlace de WhatsApp al recargador generado para ${transactionId}.`,
+                    show_alert: false
+                });
+
+                console.log(`Enlace de WhatsApp para recargador generado para transacción ${transactionId}: ${whatsappLinkRecargador}`);
+            }
         }
+
         return { statusCode: 200, body: "Webhook processed" };
     } catch (error) {
         console.error("Error en el webhook de Telegram:", error.message);

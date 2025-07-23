@@ -87,18 +87,20 @@ exports.handler = async function(event, context) {
     const SMTP_USER = process.env.SMTP_USER;
     const SMTP_PASS = process.env.SMTP_PASS;
     const SENDER_EMAIL = process.env.SENDER_EMAIL || SMTP_USER;
-    const WHATSAPP_CONTACT = process.env.WHATSAPP_CONTACT || '584126949631';
+    const WHATSAPP_CONTACT_CLIENTE = process.env.WHATSAPP_CONTACT_CLIENTE || '584126949631'; // Usamos WHATSAPP_CONTACT_CLIENTE para el email
+    const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR; // Validamos que esta también esté
 
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !SMTP_HOST || isNaN(parseInt(SMTP_PORT, 10)) || !SMTP_USER || !SMTP_PASS || !supabaseUrl || !supabaseServiceKey) {
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !SMTP_HOST || isNaN(parseInt(SMTP_PORT, 10)) || !SMTP_USER || !SMTP_PASS || !supabaseUrl || !supabaseServiceKey || !WHATSAPP_NUMBER_RECARGADOR) {
         console.error("Faltan variables de entorno requeridas o SMTP_PORT no es un número válido.");
         console.error(`Missing TELEGRAM_BOT_TOKEN: ${!TELEGRAM_BOT_TOKEN}`);
         console.error(`Missing TELEGRAM_CHAT_ID: ${!TELEGRAM_CHAT_ID}`);
         console.error(`Missing SMTP_HOST: ${!SMTP_HOST}`);
         console.error(`Invalid SMTP_PORT: ${isNaN(parseInt(SMTP_PORT, 10))}`);
         console.error(`Missing SMTP_USER: ${!SMTP_USER}`);
-        console.error(`Missing SMTP_PASS: ${!SMTP_PASS}`);
+        console.error(`Missing SMTP_PASS: ${!!SMTP_PASS}`);
         console.error(`Missing SUPABASE_URL: ${!supabaseUrl}`);
         console.error(`Missing SUPABASE_SERVICE_KEY: ${!supabaseServiceKey}`);
+        console.error(`Missing WHATSAPP_NUMBER_RECARGADOR: ${!WHATSAPP_NUMBER_RECARGADOR}`);
 
         return {
             statusCode: 500,
@@ -106,6 +108,7 @@ exports.handler = async function(event, context) {
         };
     }
 
+    // Aquí se utilizan todos los campos recibidos del formulario
     const { game, playerId, package: packageName, finalPrice, currency, paymentMethod, email, fullName, whatsappNumber, referenceNumber, txid } = fieldsData;
 
     let receiptUrl = null;
@@ -138,26 +141,25 @@ exports.handler = async function(event, context) {
             }
         }
 
-        // --- PREPARANDO DATOS PARA LA INSERCIÓN - VERSIÓN MÍNIMA ---
+        // --- PREPARANDO DATOS PARA LA INSERCIÓN - AHORA CON TODOS LOS CAMPOS ---
         const dataToInsert = {
             id_transaccion: id_transaccion_generado,
-            game: game,                       
-            package_name: packageName,        
+            game: game,                       
+            package_name: packageName,        
             final_price: parseFloat(finalPrice),
-            currency: currency,               
-            payment_method: paymentMethod,    
-            email: email,                     
+            currency: currency,               
+            payment_method: paymentMethod,    
+            email: email,                     
             status: 'pendiente', 
-            // Campos comentados para la prueba mínima:
-            // player_id: playerId || null,      
-            // full_name: fullName || null,      
-            // whatsapp_number: whatsappNumber || null, 
-            // reference_number: referenceNumber || null, 
-            // txid: txid || null,               
-            // receipt_url: receiptUrl,          
-            // telegram_chat_id: TELEGRAM_CHAT_ID, 
+            player_id: playerId || null,      
+            full_name: fullName || null,      
+            whatsapp_number: whatsappNumber || null, 
+            reference_number: referenceNumber || null, 
+            txid: txid || null,               
+            receipt_url: receiptUrl,          
+            telegram_chat_id: TELEGRAM_CHAT_ID, 
         };
-        console.log("DEBUG: Datos preparados para insertar en Supabase (MINIMAL):", JSON.stringify(dataToInsert, null, 2));
+        console.log("DEBUG: Datos preparados para insertar en Supabase:", JSON.stringify(dataToInsert, null, 2));
 
         // --- Guardar Transacción en Supabase ---
         const { data: insertedData, error: insertError } = await supabase
@@ -188,11 +190,11 @@ exports.handler = async function(event, context) {
 
     // --- Enviar Notificación a Telegram ---
     // (Este bloque se ejecuta solo si la inserción en Supabase fue exitosa)
-    let messageText = `✨ Nueva Recarga GamingKings ✨\n\n`; 
+    let messageText = `✨ *NUEVA RECARGA PENDIENTE* ✨\n\n`; 
     messageText += `*ID de Transacción:* \`${escapeMarkdownV2(id_transaccion_generado || 'N/A')}\`\n`;
     messageText += `*Estado:* \`PENDIENTE\`\n\n`;
     messageText += `🎮 Juego: *${escapeMarkdownV2(game)}*\n`;
-    messageText += `👤 ID de Jugador: *${escapeMarkdownV2(playerId || 'N/A')}*\n`; // Nota: playerId seguirá siendo null en este log si se comenta en la inserción
+    messageText += `👤 ID de Jugador: *${escapeMarkdownV2(playerId || 'N/A')}*\n`;
     messageText += `📦 Paquete: *${escapeMarkdownV2(packageName)}*\n`;
     messageText += `💰 Total a Pagar: *${escapeMarkdownV2(finalPrice)} ${escapeMarkdownV2(currency)}*\n`;
     messageText += `💳 Método de Pago: *${escapeMarkdownV2(paymentMethod.replace('-', ' ').toUpperCase())}*\n`;
@@ -204,17 +206,26 @@ exports.handler = async function(event, context) {
         messageText += `📱 WhatsApp Cliente: ${escapeMarkdownV2(whatsappNumber)}\n`;
     }
 
-    if (paymentMethod === 'pago-movil') {
-        messageText += `📊 Referencia Pago Móvil: ${escapeMarkdownV2(referenceNumber || 'N/A')}\n`;
-    } else if (paymentMethod === 'binance') {
-        messageText += `🆔 TXID Binance: ${escapeMarkdownV2(txid || referenceNumber || 'N/A')}\n`;
-    } else if (paymentMethod === 'zinli') {
-        messageText += `📊 Referencia Zinli: ${escapeMarkdownV2(referenceNumber || 'N/A')}\n`;
+    // Asegurarse de que las referencias de pago se añadan correctamente
+    if (paymentMethod === 'pago-movil' && referenceNumber) {
+        messageText += `📊 Referencia Pago Móvil: ${escapeMarkdownV2(referenceNumber)}\n`;
+    } else if (paymentMethod === 'binance' && txid) {
+        messageText += `🆔 TXID Binance: ${escapeMarkdownV2(txid)}\n`;
+    } else if (paymentMethod === 'zinli' && referenceNumber) {
+        messageText += `📊 Referencia Zinli: ${escapeMarkdownV2(referenceNumber)}\n`;
+    }
+    // Añadir el URL del comprobante si existe
+    if (receiptUrl) {
+        messageText += `📎 Comprobante: ${escapeMarkdownV2(receiptUrl)}\n`;
     }
 
+    // AHORA CON LOS DOS BOTONES INICIALES
     const replyMarkup = {
         inline_keyboard: [
-            [{ text: "✅ Marcar como Realizada", callback_data: `mark_done_${id_transaccion_generado}` }]
+            [
+                { text: "📲 Enviar a WhatsApp", callback_data: `send_whatsapp_${id_transaccion_generado}` },
+                { text: "✅ Marcar como Realizada", callback_data: `mark_done_${id_transaccion_generado}` }
+            ]
         ]
     };
 
@@ -300,7 +311,7 @@ exports.handler = async function(event, context) {
             subject: `🎉 Tu Solicitud de Recarga de ${game} con GamingKings ha sido Recibida! 🎉`, 
             html: `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                    <h2 style="color: #007bff;">¡Hola!</h2>
+                    <h2 style="color: #007bff;">¡Hola ${fullName || email}!</h2>
                     <p>Hemos recibido tu solicitud de recarga para <strong>${game}</strong> con ID: <strong>${id_transaccion_generado}</strong>.</p>
                     <p>Aquí están los detalles que nos proporcionaste:</p>
                     <ul style="list-style: none; padding: 0;">
@@ -313,7 +324,7 @@ exports.handler = async function(event, context) {
                     </ul>
                     <p>Tu solicitud está actualmente en estado: <strong>PENDIENTE</strong>.</p>
                     <p>Estamos procesando tu recarga. Te enviaremos un <strong>correo de confirmación de la recarga completada y tu factura virtual una vez que tu recarga sea procesada</strong> por nuestro equipo.</p>
-                    <p style="margin-top: 20px;">¡Gracias por confiar en GamingKings!</p> <p style="font-size: 0.9em; color: #777;">Si tienes alguna pregunta, contáctanos a través de nuestro WhatsApp: <a href="https://wa.me/${WHATSAPP_CONTACT}" style="color: #28a745; text-decoration: none;">+${WHATSAPP_CONTACT}</a></p>
+                    <p style="margin-top: 20px;">¡Gracias por confiar en GamingKings!</p> <p style="font-size: 0.9em; color: #777;">Si tienes alguna pregunta, contáctanos a través de nuestro WhatsApp: <a href="https://wa.me/${WHATSAPP_CONTACT_CLIENTE}" style="color: #28a745; text-decoration: none;">+${WHATSAPP_CONTACT_CLIENTE}</a></p>
                 </div>
             `,
         };
