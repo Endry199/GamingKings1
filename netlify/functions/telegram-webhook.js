@@ -130,7 +130,9 @@ exports.handler = async function(event, context) {
                 // Añade la línea "Recarga marcada por:"
                 const completionTime = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
                 const completionDate = new Date().toLocaleDateString('es-VE');
-                newCaption += `\n\nRecarga marcada por: *${escapeMarkdownV2(userName)}* (${completionTime} ${completionDate})`;
+                
+                // --- CAMBIO CLAVE AQUÍ: ESCAPAR TIEMPO Y FECHA ---
+                newCaption += `\n\nRecarga marcada por: *${escapeMarkdownV2(userName)}* (${escapeMarkdownV2(completionTime)} ${escapeMarkdownV2(completionDate)})`;
 
                 // Definir los nuevos botones después de completar
                 const updatedButtons = [
