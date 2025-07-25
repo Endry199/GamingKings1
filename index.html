@@ -18,7 +18,7 @@
     <link rel="preload" href="images/arena_breakout_cover.jpg" as="image">
     <link rel="preload" href="blooqstrike_banner.jpg" as="image">
 
-    <!-- INICIO: Código para el Aviso de Horario (Añadido) -->
+    <!-- INICIO: Código para el Aviso de Horario (Añadido y Modificado para móvil, colores originales) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -49,35 +49,49 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 1000; /* Asegura que esté por encima de todo */
+            z-index: 9999; /* AUMENTADO: Asegura que esté por encima de todo */
         }
         .notice-content {
             max-width: 90%; /* Ancho máximo para móviles */
             width: 500px; /* Ancho preferido para escritorio */
-            background-color: #2C2C2E; /* Gris oscuro para el contenido del aviso (gray-700) */
+            background-color: #2C2C2E; /* Color original del usuario */
             padding: 1.5rem;
             border-radius: 0.75rem; /* rounded-xl */
             box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3); /* Sombra más pronunciada */
             position: relative;
             text-align: center;
+            padding-top: 2.5rem; /* Aumenta el padding superior para evitar solapamiento */
         }
         .close-button {
             position: absolute;
-            top: 0.75rem; /* p-3 */
-            right: 0.75rem; /* p-3 */
+            top: 1rem; /* AJUSTADO: Más margen desde la parte superior */
+            right: 1rem; /* AJUSTADO: Más margen desde la derecha */
             background: none;
             border: none;
             font-size: 1.5rem;
             line-height: 1;
             cursor: pointer;
-            color: #b800dc; /* Gris claro para el botón de cerrar (gray-400) */
+            color: #b800dc; /* Color original del usuario */
             transition: color 0.2s ease-in-out;
+            z-index: 10000; /* Asegura que la X esté por encima del contenido del aviso */
         }
         .close-button:hover {
-            color: #FF69B4; /* Rosa más claro al pasar el ratón (pink-400) */
+            color: #FF69B4; /* Color original del usuario */
+        }
+
+        /* Responsive adjustment for the notice content on very small screens */
+        @media (max-width: 480px) {
+            .notice-content {
+                padding: 1.5rem; /* Restablece padding si 2.5rem es demasiado en pantallas muy pequeñas */
+                padding-top: 2.5rem; /* Mantener padding-top para la X */
+            }
+            .close-button {
+                top: 1rem; /* Mantener el ajuste para la X */
+                right: 1rem;
+            }
         }
     </style>
-    <!-- FIN: Código para el Aviso de Horario (Añadido) -->
+    <!-- FIN: Código para el Aviso de Horario (Añadido y Modificado para móvil, colores originales) -->
 </head>
 <body>
     <!-- INICIO: HTML del Aviso de Horario (Añadido) -->
@@ -192,8 +206,9 @@
             // Event listener para el botón de cerrar
             closeButton.addEventListener('click', () => {
                 noticeOverlay.classList.add('hidden');
-                // Ya NO guardamos en localStorage, así que aparecerá de nuevo en la próxima carga
             });
         });
     </script>
     <!-- FIN: JavaScript para el Aviso de Horario (Añadido) -->
+</body>
+</html>
