@@ -18,7 +18,6 @@
     <link rel="preload" href="images/arena_breakout_cover.jpg" as="image">
     <link rel="preload" href="blooqstrike_banner.jpg" as="image">
 
-    <!-- INICIO: Código para el Aviso de Horario (Añadido y Modificado para móvil, colores originales) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -49,7 +48,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 9999; /* AUMENTADO: Asegura que esté por encima de todo */
+            z-index: 9999; /* Z-INDEX CRÍTICO: Asegura que esté por encima de todo el contenido, incluyendo el header. */
         }
         .notice-content {
             max-width: 90%; /* Ancho máximo para móviles */
@@ -60,7 +59,7 @@
             box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3); /* Sombra más pronunciada */
             position: relative;
             text-align: center;
-            padding-top: 2.5rem; /* Aumenta el padding superior para evitar solapamiento */
+            padding-top: 2.5rem; /* AJUSTADO: Aumenta el padding superior para asegurar espacio para el botón de cerrar */
         }
         .close-button {
             position: absolute;
@@ -73,7 +72,7 @@
             cursor: pointer;
             color: #b800dc; /* Color original del usuario */
             transition: color 0.2s ease-in-out;
-            z-index: 10000; /* Asegura que la X esté por encima del contenido del aviso */
+            z-index: 10000; /* Z-INDEX CRÍTICO: Asegura que la 'X' esté por encima del contenido del aviso y del overlay */
         }
         .close-button:hover {
             color: #FF69B4; /* Color original del usuario */
@@ -91,10 +90,8 @@
             }
         }
     </style>
-    <!-- FIN: Código para el Aviso de Horario (Añadido y Modificado para móvil, colores originales) -->
-</head>
+    </head>
 <body>
-    <!-- INICIO: HTML del Aviso de Horario (Añadido) -->
     <div id="horario-notice" class="notice-overlay hidden">
         <div class="notice-content">
             <button id="close-notice" class="close-button" aria-label="Cerrar aviso">
@@ -112,8 +109,6 @@
             </p>
         </div>
     </div>
-    <!-- FIN: HTML del Aviso de Horario (Añadido) -->
-
     <header>
         <div class="header-left">
             <a href="index.html" class="logo-link">
@@ -194,7 +189,6 @@
     </footer>
 
     <script src="script.js"></script>
-    <!-- INICIO: JavaScript para el Aviso de Horario (Añadido) -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const noticeOverlay = document.getElementById('horario-notice');
@@ -209,6 +203,5 @@
             });
         });
     </script>
-    <!-- FIN: JavaScript para el Aviso de Horario (Añadido) -->
-</body>
+    </body>
 </html>
