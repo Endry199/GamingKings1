@@ -127,8 +127,7 @@ exports.handler = async function(event, context) {
 Aquí tienes los detalles de tu recarga:
 ---
 *Factura #${transaction.id_transaccion}*
-*Estado: REALIZADA ✅* 
-📅 Fecha: ${formattedDate}
+*Estado: REALIZADA ✅* 📅 Fecha: ${formattedDate}
 🎮 Juego: ${transaction.game}
 👤 ID de Jugador: ${transaction.player_id || 'N/A'}
 📦 Paquete: ${transaction.package_name}
@@ -167,24 +166,28 @@ Aquí tienes los detalles de tu recarga:
                 // --- Generar el enlace corto de WhatsApp para el cliente ---
                 let whatsappLinkCompletedCustomer = null;
                 if (transaction.whatsapp_number && transaction.whatsapp_number.trim() !== '') {
-                    const cleanedCustomerWhatsappNumber = transaction.whatsapp_number.replace(/\D/g, '');
+                    // MODIFICACIÓN CLAVE AQUÍ: Usamos directamente transaction.whatsapp_number
+                    // Aseguramos que tenga el '+' aunque la DB ya lo guarde así
+                    const customerWhatsappNumberFormatted = transaction.whatsapp_number.startsWith('+') ? transaction.whatsapp_number : `+${transaction.whatsapp_number}`;
                     
                     // Construimos la URL de la función Netlify que servirá la factura
                     // Usamos NETLIFY_SITE_URL para el dominio de tu sitio
                     const invoiceLink = `${NETLIFY_SITE_URL}/.netlify/functions/get-invoice?id=${transaction.id_transaccion}`;
                     
-                    // Mensaje corto para WhatsApp (este SÍ usa escapeMarkdownV2 para los asteriscos, etc.)
+                    // Mensaje corto para WhatsApp
+                    // ¡Importante! No escapar la invoiceLink con escapeMarkdownV2 aquí,
+                    // ya que es una URL para un parámetro de URL, no texto Markdown.
                     const shortWhatsappMessage = `
 🎉 ¡Hola! 👋
 
-¡Tu recarga con la ID de transaccion: ${transaction.id_transaccion}. ha sido *COMPLETADA* por GamingKings!
+¡Tu recarga con la ID de transaccion: ${escapeMarkdownV2(transaction.id_transaccion)}. ha sido *COMPLETADA* por GamingKings!
 
 Puedes ver los detalles de tu factura aquí: ${invoiceLink}
 
 ¡Gracias por tu compra! ✨
                     `.trim();
 
-                    whatsappLinkCompletedCustomer = `https://wa.me/${cleanedCustomerWhatsappNumber}?text=${encodeURIComponent(shortWhatsappMessage)}`;
+                    whatsappLinkCompletedCustomer = `https://wa.me/${customerWhatsappNumberFormatted}?text=${encodeURIComponent(shortWhatsappMessage)}`;
                     
                     console.log(`Enlace de WhatsApp 'Factura Completada' generado para cliente ${transaction.whatsapp_number}.`);
                 } else {
@@ -221,7 +224,7 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
                        (telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message is not modified'))) {
                         console.log(`DEBUG: Mensaje ${messageId} para ${transactionId} no modificado o ya editado. Ignorando este error ya que la DB fue actualizada.`);
                     } else if (telegramEditError.response && telegramEditError.response.status === 400 &&
-                                telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message to edit not found')) {
+                                 telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message to edit not found')) {
                         console.log(`DEBUG: Mensaje ${messageId} para ${transactionId} no encontrado, probablemente eliminado. Ignorando este error.`);
                     } else {
                         await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
@@ -240,12 +243,14 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
                    return { statusCode: 200, body: "Error fetching transaction for send_whatsapp" };
                }
                
-               const recargadorWhatsappNumber = WHATSAPP_NUMBER_RECARGADOR.replace(/\D/g, ''); 
+               // Asumimos que WHATSAPP_NUMBER_RECARGADOR ya tiene el prefijo '+' o lo añadimos
+               const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
+               
                let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
                whatsappMessageRecargador += `*ID de Jugador:* ${transaction.player_id || 'N/A'}\n`;
                whatsappMessageRecargador += `*Paquete a Recargar:* ${transaction.package_name.replace(/\+/g, '%2B') || 'N/A'}\n`; 
                
-               const whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumber}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
+               const whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
 
                await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
                    callback_query_id: callbackQuery.id,

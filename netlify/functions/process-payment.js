@@ -106,7 +106,7 @@ exports.handler = async function(event, context) {
         paymentMethod, 
         email, 
         fullName, 
-        whatsappNumber, 
+        whatsappNumber, // Este campo ya contendrá el prefijo del país
         referenceNumber, 
         txid 
     } = fieldsData;
@@ -151,7 +151,7 @@ exports.handler = async function(event, context) {
             status: 'pendiente', 
             player_id: playerId || null, 
             full_name: fullName || null, 
-            whatsapp_number: whatsappNumber || null, 
+            whatsapp_number: whatsappNumber || null, // Guardamos el número tal cual, con el prefijo
             reference_number: referenceNumber || null, 
             txid: txid || null, 
             receipt_url: receiptUrl, 
@@ -197,8 +197,11 @@ Tu solicitud de recarga de *${escapeMarkdownV2(packageName)}*${gameAndPlayerId} 
 
 Te enviaremos una notificación de confirmación cuando la recarga se haga efectiva. ¡Gracias por tu paciencia!
         `.trim();
-        const customerWhatsappNumberClean = whatsappNumber.replace(/\D/g, ''); 
-        whatsappLinkCustomer = `https://wa.me/${customerWhatsappNumberClean}?text=${encodeURIComponent(whatsappMessageCustomer)}`;
+        
+        // MODIFICACIÓN CLAVE AQUÍ: Usamos directamente whatsappNumber
+        // Aseguramos que tenga el '+' aunque el frontend ya lo envíe
+        const customerWhatsappNumberFormatted = whatsappNumber.startsWith('+') ? whatsappNumber : `+${whatsappNumber}`;
+        whatsappLinkCustomer = `https://wa.me/${customerWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageCustomer)}`;
         console.log("DEBUG: whatsappLinkCustomer generado para el cliente:", whatsappLinkCustomer);
     } else {
         console.log(`DEBUG: No se pudo generar whatsappLinkCustomer (cliente). whatsappNumber: '${whatsappNumber}'.`);
@@ -206,17 +209,17 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
 
     let whatsappLinkRecargador = null;
     if (game && game.toLowerCase() === 'free fire' && WHATSAPP_NUMBER_RECARGADOR) {
-        const recargadorWhatsappNumberClean = WHATSAPP_NUMBER_RECARGADOR.replace(/\D/g, ''); 
+        // Asumimos que WHATSAPP_NUMBER_RECARGADOR ya tiene el prefijo '+', o lo añadimos
+        const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
         
-        // --- CAMBIO CLAVE AQUÍ PARA EL SIGNO '+' ---
-        // Reemplazamos todos los '+' con '%2B' antes de encodeURIComponent
+        // El resto del código para el mensaje del recargador no necesita cambios.
         const cleanedPackageName = (packageName || 'N/A').replace(/\+/g, '%2B');
 
         let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
         whatsappMessageRecargador += `*ID de Jugador:* ${playerId || 'N/A'}\n`;
-        whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageName}\n`; // Usamos la versión limpia
+        whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageName}\n`; 
         
-        whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumberClean}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
+        whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
         console.log("DEBUG: whatsappLinkRecargador generado:", whatsappLinkRecargador);
     } else {
         console.log(`DEBUG: No se generará el enlace de WhatsApp para el recargador porque el juego no es Free Fire o falta WHATSAPP_NUMBER_RECARGADOR. Juego: ${game}`);
@@ -228,7 +231,7 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
     messageText += `*Estado:* \`PENDIENTE\`\n\n`;
     messageText += `🎮 Juego: *${escapeMarkdownV2(game)}*\n`;
     messageText += `👤 ID de Jugador: *${escapeMarkdownV2(playerId || 'N/A')}*\n`;
-    messageText += `📦 Paquete: *${escapeMarkdownV2(packageName)}*\n`; // Aquí en Telegram puedes dejar el packageName original
+    messageText += `📦 Paquete: *${escapeMarkdownV2(packageName)}*\n`; 
     messageText += `💰 Total a Pagar: *${escapeMarkdownV2(finalPrice)} ${escapeMarkdownV2(currency)}*\n`;
     messageText += `💳 Método de Pago: *${escapeMarkdownV2(paymentMethod.replace('-', ' ').toUpperCase())}*\n`;
     messageText += `📧 Correo Cliente: ${escapeMarkdownV2(email || 'N/A')}\n`; 
@@ -236,7 +239,7 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
         messageText += `🧑‍💻 Nombre Cliente: ${escapeMarkdownV2(fullName)}\n`;
     }
     if (whatsappNumber) {
-        messageText += `📱 WhatsApp Cliente: ${escapeMarkdownV2(whatsappNumber)}\n`;
+        messageText += `📱 WhatsApp Cliente: ${escapeMarkdownV2(whatsappNumber)}\n`; // Muestra el número completo en el mensaje de Telegram
     }
 
     if (paymentMethod === 'pago-movil' && referenceNumber) {
