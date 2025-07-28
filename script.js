@@ -90,4 +90,80 @@ document.addEventListener('DOMContentLoaded', () => {
     // a través de la Netlify Function 'recargar.js', que es más seguro y robusto.
     // La verificación de Nick (si se implementa) se haría en una función de Netlify separada
     // y se llamaría desde la página específica del juego.
+
+    // === Lógica JavaScript para el Carrusel (AÑADIDA) ===
+    const slides = document.querySelectorAll('.carousel-slide');
+    const prevButton = document.querySelector('.carousel-prev');
+    const nextButton = document.querySelector('.carousel-next');
+    const dotsContainer = document.querySelector('.carousel-dots');
+    let currentIndex = 0;
+    let intervalId;
+
+    function updateDots() {
+        if (!dotsContainer) return; // Asegurarse de que el contenedor de puntos existe
+        dotsContainer.innerHTML = '';
+        slides.forEach((_, index) => {
+            const dot = document.createElement('span');
+            dot.classList.add('carousel-dot');
+            dot.addEventListener('click', () => {
+                stopCarousel(); // Detener el carrusel al hacer clic en un punto
+                goToSlide(index);
+                startCarousel(); // Reiniciar el carrusel
+            });
+            dotsContainer.appendChild(dot);
+        });
+        if (dotsContainer.children[currentIndex]) {
+            dotsContainer.children[currentIndex].classList.add('active');
+        }
+    }
+
+    function goToSlide(index) {
+        slides.forEach((slide, i) => {
+            slide.style.transform = `translateX(${(i - index) * 100}%)`;
+        });
+        currentIndex = index;
+        updateDots();
+    }
+
+    function nextSlide() {
+        currentIndex = (currentIndex + 1) % slides.length;
+        goToSlide(currentIndex);
+    }
+
+    function prevSlide() {
+        currentIndex = (currentIndex - 1 + slides.length) % slides.length;
+        goToSlide(currentIndex);
+    }
+
+    function startCarousel() {
+        intervalId = setInterval(nextSlide, 3000); // Cambia de imagen cada 3 segundos
+    }
+
+    function stopCarousel() {
+        clearInterval(intervalId);
+    }
+
+    // Solo inicializar el carrusel si los elementos existen en la página
+    if (slides.length > 0 && prevButton && nextButton && dotsContainer) {
+        prevButton.addEventListener('click', () => {
+            stopCarousel();
+            prevSlide();
+            startCarousel();
+        });
+
+        nextButton.addEventListener('click', () => {
+            stopCarousel();
+            nextSlide();
+            startCarousel();
+        });
+
+        // Inicializar las posiciones de las diapositivas
+        slides.forEach((slide, index) => {
+            slide.style.transform = `translateX(${index * 100}%)`;
+        });
+
+        // Inicializar puntos y empezar el carrusel
+        updateDots();
+        startCarousel();
+    }
 });

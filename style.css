@@ -74,16 +74,16 @@ p {
 
 /* Header */
 header {
-    background-color: var(--card-bg);
-    padding: 5px 25px;
+    background-color: #121212; /* Fondo oscuro similar a la imagen */
+    padding: 10px 25px; /* Ajustando el padding vertical */
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--border-color);
-    box-shadow: 0 2px 8px var(--shadow-dark);
+    border-bottom: none; /* Eliminando el borde inferior */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8); /* Sombra más pronunciada */
     flex-wrap: wrap;
-    position: sticky;
-    top: 0;
+    position: sticky; /* Se mantiene en la parte superior al hacer scroll */
+    top: 0; /* Se pega a la parte superior */
     z-index: 1000;
     width: 100%;
     box-sizing: border-box;
@@ -281,17 +281,21 @@ header {
 }
 
 /* Secciones principales */
-section {
-    background-color: var(--card-bg);
-    padding: 35px;
+/* Ajuste para que las secciones dentro de main no tengan recuadro por defecto */
+main > section {
+    background-color: transparent; /* Fondo transparente */
+    padding: 35px 20px; /* Manteniendo el padding interno */
     margin-bottom: 25px;
-    border-radius: 12px;
-    box-shadow: 0 5px 15px var(--shadow-dark);
+    border-radius: 0; /* Sin bordes redondeados */
+    box-shadow: none; /* Sin sombra */
     text-align: center;
-    border: 1px solid var(--border-color);
+    border: none; /* Sin borde */
+    max-width: 1200px; /* Limita el ancho de las secciones de contenido si es necesario */
+    margin-left: auto;
+    margin-right: auto;
 }
 
-/* ESTILO ESPECÍFICO PARA EL HERO SECTION EN INDEX.HTML */
+/* ESTILO ESPECÍFICO PARA EL HERO SECTION EN INDEX.HTML (se eliminó en index.html, pero dejo el estilo por si lo necesitas más adelante) */
 .hero {
     background: linear-gradient(135deg, var(--primary-purple) 0%, var(--secondary-pink) 100%); /* Gradiente morado-rosa */
     padding: 60px 25px;
@@ -327,25 +331,25 @@ section {
 }
 
 .game-card {
-    background-color: var(--dark-grey-bg); /* Fondo más oscuro para la tarjeta */
-    border: 2px solid var(--border-color);
+    background-color: #1C1C1E; /* Manteniendo el fondo oscuro de las tarjetas */
+    border: none; /* Eliminando el borde de las tarjetas */
     border-radius: 15px;
     overflow: hidden;
     text-decoration: none;
     color: var(--text-color);
-    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease; /* Quitamos border-color de la transición */
     display: flex;
     flex-direction: column;
     align-items: stretch;
     padding-bottom: 20px;
     position: relative;
-    box-shadow: 0 8px 20px var(--shadow-dark);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8); /* Sombra para las tarjetas */
 }
 
 .game-card:hover {
     transform: translateY(-10px);
-    box-shadow: 0 15px 30px var(--shadow-dark);
-    border-color: var(--primary-purple); /* Borde primario en hover */
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.9); /* Sombra más intensa en hover */
+    /* border-color: var(--primary-purple); Eliminamos cambio de borde en hover */
 }
 
 .game-card img {
@@ -1119,7 +1123,7 @@ footer p {
 }
 
 /* Ajustes para que los campos de referencia no afecten el espaciado
-   cuando se muestran o se ocultan dinámicamente */
+    cuando se muestran o se ocultan dinámicamente */
 .payment-fields-container {
     margin-top: 20px;
     padding-top: 15px;
@@ -1131,6 +1135,90 @@ footer p {
     margin-bottom: 15px;
 }
 
+
+/* Estilos para el Carrusel */
+.carousel-container {
+    position: relative;
+    overflow: hidden;
+    width: 100vw; /* Ocupa el 100% del ancho del viewport */
+    margin-left: calc(50% - 50vw); /* Centra el carrusel y lo pega a los bordes */
+    height: 350px; /* Altura del carrusel, AUMENTADA */
+    margin-bottom: 20px; /* Mantener un margen inferior si lo deseas */
+    border-radius: 0; /* Asegura que no tenga bordes redondeados */
+    box-shadow: 0 40px 60px rgba(0, 0, 0, 0.8); /* Sombra para integrar */
+    border: none; /* Asegura que no haya ningún borde */
+}
+
+.carousel-slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.5s ease-in-out;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #333; /* Fondo de respaldo si la imagen no carga */
+}
+
+.carousel-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Asegura que la imagen cubra el área sin distorsionarse */
+    display: block;
+}
+
+.carousel-prev, .carousel-next {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    padding: 15px 10px; /* Aumentar padding para botones más visibles */
+    cursor: pointer;
+    z-index: 10;
+    font-size: 1.5rem; /* Tamaño de flecha */
+    border-radius: 5px;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.carousel-prev:hover, .carousel-next:hover {
+    opacity: 1;
+}
+
+.carousel-prev {
+    left: 10px;
+}
+
+.carousel-next {
+    right: 10px;
+}
+
+.carousel-dots {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    z-index: 10;
+}
+
+.carousel-dot {
+    width: 12px; /* Tamaño de los puntos */
+    height: 12px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.5); /* Puntos semitransparentes */
+    margin: 0 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.carousel-dot.active {
+    background-color: white; /* Punto activo blanco */
+}
 
 /* Responsive Design */
 @media (max-width: 768px) {
@@ -1177,6 +1265,10 @@ footer p {
 
     .home-main h1 { /* Assuming this class is used for the main title on index.html */
         font-size: 1.8em;
+    }
+
+    main > section { /* Ajuste responsive para la sección de juegos */
+        padding: 20px 15px;
     }
 
     .game-grid {
@@ -1235,6 +1327,18 @@ footer p {
     }
     .game-main .game-hero h1 {
         font-size: 2em;
+    }
+    
+    .carousel-container {
+        height: 280px; /* Altura aún más reducida en móviles, AJUSTADA */
+    }
+    .carousel-prev, .carousel-next {
+        padding: 10px 8px;
+        font-size: 1.2rem;
+    }
+    .carousel-dot {
+        width: 10px;
+        height: 10px;
     }
 }
 
@@ -1304,6 +1408,10 @@ footer p {
     }
     .game-main .game-hero h1 {
         font-size: 1.8em;
+    }
+    
+    .carousel-container {
+        height: 200px; /* Altura para pantallas muy pequeñas, AJUSTADA */
     }
 }
 

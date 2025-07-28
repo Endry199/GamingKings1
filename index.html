@@ -12,11 +12,11 @@
     <link rel="preload" href="images/gamingkings_logo.png" as="image">
     <link rel="preload" href="images/flag_ve.png" as="image">
     <link rel="preload" href="images/flag_us.png" as="image">
-    <link rel="preload" href="images/freefire_banner.jpg" as="image">
-    <link rel="preload" href="images/mobile_legends_cover.jpg" as="image">
-    <link rel="preload" href="images/pubg_mobile_cover.jpg" as="image">
-    <link rel="preload" href="images/arena_breakout_cover.jpg" as="image">
-    <link rel="preload" href="blooqstrike_banner.jpg" as="image">
+    <link rel="preload" href="images/freefire_logo.jpg" as="image">
+    <link rel="preload" href="images/mobile_legends_logo.jpg" as="image">
+    <link rel="preload" href="images/pubg_mobile_logo.jpg" as="image">
+    <link rel="preload" href="images/arena_breakout_logo.jpg" as="image">
+    <link rel="preload" href="images/bloodstrike_logo.jpg" as="image">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -53,13 +53,15 @@
         .notice-content {
             max-width: 90%; /* Ancho máximo para móviles */
             width: 500px; /* Ancho preferido para escritorio */
-            background-color: #2C2C2E; /* Color original del usuario */
+            background-color: var(--card-bg); /* Usar variable de color de la paleta */
             padding: 1.5rem;
             border-radius: 0.75rem; /* rounded-xl */
-            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3); /* Sombra más pronunciada */
+            box-shadow: 0 0 30px var(--secondary-pink), 0 0 15px var(--primary-purple); /* Borde luminoso rosa y morado */
+            border: 2px solid var(--secondary-pink); /* Borde físico rosa */
             position: relative;
             text-align: center;
             padding-top: 2.5rem; /* AJUSTADO: Aumenta el padding superior para asegurar espacio para el botón de cerrar */
+            color: var(--text-color); /* Color de texto base para el contenido del aviso */
         }
         .close-button {
             position: absolute;
@@ -70,13 +72,29 @@
             font-size: 1.5rem;
             line-height: 1;
             cursor: pointer;
-            color: #b800dc; /* Color original del usuario */
+            color: var(--primary-purple); /* Color del botón de cerrar */
             transition: color 0.2s ease-in-out;
             z-index: 10000; /* Z-INDEX CRÍTICO: Asegura que la 'X' esté por encima del contenido del aviso y del overlay */
         }
         .close-button:hover {
-            color: #FF69B4; /* Color original del usuario */
+            color: var(--secondary-pink); /* Color de hover del botón de cerrar */
         }
+        .notice-content h2 { /* Estilo para el título del aviso */
+            color: var(--primary-purple); /* Color del título */
+            font-size: 2em; /* Tamaño de fuente para que sea más coherente */
+            margin-bottom: 1rem;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+        }
+        .notice-content p { /* Estilo para los párrafos del aviso */
+            color: var(--text-color); /* Color del texto */
+            margin-bottom: 1rem;
+        }
+        .notice-content .text-purple-400 { /* Estilo específico para la línea del horario */
+            color: var(--secondary-pink); /* Usar rosa vibrante para el horario */
+            font-weight: 700;
+            font-size: 1.25em; /* Asegurar que el tamaño sea visible */
+        }
+
 
         /* Responsive adjustment for the notice content on very small screens */
         @media (max-width: 480px) {
@@ -89,22 +107,126 @@
                 right: 1rem;
             }
         }
+
+        /* Estilos para el Carrusel */
+        .carousel-container {
+            position: relative;
+            overflow: hidden;
+            width: 100vw; /* Ocupa el 100% del ancho del viewport */
+            margin-left: calc(50% - 50vw); /* Centra el carrusel y lo pega a los bordes */
+            height: 500px; /* Altura del carrusel, AUMENTADA */
+            margin-bottom: 20px; /* Margen inferior */
+            border-radius: 0; /* Asegura que no tenga bordes redondeados */
+            box-shadow: 0 40px 60px rgba(0, 0, 0, 0.8); /* Sombra que emana desde abajo y se fusiona */
+            border: none; /* Asegura que no haya ningún borde */
+        }
+
+        .carousel-slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.5s ease-in-out;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #333; /* Fondo de respaldo si la imagen no carga */
+        }
+
+        .carousel-slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Asegura que la imagen cubra el área sin distorsionarse */
+            display: block;
+        }
+
+        .carousel-prev, .carousel-next {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            padding: 15px 10px; /* Aumentar padding para botones más visibles */
+            cursor: pointer;
+            z-index: 10;
+            font-size: 1.5rem; /* Tamaño de flecha */
+            border-radius: 5px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .carousel-prev:hover, .carousel-next:hover {
+            opacity: 1;
+        }
+
+        .carousel-prev {
+            left: 10px;
+        }
+
+        .carousel-next {
+            right: 10px;
+        }
+
+        .carousel-dots {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            z-index: 10;
+        }
+
+        .carousel-dot {
+            width: 12px; /* Tamaño de los puntos */
+            height: 12px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.5); /* Puntos semitransparentes */
+            margin: 0 6px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .carousel-dot.active {
+            background-color: white; /* Punto activo blanco */
+        }
+
+        /* Responsive para el carrusel */
+        @media (max-width: 768px) {
+            .carousel-container {
+                height: 400px; /* Reduce la altura en pantallas más pequeñas, AJUSTADA */
+            }
+            .carousel-prev, .carousel-next {
+                padding: 10px 8px;
+                font-size: 1.2rem;
+            }
+            .carousel-dot {
+                width: 10px;
+                height: 10px;
+            }
+        }
+        @media (max-width: 480px) {
+            .carousel-container {
+                height: 300px; /* Altura para pantallas muy pequeñas, AJUSTADA */
+            }
+        }
     </style>
-    </head>
+</head>
 <body>
     <div id="horario-notice" class="notice-overlay hidden">
         <div class="notice-content">
             <button id="close-notice" class="close-button" aria-label="Cerrar aviso">
                 &times;
             </button>
-            <h2 class="text-2xl font-bold text-gray-50 mb-4">¡Aviso Importante!</h2>
-            <p class="text-gray-100 text-lg mb-3">
+            <h2 class="font-bold mb-4">¡Aviso Importante!</h2>
+            <p class="mb-3">
                 Nuestro horario de atención es:
             </p>
-            <p class="text-purple-400 font-semibold text-xl mb-4">
+            <p class="text-purple-400 font-semibold mb-4">
                 Todos los días de 10:30 AM a 9:30 PM
             </p>
-            <p class="text-gray-200 text-base">
+            <p>
                 En caso de realizar una recarga fuera de este horario, la recarga será efectiva el día siguiente a la hora de apertura.
             </p>
         </div>
@@ -137,9 +259,38 @@
     </header>
 
     <main class="home-main">
-        <section class="hero">
-            <h1>¡Recarga tus Juegos Favoritos al Mejor Precio!</h1>
-            <p>Diamantes, monedas, saldo y más para Free Fire, Mobile Legends, PUBG Mobile, Arena Breakout y Blood Strike. Rápido, seguro y al instante.</p>
+        <section class="carousel-section">
+            <div class="carousel-container">
+                <div class="carousel-slide">
+                    <a href="freefire.html">
+                        <img src="images/freefire_banner.jpg" alt="Banner Free Fire">
+                    </a>
+                </div>
+                <div class="carousel-slide">
+                    <a href="bloodstrike.html">
+                        <img src="images/bloodstrike_banner.jpg" alt="Banner Blood Strike">
+                    </a>
+                </div>
+                <div class="carousel-slide">
+                    <a href="arenabreakout.html">
+                        <img src="images/arena_breakout_banner.jpg" alt="Banner Arena Breakout">
+                    </a>
+                </div>
+                <div class="carousel-slide">
+                    <a href="pubgmobile.html">
+                        <img src="images/pubg_mobile_banner.jpg" alt="Banner PUBG Mobile">
+                    </a>
+                </div>
+                <div class="carousel-slide">
+                    <a href="mobilelegends.html">
+                        <img src="images/mobile_legends_banner.jpg" alt="Banner Mobile Legends">
+                    </a>
+                </div>
+                
+                <button class="carousel-prev">&#10094;</button>
+                <button class="carousel-next">&#10095;</button>
+                <div class="carousel-dots"></div>
+            </div>
         </section>
 
         <section>
@@ -147,27 +298,27 @@
             <p class="small-text">Haz clic en tu juego para comenzar la recarga.</p>
             <div class="game-grid" id="game-grid">
                 <a href="freefire.html" class="game-card">
-                    <img src="images/freefire_banner.jpg" alt="Free Fire">
+                    <img src="images/freefire_logo.jpg" alt="Free Fire">
                     <h2>Free Fire</h2>
                     <p class="game-description">Recarga tus diamantes de Free Fire de forma rápida y segura.</p>
                 </a>
                 <a href="mobilelegends.html" class="game-card">
-                    <img src="images/mobile_legends_cover.jpg" alt="Mobile Legends Diamonds">
+                    <img src="images/mobile_legends_logo.jpg" alt="Mobile Legends Diamonds">
                     <h2>Mobile Legends</h2>
                     <p class="game-description">Consigue los diamantes para Mobile Legends y mejora tu experiencia de juego.</p>
                 </a>
                 <a href="pubgmobile.html" class="game-card">
-                    <img src="images/pubg_mobile_cover.jpg" alt="PUBG Mobile UC">
+                    <img src="images/pubg_mobile_logo.jpg" alt="PUBG Mobile UC">
                     <h2>PUBG Mobile</h2>
                     <p class="game-description">Recarga UC para PUBG Mobile y desbloquea contenido exclusivo.</p>
                 </a>
                 <a href="arenabreakout.html" class="game-card">
-                    <img src="images/arena_breakout_cover.jpg" alt="Arena Breakout NC">
+                    <img src="images/arena_breakout_logo.jpg" alt="Arena Breakout NC">
                     <h2>Arena Breakout</h2>
                     <p class="game-description">Obtén NC para Arena Breakout y domina el campo de batalla.</p>
                 </a>
                 <a href="bloodstrike.html" class="game-card">
-                    <img src="images/blooqstrike_banner.jpg" alt="Blood Strike Gold">
+                    <img src="images/bloodstrike_logo.jpg" alt="Blood Strike Gold">
                     <h2>Blood Strike</h2>
                     <p class="game-description">Recarga Oro y compra Pases para Blood Strike.</p>
                 </a>
@@ -201,7 +352,79 @@
             closeButton.addEventListener('click', () => {
                 noticeOverlay.classList.add('hidden');
             });
+
+            // Código JavaScript para el Carrusel
+            const slides = document.querySelectorAll('.carousel-slide');
+            const prevButton = document.querySelector('.carousel-prev');
+            const nextButton = document.querySelector('.carousel-next');
+            const dotsContainer = document.querySelector('.carousel-dots');
+            let currentIndex = 0;
+            let intervalId;
+
+            function updateDots() {
+                dotsContainer.innerHTML = '';
+                slides.forEach((_, index) => {
+                    const dot = document.createElement('span');
+                    dot.classList.add('carousel-dot');
+                    dot.addEventListener('click', () => {
+                        stopCarousel(); // Detener el carrusel al hacer clic en un punto
+                        goToSlide(index);
+                        startCarousel(); // Reiniciar el carrusel
+                    });
+                    dotsContainer.appendChild(dot);
+                });
+                if (dotsContainer.children[currentIndex]) {
+                    dotsContainer.children[currentIndex].classList.add('active');
+                }
+            }
+
+            function goToSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.style.transform = `translateX(${(i - index) * 100}%)`;
+                });
+                currentIndex = index;
+                updateDots();
+            }
+
+            function nextSlide() {
+                currentIndex = (currentIndex + 1) % slides.length;
+                goToSlide(currentIndex);
+            }
+
+            function prevSlide() {
+                currentIndex = (currentIndex - 1 + slides.length) % slides.length;
+                goToSlide(currentIndex);
+            }
+
+            function startCarousel() {
+                intervalId = setInterval(nextSlide, 3000); // Cambia de imagen cada 3 segundos
+            }
+
+            function stopCarousel() {
+                clearInterval(intervalId);
+            }
+
+            prevButton.addEventListener('click', () => {
+                stopCarousel();
+                prevSlide();
+                startCarousel();
+            });
+
+            nextButton.addEventListener('click', () => {
+                stopCarousel();
+                nextSlide();
+                startCarousel();
+            });
+
+            // Inicializar las posiciones de las diapositivas
+            slides.forEach((slide, index) => {
+                slide.style.transform = `translateX(${index * 100}%)`;
+            });
+
+            // Inicializar puntos y empezar el carrusel
+            updateDots();
+            startCarousel();
         });
     </script>
-    </body>
+</body>
 </html>
