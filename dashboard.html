@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - GamingKings</title>
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos específicos para el dashboard */
+        .dashboard-container {
+            background-color: var(--card-bg); /* Asume que --card-bg está en style.css o en :root */
+            padding: 2.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 0 30px var(--secondary-pink), 0 0 15px var(--primary-purple);
+            border: 2px solid var(--secondary-pink);
+            width: 100%;
+            max-width: 800px; /* Un poco más ancho que el de auth */
+            text-align: center;
+            margin: 2rem auto;
+        }
+        .dashboard-container h1 {
+            color: var(--primary-purple);
+            font-size: 2.5rem; /* text-4xl */
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+        .dashboard-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .dashboard-info p {
+            font-size: 1.25rem; /* text-xl */
+            color: var(--text-color);
+        }
+        .balance-card {
+            background-color: var(--input-bg); /* Un tono más oscuro para la tarjeta de balance */
+            padding: 1.5rem 2rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+            width: 100%;
+            max-width: 300px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .balance-card h2 {
+            color: var(--primary-purple);
+            font-size: 1.5rem; /* text-2xl */
+            margin-bottom: 0.5rem;
+        }
+        .balance-card p {
+            font-size: 2.5rem; /* text-5xl */
+            font-weight: 700;
+            color: var(--secondary-pink);
+            display: flex; /* Para alinear el icono con el texto */
+            align-items: center;
+            justify-content: center;
+        }
+        .balance-card p .fas.fa-crown {
+            font-size: 2rem; /* Tamaño del icono de corona */
+            margin-right: 10px; /* Espacio entre el icono y el número */
+            color: var(--secondary-pink); /* Color de la corona, puedes ajustarlo */
+        }
+        /* Si usas imagen de corona en lugar de Font Awesome */
+        /*
+        .balance-card p .crown-icon {
+            width: 30px;
+            height: 30px;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+        */
+        .dashboard-actions {
+            margin-top: 2rem;
+        }
+        .dashboard-actions button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            background-color: var(--primary-purple);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            margin: 0.5rem;
+        }
+        .dashboard-actions button:hover {
+            background-color: var(--secondary-pink);
+            transform: translateY(-2px);
+        }
+
+        /* --- IMPORTANTE --- */
+        /* Estos estilos del body y main DEBEN estar en tu style.css. */
+        /* Los comentarios aquí indican que NO deben estar en este archivo HTML. */
+        /*
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+        }
+        main {
+            flex-grow: 1;
+            display: flex;
+            justify-content: flex-start; // Cambiado de center a flex-start para contenido superior
+            align-items: center; // Mantener alineación vertical si el contenido es menor que el main
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        */
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <a href="index.html" class="logo-link">
+                <img src="images/gamingkings_logo.png" alt="GamingKings Logo" class="logo-img">
+            </a>
+        </div>
+        <div class="header-right">
+            <div class="search-bar">
+                <input type="text" placeholder="Buscar juego...">
+                <i class="fas fa-search"></i>
+            </div>
+            <div class="custom-currency-selector" id="custom-currency-selector">
+                <div class="selected-currency" id="selected-currency">
+                    <img src="images/flag_ve.png" alt="Venezuela Flag"> <span>Bs. (VES)</span> <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="currency-options" id="currency-options">
+                    <div class="option" data-value="VES">
+                        <img src="images/flag_ve.png" alt="Venezuela Flag"> <span>Bs. (VES)</span>
+                    </div>
+                    <div class="option" data-value="USD">
+                        <img src="images/flag_us.png" alt="USA Flag"> <span>$ (USD)</span>
+                    </div>
+                </div>
+            </div>
+            <a href="dashboard.html" class="icon-link"><i class="fas fa-user"></i></a>
+        </div>
+    </header>
+
+    <main>
+        <div class="dashboard-container">
+            <h1 id="welcome-message">Bienvenido, Usuario!</h1>
+
+            <div class="dashboard-info">
+                <div class="balance-card">
+                    <h2>Tu Saldo GamingKings</h2>
+                    <p id="user-balance"><i class="fas fa-crown"></i> <span id="balance-value">Cargando...</span></p>
+                    </div>
+            </div>
+
+            <div class="dashboard-actions">
+                <button id="recharge-button" onclick="window.location.href='buy_kingcoins.html'">Recarga KingCoins <i class="fas fa-crown"></i></button>
+                <button id="view-history-button">Ver Historial de Recargas</button>
+                <button id="logout-button">Cerrar Sesión</button>
+            </div>
+
+            <div id="dashboard-message" class="auth-message hidden"></div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 GamingKings. Todos los derechos reservados.</p>
+            <div class="footer-links">
+                <a href="privacy.html">Políticas de Privacidad</a>
+                <a href="terms.html">Términos de Servicio</a>
+            </div>
+            <a href="https://wa.me/573021090841" target="_blank" class="whatsapp-link">
+                <i class="fab fa-whatsapp"></i> Contáctanos por WhatsApp
+            </a>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script type="module" src="dashboard.js"></script>
+</body>
+</html>

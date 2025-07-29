@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inicio de Sesión - GamingKings</title>
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos específicos para el contenedor de autenticación */
+        .auth-container {
+            background-color: var(--card-bg); /* Asume que --card-bg está en style.css o en :root */
+            padding: 2.5rem;
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 0 30px var(--secondary-pink), 0 0 15px var(--primary-purple); /* Asegura que estas variables estén definidas */
+            border: 2px solid var(--secondary-pink);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            margin: 2rem auto; /* Centra el contenedor y le da margen vertical */
+        }
+        .auth-container h1 {
+            color: var(--primary-purple);
+            font-size: 2.25rem; /* text-3xl */
+            font-weight: 700; /* font-bold */
+            margin-bottom: 2rem;
+        }
+        .auth-container input[type="email"],
+        .auth-container input[type="password"] {
+            width: calc(100% - 20px);
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color); /* Define --border-color */
+            background-color: var(--input-bg); /* Define --input-bg */
+            color: var(--text-color);
+        }
+        .auth-container button {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            background-color: var(--primary-purple);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .auth-container button:hover {
+            background-color: var(--secondary-pink);
+            transform: translateY(-2px);
+        }
+        .auth-message {
+            margin-top: 1rem;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            font-weight: 500;
+        }
+        .auth-message.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .auth-message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .auth-links {
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+        }
+        .auth-links a {
+            color: var(--primary-purple);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .auth-links a:hover {
+            text-decoration: underline;
+            color: var(--secondary-pink);
+        }
+        /* Aseguramos que el layout del body y main se define una vez, probablemente en style.css */
+        /* Si no tienes esto en style.css, MUY IMPORTANTE que lo añadas allí: */
+        /*
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+        }
+        main {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        */
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <a href="index.html" class="logo-link">
+                <img src="images/gamingkings_logo.png" alt="GamingKings Logo" class="logo-img">
+            </a>
+        </div>
+        <div class="header-right">
+            <div class="search-bar">
+                <input type="text" placeholder="Buscar juego...">
+                <i class="fas fa-search"></i>
+            </div>
+            <div class="custom-currency-selector" id="custom-currency-selector">
+                <div class="selected-currency" id="selected-currency">
+                    <img src="images/flag_ve.png" alt="Venezuela Flag"> <span>Bs. (VES)</span> <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="currency-options" id="currency-options">
+                    <div class="option" data-value="VES">
+                        <img src="images/flag_ve.png" alt="Venezuela Flag"> <span>Bs. (VES)</span>
+                    </div>
+                    <div class="option" data-value="USD">
+                        <img src="images/flag_us.png" alt="USA Flag"> <span>$ (USD)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="auth-container">
+            <h1>Iniciar Sesión</h1>
+            <form id="login-form">
+                <input type="email" id="email" placeholder="Correo Electrónico" required>
+                <input type="password" id="password" placeholder="Contraseña" required>
+                <button type="submit">Iniciar Sesión</button>
+            </form>
+            <div id="auth-message" class="auth-message hidden"></div>
+            <div class="auth-links">
+                ¿No tienes una cuenta? <a href="register.html">Regístrate</a><br>
+                <a href="forgot-password.html">¿Olvidaste tu contraseña?</a>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 GamingKings. Todos los derechos reservados.</p>
+            <div class="footer-links">
+                <a href="privacy.html">Políticas de Privacidad</a>
+                <a href="terms.html">Términos de Servicio</a>
+            </div>
+            <a href="https://wa.me/573021090841" target="_blank" class="whatsapp-link">
+                <i class="fab fa-whatsapp"></i> Contáctanos por WhatsApp
+            </a>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script type="module" src="login.js"></script>
+</body>
+</html>
