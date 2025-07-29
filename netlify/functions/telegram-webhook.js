@@ -224,8 +224,8 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
                     }
                 }
             }
-            // --- NUEVO Handler para 'release_kingcoins_' ---
-            else if (data.startsWith('release_kingcoins_')) { // Cambiado de 'confirm_kingcoins:' a 'release_kingcoins_'
+            // --- Handler para 'release_kingcoins_' ---
+            else if (data.startsWith('release_kingcoins_')) {
                 const transactionId = data.replace('release_kingcoins_', '');
                 const transaction = await getTransaction(transactionId);
 
@@ -310,6 +310,65 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
                     ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins') 
                     : transaction.package_name;
 
+                // Extraer la cantidad numérica de KingCoins del package_name
+                const kingcoinAmountMatch = cleanedPackageName.match(/(\d+)\s*KingCoins/i);
+                const kingcoinAmount = kingcoinAmountMatch ? parseInt(kingcoinAmountMatch[1], 10) : 0;
+
+                let kingcoinsCreditedMessage = ''; // Mensaje para indicar si se acreditaron los KingCoins
+
+                // ACREDITAR KINGCOINS EN user_wallets
+                if (kingcoinAmount > 0 && transaction.player_id) { // Usamos transaction.player_id como el user_id (UUID)
+                    try {
+                        // Intentar obtener el saldo actual del usuario
+                        const { data: userWallet, error: fetchWalletError } = await supabase
+                            .from('user_wallets') // Usamos 'user_wallets'
+                            .select('balance') // Seleccionamos la columna 'balance'
+                            .eq('user_id', transaction.player_id) // Buscamos por 'user_id'
+                            .single();
+
+                        if (fetchWalletError && fetchWalletError.code === 'PGRST116') { // No rows found
+                            // Si el usuario no existe, inserta una nueva entrada
+                            const { error: insertWalletError } = await supabase
+                                .from('user_wallets') // Usamos 'user_wallets'
+                                .insert({
+                                    user_id: transaction.player_id, // Insertamos en 'user_id'
+                                    balance: kingcoinAmount // Insertamos en 'balance'
+                                });
+                            if (insertWalletError) {
+                                console.error("Error al insertar nueva wallet de usuario:", insertWalletError.message);
+                                kingcoinsCreditedMessage = `\n⚠️ Error al crear wallet para ${transaction.player_id}: ${insertWalletError.message}`;
+                            } else {
+                                console.log(`Wallet creada y ${kingcoinAmount} KingCoins acreditados a ${transaction.player_id}.`);
+                                kingcoinsCreditedMessage = `\n✅ ${kingcoinAmount} KingCoins acreditados a *${escapeMarkdownV2(transaction.player_id)}*.`;
+                            }
+                        } else if (fetchWalletError) {
+                            console.error("Error al obtener wallet de usuario:", fetchWalletError.message);
+                            kingcoinsCreditedMessage = `\n⚠️ Error al obtener wallet para ${transaction.player_id}: ${fetchWalletError.message}`;
+                        } else {
+                            // Si el usuario existe, actualiza el saldo
+                            const newBalance = userWallet.balance + kingcoinAmount; // Sumamos al 'balance' existente
+                            const { error: updateWalletError } = await supabase
+                                .from('user_wallets') // Usamos 'user_wallets'
+                                .update({ balance: newBalance }) // Actualizamos 'balance'
+                                .eq('user_id', transaction.player_id); // Buscamos por 'user_id'
+
+                            if (updateWalletError) {
+                                console.error("Error al actualizar wallet de usuario:", updateWalletError.message);
+                                kingcoinsCreditedMessage = `\n⚠️ Error al actualizar wallet para ${transaction.player_id}: ${updateWalletError.message}`;
+                            } else {
+                                console.log(`${kingcoinAmount} KingCoins acreditados a ${transaction.player_id}. Nuevo saldo: ${newBalance}`);
+                                kingcoinsCreditedMessage = `\n✅ ${kingcoinAmount} KingCoins acreditados a *${escapeMarkdownV2(transaction.player_id)}*. Nuevo saldo: *${newBalance}*.`;
+                            }
+                        }
+                    } catch (walletOperationError) {
+                        console.error("Error inesperado en operación de wallet:", walletOperationError.message);
+                        kingcoinsCreditedMessage = `\n❌ Error inesperado al acreditar KingCoins: ${walletOperationError.message}`;
+                    }
+                } else {
+                    kingcoinsCreditedMessage = `\nℹ️ No se pudieron acreditar KingCoins (cantidad 0 o ID de jugador/usuario no válida).`;
+                }
+
+
                 // Construimos la factura de texto para KingCoins
                 let invoiceTextContent = `
 🎉 ¡Hola! 👋
@@ -353,6 +412,7 @@ Aquí tienes los detalles de tu transacción:
                 let newCaption = callbackQuery.message.text;
                 newCaption = newCaption.replace('Estado: `PENDIENTE`', 'Estado: `LIBERADO` ✅');
                 newCaption += `\n\nKingCoins liberados por: *${userName}* (${formattedTime} ${formattedDate})`;
+                newCaption += kingcoinsCreditedMessage; // Añadir el mensaje de acreditación
 
                 // Definir los nuevos botones para el mensaje editado de KingCoins
                 let updatedInlineKeyboard = [];
