@@ -111,6 +111,12 @@ exports.handler = async function(event, context) {
         txid 
     } = fieldsData;
 
+    // MODIFICACIÓN: Limpiar packageName específicamente para la visualización en mensajes
+    let cleanedDisplayPackageName = packageName;
+    if (cleanedDisplayPackageName.includes('<i class="fas fa-crown"></i>')) {
+        cleanedDisplayPackageName = cleanedDisplayPackageName.replace('<i class="fas fa-crown"></i>', ' KingCoins');
+    }
+
     let receiptUrl = null;
     let newTransactionData;
     let id_transaccion_generado;
@@ -143,7 +149,7 @@ exports.handler = async function(event, context) {
         const dataToInsert = {
             id_transaccion: id_transaccion_generado,
             game: game, 
-            package_name: packageName, 
+            package_name: packageName, // Guardar el valor original en la DB
             final_price: parseFloat(finalPrice),
             currency: currency, 
             payment_method: paymentMethod, 
@@ -188,17 +194,19 @@ exports.handler = async function(event, context) {
     if (whatsappNumber && whatsappNumber.trim() !== '') {
         const customerNamePart = fullName && fullName.trim() !== '' ? `${fullName.split(' ')[0]}` : '';
         const greeting = customerNamePart ? `¡Hola ${customerNamePart}! 👋` : `¡Hola! 👋`;
-        // Modificado: para KingCoins, el player_id no es relevante en el mensaje inicial del cliente
-        const gameAndPlayerInfo = game === 'KingCoins' ? `de *KingCoins*` : ` para *${game}* (ID: \`${escapeMarkdownV2(playerId || 'N/A')}\`)`;
+        const gameAndPlayerId = playerId ? ` para *${game}* (ID: \`${escapeMarkdownV2(playerId)}\`)` : ` para *${game}*`;
         
+        // Usar cleanedDisplayPackageName para el mensaje de WhatsApp del cliente
         const whatsappMessageCustomer = `
 ${greeting}
 
-Tu solicitud de compra ${gameAndPlayerInfo} por *${escapeMarkdownV2(packageName)}* ha sido recibida y está siendo *PROCESADA* bajo el número de transacción: \`${escapeMarkdownV2(id_transaccion_generado)}\`.
+Tu solicitud de recarga de *${escapeMarkdownV2(cleanedDisplayPackageName)}*${gameAndPlayerId} ha sido recibida y está siendo *PROCESADA* bajo el número de transacción: \`${escapeMarkdownV2(id_transaccion_generado)}\`.
 
 Te enviaremos una notificación de confirmación cuando la recarga se haga efectiva. ¡Gracias por tu paciencia!
         `.trim();
         
+        // MODIFICACIÓN CLAVE AQUÍ: Usamos directamente whatsappNumber
+        // Aseguramos que tenga el '+' aunque el frontend ya lo envíe
         const customerWhatsappNumberFormatted = whatsappNumber.startsWith('+') ? whatsappNumber : `+${whatsappNumber}`;
         whatsappLinkCustomer = `https://wa.me/${customerWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageCustomer)}`;
         console.log("DEBUG: whatsappLinkCustomer generado para el cliente:", whatsappLinkCustomer);
@@ -207,15 +215,16 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
     }
 
     let whatsappLinkRecargador = null;
-    // La lógica de WhatsApp Recargador solo para 'Free Fire' se mantiene
     if (game && game.toLowerCase() === 'free fire' && WHATSAPP_NUMBER_RECARGADOR) {
+        // Asumimos que WHATSAPP_NUMBER_RECARGADOR ya tiene el prefijo '+', o lo añadimos
         const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
         
-        const cleanedPackageName = (packageName || 'N/A').replace(/\+/g, '%2B');
+        // Usar cleanedDisplayPackageName para el mensaje de WhatsApp del recargador
+        const cleanedPackageNameForWhatsappRecargador = (cleanedDisplayPackageName || 'N/A').replace(/\+/g, '%2B');
 
         let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
         whatsappMessageRecargador += `*ID de Jugador:* ${playerId || 'N/A'}\n`;
-        whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageName}\n`; 
+        whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageNameForWhatsappRecargador}\n`; 
         
         whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
         console.log("DEBUG: whatsappLinkRecargador generado:", whatsappLinkRecargador);
@@ -224,14 +233,12 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
     }
 
 
-    let messageText = `✨ *NUEVA TRANSACCIÓN PENDIENTE* ✨\n\n`; // Cambiado de 'RECARGA' a 'TRANSACCIÓN'
+    let messageText = `✨ *NUEVA RECARGA PENDIENTE* ✨\n\n`; 
     messageText += `*ID de Transacción:* \`${escapeMarkdownV2(id_transaccion_generado || 'N/A')}\`\n`;
     messageText += `*Estado:* \`PENDIENTE\`\n\n`;
-    messageText += `🎮 Producto/Juego: *${escapeMarkdownV2(game)}*\n`; // Cambiado de 'Juego' a 'Producto/Juego'
-    if (game !== 'KingCoins') { // Solo muestra ID de Jugador si no es KingCoins
-        messageText += `👤 ID de Jugador: *${escapeMarkdownV2(playerId || 'N/A')}*\n`;
-    }
-    messageText += `📦 Paquete: *${escapeMarkdownV2(packageName)}*\n`; 
+    messageText += `🎮 Juego: *${escapeMarkdownV2(game)}*\n`;
+    messageText += `👤 ID de Jugador: *${escapeMarkdownV2(playerId || 'N/A')}*\n`;
+    messageText += `📦 Paquete: *${escapeMarkdownV2(cleanedDisplayPackageName)}*\n`; // Usar la variable limpia aquí
     messageText += `💰 Total a Pagar: *${escapeMarkdownV2(finalPrice)} ${escapeMarkdownV2(currency)}*\n`;
     messageText += `💳 Método de Pago: *${escapeMarkdownV2(paymentMethod.replace('-', ' ').toUpperCase())}*\n`;
     messageText += `📧 Correo Cliente: ${escapeMarkdownV2(email || 'N/A')}\n`; 
@@ -247,39 +254,15 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
     } else if (paymentMethod === 'binance' && txid) {
         messageText += `🆔 TXID Binance: ${escapeMarkdownV2(txid)}\n`;
     } else if (paymentMethod === 'zinli' && referenceNumber) {
-        messageText += `📊 Referencia Zinli: ${escapeMarkdownV2(referenceNumber)}\n`;
+        messageText += `📊 Referencia Zinli: ${referenceNumber}\n`;
     }
 
+    // MODIFICACIÓN: Sólo el botón "Liberar KingCoins" inicialmente
     let inlineKeyboard = [];
-    let currentRow = []; 
-
-    if (whatsappLinkCustomer) {
-        currentRow.push({ text: "💬 Chatear con el Cliente", url: whatsappLinkCustomer });
-    }
+    inlineKeyboard.push([
+        { text: "👑 Liberar KingCoins", callback_data: `release_kingcoins_${id_transaccion_generado}` }
+    ]);
     
-    // Si no es KingCoins, mantén el botón de WhatsApp Recargador si aplica
-    if (game !== 'KingCoins' && whatsappLinkRecargador) { 
-        currentRow.push({ text: "📲 WhatsApp Recargador", url: whatsappLinkRecargador });
-    }
-
-    if (currentRow.length > 0) {
-        inlineKeyboard.push(currentRow);
-    }
-    
-    // Lógica condicional para los botones de acción principales
-    if (game === 'KingCoins') {
-        inlineKeyboard.push([
-            { text: "✅ Pago Confirmado (Liberar KingCoins)", callback_data: `confirm_kingcoins:${id_transaccion_generado}` }
-        ]);
-        // Se añade como un botón separado, no en la misma fila para evitar conflictos con el límite de Telegram
-        inlineKeyboard.push([
-            { text: "📄 Factura por WhatsApp", callback_data: `send_invoice_kingcoins:${id_transaccion_generado}` }
-        ]);
-    } else {
-        // Botón existente para otros juegos
-        inlineKeyboard.push([{ text: "✅ Marcar como Realizada", callback_data: `mark_done_${id_transaccion_generado}` }]);
-    }
-
     const replyMarkup = {
         inline_keyboard: inlineKeyboard
     };
