@@ -8,6 +8,7 @@
     <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> 
     <style>
         /* Estilos para el botón de copiar y el mensaje */
         .copy-container {
@@ -498,6 +499,13 @@
 
     <script src="script.js"></script>
     <script>
+        // Configuración de Supabase (¡REEMPLAZA ESTO CON TUS PROPIAS CLAVES!)
+const SUPABASE_URL = 'TU_SUPABASE_URL'; 
+const SUPABASE_ANON_KEY = 'TU_SUPABASE_ANON_KEY'; 
+
+// Inicializa Supabase Client
+const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
         const paymentDetailsTemplates = {
             'pago-movil': `
                 <p><strong>Paso 1:</strong> Realiza el Pago Móvil a los siguientes datos:</p>
@@ -796,11 +804,35 @@
 
                 // Update the whatsappNumber in formData with the combined value
                 formData.set('whatsappNumber', fullWhatsappNumber);
+                // INICIO DE MODIFICACIÓN: Lógica para obtener user_id de Supabase y asignarlo a playerId
+let currentUserId = null;
+try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session && session.user) {
+        currentUserId = session.user.id;
+        console.log("Supabase User ID (from payment.html):", currentUserId);
+    } else {
+        console.warn("No hay sesión de usuario activa en Supabase en payment.html. El playerId para KingsCoins será 'anon'.");
+    }
+} catch (error) {
+    console.error("Error al obtener la sesión de Supabase en payment.html:", error);
+}
+
+// Si el juego es KingCoins, usa el user_id de Supabase como playerId
+if (transactionDetails.game === "KingsCoins") {
+    formData.append('playerId', currentUserId || 'anon'); // Usa 'anon' si no hay user_id
+} else {
+    // Para otros juegos, usa el playerId original de la transacción
+    // Asegúrate de que transactionDetails.playerId exista para otros juegos
+    formData.append('playerId', transactionDetails.playerId || ''); 
+}
+// FIN DE MODIFICACIÓN
+                
 
                 // Add transactionDetails to formData (these are not direct form inputs)
                 for (const key in transactionDetails) {
                     // Avoid re-appending whatsappNumber if it's already set from the combined value
-                    if (key === 'whatsappNumber') continue; 
+                    if (key === 'whatsappNumber' || key === 'playerId') continue; 
                     formData.append(key, transactionDetails[key]);
                 }
 
