@@ -8,7 +8,7 @@
     <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- La etiqueta de Supabase JS se ha movido al final del body para asegurar la carga -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* Estilos para el botón de copiar y el mensaje */
         .copy-container {
@@ -350,7 +350,7 @@
                                 <option value="+1664">Montserrat (+1664)</option>
                                 <option value="+212">Marruecos (+212)</option>
                                 <option value="+258">Mozambique (+258)</option>
-                                <option value="+95">Birmania (Myanmar) (+95)</onion>
+                                <option value="+95">Birmania (Myanmar) (+95)</option>
                                 <option value="+264">Namibia (+264)</option>
                                 <option value="+674">Nauru (+674)</option>
                                 <option value="+977">Nepal (+977)</option>
@@ -398,7 +398,7 @@
                                 <option value="+221">Senegal (+221)</option>
                                 <option value="+381">Serbia (+381)</option>
                                 <option value="+248">Seychelles (+248)</option>
-                                <option value="+232">Sierra Leona (+232)</onion>
+                                <option value="+232">Sierra Leona (+232)</option>
                                 <option value="+65">Singapur (+65)</option>
                                 <option value="+1721">Sint Maarten (parte holandesa) (+1721)</option>
                                 <option value="+421">Eslovaquia (+421)</option>
@@ -427,7 +427,7 @@
                                 <option value="+676">Tonga (+676)</option>
                                 <option value="+1868">Trinidad y Tobago (+1868)</option>
                                 <option value="+216">Túnez (+216)</option>
-                                <option value="+90">Turquía (+90)</onion>
+                                <option value="+90">Turquía (+90)</option>
                                 <option value="+993">Turkmenistán (+993)</option>
                                 <option value="+1649">Islas Turcas y Caicos (+1649)</option>
                                 <option value="+688">Tuvalu (+688)</option>
@@ -477,7 +477,7 @@
             </form>
 
             <div id="success-message-display" class="payment-success-message" style="display: none;">
-                <h2>� ¡Notificación Enviada! 🎉</h2>
+                <h2>🎉 ¡Notificación Enviada! 🎉</h2>
                 <p>Hemos recibido tu solicitud de recarga. Te enviaremos un correo de confirmación y la factura virtual una vez que tu recarga sea procesada.</p>
                 <p>¡Gracias por usar GamingKings!</p>
             </div>
@@ -497,18 +497,8 @@
         </div>
     </footer>
 
-    <!-- Mover la carga de Supabase JS a aquí, justo antes del script principal -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> 
     <script src="script.js"></script>
     <script>
-        // Configuración de Supabase (¡REEMPLAZA ESTO CON TUS PROPIAS CLAVES!)
-        const SUPABASE_URL = 'https://oznmqczxpywvdmefermv.supabase.co'; 
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96bm1xY3p4cHl3dmRtZWZlcm12Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzIwODc3NywiZXhwIjoyMDY4Nzg0Nzc3fQ.shFt2SQvNAjKyK2RLsz2NBf0EyHyJuw_Z1tGOVuWzjY'; 
-
-        // Inicializa Supabase Client de forma global
-        const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        console.log("Supabase client initialized globally."); // Para depuración
-        
         const paymentDetailsTemplates = {
             'pago-movil': `
                 <p><strong>Paso 1:</strong> Realiza el Pago Móvil a los siguientes datos:</p>
@@ -807,35 +797,11 @@
 
                 // Update the whatsappNumber in formData with the combined value
                 formData.set('whatsappNumber', fullWhatsappNumber);
-                // INICIO DE MODIFICACIÓN: Lógica para obtener user_id de Supabase y asignarlo a playerId
-                let currentUserId = null;
-                try {
-                    const { data: { session } } = await supabase.auth.getSession();
-                    if (session && session.user) {
-                        currentUserId = session.user.id;
-                        console.log("Supabase User ID (from payment.html):", currentUserId);
-                    } else {
-                        console.warn("No hay sesión de usuario activa en Supabase en payment.html. El playerId para KingsCoins será 'anon'.");
-                    }
-                } catch (error) {
-                    console.error("Error al obtener la sesión de Supabase en payment.html:", error);
-                }
-
-                // Si el juego es KingCoins, usa el user_id de Supabase como playerId
-                if (transactionDetails.game === "KingsCoins") {
-                    formData.append('playerId', currentUserId || 'anon'); // Usa 'anon' si no hay user_id
-                } else {
-                    // Para otros juegos, usa el playerId original de la transacción
-                    // Asegúrate de que transactionDetails.playerId exista para otros juegos
-                    formData.append('playerId', transactionDetails.playerId || ''); 
-                }
-                // FIN DE MODIFICACIÓN
-                
 
                 // Add transactionDetails to formData (these are not direct form inputs)
                 for (const key in transactionDetails) {
                     // Avoid re-appending whatsappNumber if it's already set from the combined value
-                    if (key === 'whatsappNumber' || key === 'playerId') continue; 
+                    if (key === 'whatsappNumber') continue; 
                     formData.append(key, transactionDetails[key]);
                 }
 
