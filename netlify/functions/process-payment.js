@@ -205,7 +205,6 @@ Tu solicitud de recarga de *${escapeMarkdownV2(cleanedDisplayPackageName)}*${gam
 Te enviaremos una notificación de confirmación cuando la recarga se haga efectiva. ¡Gracias por tu paciencia!
         `.trim();
         
-        // MODIFICACIÓN CLAVE AQUÍ: Usamos directamente whatsappNumber
         // Aseguramos que tenga el '+' aunque el frontend ya lo envíe
         const customerWhatsappNumberFormatted = whatsappNumber.startsWith('+') ? whatsappNumber : `+${whatsappNumber}`;
         whatsappLinkCustomer = `https://wa.me/${customerWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageCustomer)}`;
@@ -257,20 +256,56 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
         messageText += `📊 Referencia Zinli: ${referenceNumber}\n`;
     }
 
-    // --- MODIFICACIÓN CLAVE AQUÍ ---
+    // --- Lógica para los botones de Telegram: Restaurada ---
     let inlineKeyboard = [];
-    // Condicionalmente añadir el botón "Liberar KingCoins"
+    
+    // Si es KingCoins, solo el botón "Liberar KingCoins"
     if (cleanedDisplayPackageName.includes('KingCoins')) {
         inlineKeyboard.push([
             { text: "👑 Liberar KingCoins", callback_data: `release_kingcoins_${id_transaccion_generado}` }
         ]);
-    } else {
-        // Si no son KingCoins, puedes añadir otros botones aquí o dejarlo vacío
-        // Por ejemplo, si tenías un botón genérico antes, podrías ponerlo aquí:
-        // inlineKeyboard.push([
-        //     { text: "✅ Marcar como Completado", callback_data: `complete_transaction_${id_transaccion_generado}` }
-        // ]);
-        console.log("No se añadió el botón 'Liberar KingCoins' porque no es una compra de KingCoins.");
+    } 
+    // Si es Free Fire, los botones de WhatsApp para el recargador y gestión
+    else if (game && game.toLowerCase() === 'free fire') {
+        // Botón de WhatsApp para el recargador
+        if (WHATSAPP_NUMBER_RECARGADOR) {
+            const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
+            const cleanedPackageNameForWhatsappRecargador = (cleanedDisplayPackageName || 'N/A').replace(/\+/g, '%2B');
+
+            let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
+            whatsappMessageRecargador += `*ID de Jugador:* ${playerId || 'N/A'}\n`;
+            whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageNameForWhatsappRecargador}\n`; 
+
+            const whatsappLinkRecargadorButton = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
+
+            inlineKeyboard.push([
+                { text: "📲 WhatsApp Recargador", url: whatsappLinkRecargadorButton }
+            ]);
+        } else {
+            console.log("Advertencia: WHATSAPP_NUMBER_RECARGADOR no está configurado para Free Fire.");
+        }
+
+        // Botones de gestión (Completado/Cancelado) para Free Fire
+        inlineKeyboard.push(
+            [
+                { text: "✅ Marcar como Completado", callback_data: `complete_transaction_${id_transaccion_generado}` }
+            ],
+            [
+                { text: "❌ Marcar como Cancelado", callback_data: `cancel_transaction_${id_transaccion_generado}` }
+            ]
+        );
+    } 
+    // Para el resto de los juegos (no KingCoins, no Free Fire), los botones genéricos de gestión
+    else {
+        inlineKeyboard.push(
+            [
+                { text: "✅ Marcar como Completado", callback_data: `complete_transaction_${id_transaccion_generado}` }
+            ],
+            [
+                { text: "❌ Marcar como Cancelado", callback_data: `cancel_transaction_${id_transaccion_generado}` }
+            ]
+        );
+        console.log(`Botones de 'Completado' y 'Cancelado' añadidos para el juego ${game} y la transacción ${id_transaccion_generado}.`);
     }
     
     const replyMarkup = {
