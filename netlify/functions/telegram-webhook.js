@@ -7,7 +7,11 @@ function escapeMarkdownV2(text) {
     if (typeof text !== 'string') {
         text = String(text);
     }
-    const specialChars = /[_*\[\]()~`>#+\-={}.!]/g; 
+    // Caracteres especiales de MarkdownV2 que necesitan ser escapados universalmente.
+    // Se han quitado el guion '-' y el punto '.' de esta lista,
+    // ya que solo son especiales en contextos específicos (ej. listas, números de enlace)
+    // y no deben escaparse cuando son parte de una cadena de texto literal como un ID.
+    const specialChars = /[_*\[\]()~`>#+={}|!]/g; // Eliminado '-' y '.'
     return text.replace(specialChars, '\\$&');
 }
 
@@ -86,15 +90,20 @@ exports.handler = async function(event, context) {
                     const currentMessageText = callbackQuery.message.text;
                     const newTextIfAlreadyDone = currentMessageText.includes('REALIZADA') ? currentMessageText : currentMessageText.replace('Estado: `PENDIENTE`', 'Estado: `REALIZADA` ✅');
                     
-                    await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
-                        chat_id: chatId,
-                        message_id: messageId,
-                        text: escapeMarkdownV2(newTextIfAlreadyDone),
-                        parse_mode: 'MarkdownV2',
-                        reply_markup: {
-                            inline_keyboard: [[{ text: "✅ Recarga Realizada", callback_data: `completed_status_${transactionId}` }]] 
-                        }
-                    });
+                    try {
+                        await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
+                            chat_id: chatId,
+                            message_id: messageId,
+                            // Aplicamos escapeMarkdownV2 aquí para el texto completo
+                            text: escapeMarkdownV2(newTextIfAlreadyDone),
+                            parse_mode: 'MarkdownV2',
+                            reply_markup: {
+                                inline_keyboard: [[{ text: "✅ Recarga Realizada", callback_data: `completed_status_${transactionId}` }]] 
+                            }
+                        });
+                    } catch (editErrorAlreadyDone) {
+                        console.error(`ERROR: Fallo al editar mensaje de Telegram (ya realizada) para ${transactionId}:`, editErrorAlreadyDone.response ? editErrorAlreadyDone.response.data : editErrorAlreadyDone.message);
+                    }
 
                     return { statusCode: 200, body: "Already completed" };
                 }
@@ -115,6 +124,7 @@ exports.handler = async function(event, context) {
                 const formattedTime = `${hours}:${minutes}`;
                 
                 // --- Construimos la factura de texto para guardar ---
+                // Escapamos los campos que puedan contener caracteres especiales
                 let invoiceTextContent = `
 🎉 ¡Hola! 👋
 
@@ -122,13 +132,13 @@ exports.handler = async function(event, context) {
 
 Aquí tienes los detalles de tu recarga:
 ---
-*Factura #${transaction.id_transaccion}*
+*Factura \\#${escapeMarkdownV2(transaction.id_transaccion)}*
 *Estado: REALIZADA ✅* 📅 Fecha: ${formattedDate}
-🎮 Juego: ${transaction.game}
-👤 ID de Jugador: ${transaction.player_id || 'N/A'}
-📦 Paquete: ${transaction.package_name}
-💰 Monto Pagado: ${transaction.final_price} ${transaction.currency}
-💳 Método de Pago: ${transaction.payment_method.replace('-', ' ').toUpperCase()}
+🎮 Juego: ${escapeMarkdownV2(transaction.game || 'N/A')}
+👤 ID de Jugador: ${escapeMarkdownV2(transaction.player_id || 'N/A')}
+📦 Paquete: ${escapeMarkdownV2(transaction.package_name || 'N/A')}
+💰 Monto Pagado: ${escapeMarkdownV2(transaction.final_price.toString() || 'N/A')} ${escapeMarkdownV2(transaction.currency || 'N/A')}
+💳 Método de Pago: ${escapeMarkdownV2(transaction.payment_method.replace('-', ' ').toUpperCase() || 'N/A')}
 ---
 ¡Gracias por tu compra! ✨
                 `.trim();
@@ -147,7 +157,8 @@ Aquí tienes los detalles de tu recarga:
                     console.error("Error al actualizar la transacción en Supabase:", updateError.message);
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                         chat_id: chatId,
-                        text: escapeMarkdownV2(`❌ Error al marcar la transacción ${transactionId} como realizada en la DB: ${updateError.message}. Por favor, inténtalo de nuevo o revisa los logs.`),
+                        // Corrected: using string concatenation for the problematic backtick part
+                        text: escapeMarkdownV2('❌ Error al marcar la transacción `' + transactionId + '` como realizada en la DB: ' + updateError.message + '. Por favor, inténtalo de nuevo o revisa los logs.'),
                         parse_mode: 'MarkdownV2'
                     });
                     return { statusCode: 200, body: "Error updating transaction status" };
@@ -157,7 +168,8 @@ Aquí tienes los detalles de tu recarga:
 
                 let newCaption = callbackQuery.message.text;
                 newCaption = newCaption.replace('Estado: `PENDIENTE`', 'Estado: `REALIZADA` ✅');
-                newCaption += `\n\nRecarga marcada por: *${userName}* (${formattedTime} ${formattedDate})`;
+                // Escapamos userName y las variables de fecha/hora si se usan en Markdown
+                newCaption += `\n\nRecarga marcada por: *${escapeMarkdownV2(userName)}* (${escapeMarkdownV2(formattedTime)} ${escapeMarkdownV2(formattedDate)})`;
 
                 // --- Generar el enlace corto de WhatsApp para el cliente ---
                 let whatsappLinkCompletedCustomer = null;
@@ -201,7 +213,7 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
                         chat_id: chatId,
                         message_id: messageId,
-                        text: escapeMarkdownV2(newCaption), 
+                        text: escapeMarkdownV2(newCaption), // Asegúrate de que newCaption esté completamente escapado
                         parse_mode: 'MarkdownV2',
                         reply_markup: updatedReplyMarkup,
                         disable_web_page_preview: true
@@ -210,15 +222,16 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
                 } catch (telegramEditError) {
                     console.error(`ERROR: Fallo al editar mensaje de Telegram para ${transactionId}:`, telegramEditError.response ? telegramEditError.response.data : telegramEditError.message);
                     if (telegramEditError.response && telegramEditError.response.status === 400 && 
-                       (telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message is not modified'))) {
+                        (telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message is not modified'))) {
                         console.log(`DEBUG: Mensaje ${messageId} para ${transactionId} no modificado o ya editado. Ignorando este error ya que la DB fue actualizada.`);
                     } else if (telegramEditError.response && telegramEditError.response.status === 400 &&
-                                 telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message to edit not found')) {
+                                telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message to edit not found')) {
                         console.log(`DEBUG: Mensaje ${messageId} para ${transactionId} no encontrado, probablemente eliminado. Ignorando este error.`);
                     } else {
                         await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                             chat_id: chatId,
-                            text: escapeMarkdownV2(`⚠️ Advertencia: Recarga ${transactionId} marcada como *REALIZADA* en la base de datos, pero hubo un problema al editar el mensaje de Telegram.`),
+                            // Corrected: using string concatenation for the problematic backtick part
+                            text: escapeMarkdownV2('⚠️ Advertencia: Recarga `' + transactionId + '` marcada como *REALIZADA* en la base de datos, pero hubo un problema al editar el mensaje de Telegram.'),
                             parse_mode: 'MarkdownV2'
                         });
                     }
@@ -243,7 +256,8 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
                     // Editar el mensaje para que muestre el estado final y el botón de factura
                     let newCaption = callbackQuery.message.text;
                     newCaption = newCaption.replace('Estado: `PENDIENTE`', 'Estado: `LIBERADO` ✅');
-                    newCaption += `\n\nKingCoins liberados por: *${userName}*`; // No añadir fecha/hora aquí, ya que se añade más abajo
+                    // Escapamos userName y las variables de fecha/hora si se usan en Markdown
+                    newCaption += `\n\nKingCoins liberados por: *${escapeMarkdownV2(userName)}*`; // No añadir fecha/hora aquí, ya que se añade más abajo
 
                     let updatedInlineKeyboard = [];
                     updatedInlineKeyboard.push([{ text: "✅ KingCoins Liberados", callback_data: `completed_status_${transactionId}` }]); 
@@ -259,7 +273,7 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
                         const shortWhatsappMessage = `
 🎉 ¡Hola! 👋
 
-¡Tu compra de KingCoins (Transaccion: ${escapeMarkdownV2(transaction.id_transaccion)}) ha sido *COMPLETADA* por GamingKings!
+¡Tu compra de KingCoins (Transaccion: ${escapeMarkdownV2(transaction.id_transaccion)}. ha sido *COMPLETADA* por GamingKings!
 
 Puedes ver los detalles de tu factura aquí: ${invoiceLink}
 
@@ -278,14 +292,18 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
                         inline_keyboard: updatedInlineKeyboard
                     };
 
-                    await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
-                        chat_id: chatId,
-                        message_id: messageId,
-                        text: escapeMarkdownV2(newCaption),
-                        parse_mode: 'MarkdownV2',
-                        reply_markup: updatedReplyMarkup,
-                        disable_web_page_preview: true
-                    });
+                    try {
+                        await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
+                            chat_id: chatId,
+                            message_id: messageId,
+                            text: escapeMarkdownV2(newCaption), // Escapamos newCaption
+                            parse_mode: 'MarkdownV2',
+                            reply_markup: updatedReplyMarkup,
+                            disable_web_page_preview: true
+                        });
+                    } catch (editErrorAlreadyReleased) {
+                        console.error(`ERROR: Fallo al editar mensaje de Telegram (ya liberados) para ${transactionId}:`, editErrorAlreadyReleased.response ? editErrorAlreadyReleased.response.data : editErrorAlreadyReleased.message);
+                    }
                     return { statusCode: 200, body: "KingCoins already confirmed" };
                 }
 
@@ -336,14 +354,17 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
                                 });
                             if (insertWalletError) {
                                 console.error("Error al insertar nueva wallet de usuario:", insertWalletError.message);
-                                kingcoinsCreditedMessage = `\n⚠️ Error al crear wallet para ${transaction.player_id}: ${insertWalletError.message}`;
+                                // Escapamos el mensaje de error y el ID
+                                kingcoinsCreditedMessage = `\n⚠️ Error al crear wallet para ${escapeMarkdownV2(transaction.player_id || 'N/A')}: ${escapeMarkdownV2(insertWalletError.message || 'Error desconocido')}`;
                             } else {
                                 console.log(`Wallet creada y ${kingcoinAmount} KingCoins acreditados a ${transaction.player_id}.`);
-                                kingcoinsCreditedMessage = `\n✅ ${kingcoinAmount} KingCoins acreditados a *${escapeMarkdownV2(transaction.player_id)}*.`;
+                                // ESCAPA EL ID DE JUGADOR
+                                kingcoinsCreditedMessage = `\n✅ ${kingcoinAmount} KingCoins acreditados a *${escapeMarkdownV2(transaction.player_id || 'N/A')}*.`;
                             }
                         } else if (fetchWalletError) {
                             console.error("Error al obtener wallet de usuario:", fetchWalletError.message);
-                            kingcoinsCreditedMessage = `\n⚠️ Error al obtener wallet para ${transaction.player_id}: ${fetchWalletError.message}`;
+                            // Escapamos el mensaje de error y el ID
+                            kingcoinsCreditedMessage = `\n⚠️ Error al obtener wallet para ${escapeMarkdownV2(transaction.player_id || 'N/A')}: ${escapeMarkdownV2(fetchWalletError.message || 'Error desconocido')}`;
                         } else {
                             // Si el usuario existe, actualiza el saldo
                             const newBalance = userWallet.balance + kingcoinAmount; // Sumamos al 'balance' existente
@@ -354,22 +375,25 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
 
                             if (updateWalletError) {
                                 console.error("Error al actualizar wallet de usuario:", updateWalletError.message);
-                                kingcoinsCreditedMessage = `\n⚠️ Error al actualizar wallet para ${transaction.player_id}: ${updateWalletError.message}`;
+                                // Escapamos el mensaje de error y el ID
+                                kingcoinsCreditedMessage = `\n⚠️ Error al actualizar wallet para ${escapeMarkdownV2(transaction.player_id || 'N/A')}: ${escapeMarkdownV2(updateWalletError.message || 'Error desconocido')}`;
                             } else {
                                 console.log(`${kingcoinAmount} KingCoins acreditados a ${transaction.player_id}. Nuevo saldo: ${newBalance}`);
-                                kingcoinsCreditedMessage = `\n✅ ${kingcoinAmount} KingCoins acreditados a *${escapeMarkdownV2(transaction.player_id)}*. Nuevo saldo: *${newBalance}*.`;
+                                // ESCAPA EL ID DE JUGADOR Y EL NUEVO SALDO (por si contiene un punto decimal u otro caracter especial)
+                                kingcoinsCreditedMessage = `\n✅ ${kingcoinAmount} KingCoins acreditados a *${escapeMarkdownV2(transaction.player_id || 'N/A')}*. Nuevo saldo: *${escapeMarkdownV2(newBalance.toString())}*.`;
                             }
                         }
                     } catch (walletOperationError) {
                         console.error("Error inesperado en operación de wallet:", walletOperationError.message);
-                        kingcoinsCreditedMessage = `\n❌ Error inesperado al acreditar KingCoins: ${walletOperationError.message}`;
+                        // Escapamos el mensaje de error
+                        kingcoinsCreditedMessage = `\n❌ Error inesperado al acreditar KingCoins: ${escapeMarkdownV2(walletOperationError.message || 'Error desconocido')}`;
                     }
                 } else {
                     kingcoinsCreditedMessage = `\nℹ️ No se pudieron acreditar KingCoins (cantidad 0 o ID de jugador/usuario no válida).`;
                 }
 
-
                 // Construimos la factura de texto para KingCoins
+                // Escapamos los campos que puedan contener caracteres especiales
                 let invoiceTextContent = `
 🎉 ¡Hola! 👋
 
@@ -377,12 +401,12 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
 
 Aquí tienes los detalles de tu transacción:
 ---
-*Factura #${transaction.id_transaccion}*
+*Factura \\#${escapeMarkdownV2(transaction.id_transaccion)}*
 *Estado: LIBERADO ✅* 📅 Fecha: ${formattedDate}
 👑 Producto: KingCoins
-💰 Cantidad Comprada: ${cleanedPackageName}
-💲 Monto Pagado: ${transaction.final_price} ${transaction.currency}
-💳 Método de Pago: ${transaction.payment_method.replace('-', ' ').toUpperCase()}
+💰 Cantidad Comprada: ${escapeMarkdownV2(cleanedPackageName || 'N/A')}
+💲 Monto Pagado: ${escapeMarkdownV2(transaction.final_price.toString() || 'N/A')} ${escapeMarkdownV2(transaction.currency || 'N/A')}
+💳 Método de Pago: ${escapeMarkdownV2(transaction.payment_method.replace('-', ' ').toUpperCase() || 'N/A')}
 ---
 ¡Gracias por tu compra! ✨
                 `.trim();
@@ -401,7 +425,8 @@ Aquí tienes los detalles de tu transacción:
                     console.error("Error al actualizar la transacción de KingCoins en Supabase:", updateError.message);
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                         chat_id: chatId,
-                        text: escapeMarkdownV2(`❌ Error al liberar KingCoins para ${transactionId} en la DB: ${updateError.message}.`),
+                        // Corrected: using string concatenation for the problematic backtick part
+                        text: escapeMarkdownV2('❌ Error al liberar KingCoins para `' + transactionId + '` en la DB: ' + updateError.message + '.'),
                         parse_mode: 'MarkdownV2'
                     });
                     return { statusCode: 200, body: "Error updating KingCoins transaction status" };
@@ -411,8 +436,9 @@ Aquí tienes los detalles de tu transacción:
 
                 let newCaption = callbackQuery.message.text;
                 newCaption = newCaption.replace('Estado: `PENDIENTE`', 'Estado: `LIBERADO` ✅');
-                newCaption += `\n\nKingCoins liberados por: *${userName}* (${formattedTime} ${formattedDate})`;
-                newCaption += kingcoinsCreditedMessage; // Añadir el mensaje de acreditación
+                // Escapamos userName y las variables de fecha/hora si se usan en Markdown
+                newCaption += `\n\nKingCoins liberados por: *${escapeMarkdownV2(userName)}* (${escapeMarkdownV2(formattedTime)} ${escapeMarkdownV2(formattedDate)})`;
+                newCaption += kingcoinsCreditedMessage; // Añadir el mensaje de acreditación (ya escapado internamente)
 
                 // Definir los nuevos botones para el mensaje editado de KingCoins
                 let updatedInlineKeyboard = [];
@@ -449,7 +475,7 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
                         chat_id: chatId,
                         message_id: messageId,
-                        text: escapeMarkdownV2(newCaption),
+                        text: escapeMarkdownV2(newCaption), // Asegúrate de que newCaption esté completamente escapado
                         parse_mode: 'MarkdownV2',
                         reply_markup: updatedReplyMarkup,
                         disable_web_page_preview: true
@@ -458,15 +484,16 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
                 } catch (telegramEditError) {
                     console.error(`ERROR: Fallo al editar mensaje de Telegram para KingCoins ${transactionId}:`, telegramEditError.response ? telegramEditError.response.data : telegramEditError.message);
                     if (telegramEditError.response && telegramEditError.response.status === 400 && 
-                       (telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message is not modified'))) {
+                        (telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message is not modified'))) {
                         console.log(`DEBUG: Mensaje ${messageId} para KingCoins ${transactionId} no modificado o ya editado. Ignorando.`);
                     } else if (telegramEditError.response && telegramEditError.response.status === 400 &&
-                                 telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message to edit not found')) {
+                                telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message to edit not found')) {
                         console.log(`DEBUG: Mensaje ${messageId} para KingCoins ${transactionId} no encontrado, probablemente eliminado. Ignorando.`);
                     } else {
                         await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                             chat_id: chatId,
-                            text: escapeMarkdownV2(`⚠️ Advertencia: KingCoins ${transactionId} marcados como *LIBERADOS* en la base de datos, pero hubo un problema al editar el mensaje de Telegram.`),
+                            // Corrected: using string concatenation for the problematic backtick part
+                            text: escapeMarkdownV2('⚠️ Advertencia: KingCoins `' + transactionId + '` marcados como *LIBERADOS* en la base de datos, pero hubo un problema al editar el mensaje de Telegram.'),
                             parse_mode: 'MarkdownV2'
                         });
                     }
@@ -505,7 +532,7 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
                     const whatsappMessageInvoice = `
 🎉 ¡Hola! 👋
 
-Aquí tienes tu factura para la compra de ${escapeMarkdownV2(cleanedPackageName)} (Transacción #${escapeMarkdownV2(transaction.id_transaccion)}) de GamingKings.
+Aquí tienes tu factura para la compra de ${escapeMarkdownV2(cleanedPackageName)} (Transacción \\#${escapeMarkdownV2(transaction.id_transaccion)}) de GamingKings.
 
 Puedes verla aquí: ${invoiceLink}
 
@@ -516,7 +543,8 @@ Puedes verla aquí: ${invoiceLink}
                     
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                         chat_id: chatId,
-                        text: escapeMarkdownV2(`👉 *Enlace de Factura para cliente de la transacción \`${transactionId}\`:* [Enviar por WhatsApp](${whatsappLinkInvoiceCustomer})`),
+                        // Corrected: using string concatenation for the problematic backtick part
+                        text: escapeMarkdownV2('👉 *Enlace de Factura para cliente de la transacción `' + transactionId + '`:* [Enviar por WhatsApp](' + whatsappLinkInvoiceCustomer + ')'),
                         parse_mode: 'MarkdownV2',
                         disable_web_page_preview: true
                     });
@@ -524,7 +552,8 @@ Puedes verla aquí: ${invoiceLink}
                 } else {
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                         chat_id: chatId,
-                        text: escapeMarkdownV2(`⚠️ La transacción \`${transactionId}\` no tiene un número de WhatsApp asociado para enviar la factura.`),
+                        // Corrected: using string concatenation for the problematic backtick part
+                        text: escapeMarkdownV2('⚠️ La transacción `' + transactionId + '` no tiene un número de WhatsApp asociado para enviar la factura.'),
                         parse_mode: 'MarkdownV2'
                     });
                     console.log(`No hay número de WhatsApp para el cliente de la transacción ${transactionId}. No se generará el enlace de WhatsApp de factura.`);
@@ -532,40 +561,42 @@ Puedes verla aquí: ${invoiceLink}
             }
             // --- Handler para 'send_whatsapp_' (existente para recargador) ---
             else if (data.startsWith('send_whatsapp_')) { 
-               const transactionId = data.replace('send_whatsapp_', '');
-               const transaction = await getTransaction(transactionId);
-               
-               if (!transaction) {
-                   return { statusCode: 200, body: "Error fetching transaction for send_whatsapp" };
-               }
-               
-               const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
-               
-               // Limpiar packageName para el mensaje del recargador
-               const cleanedPackageNameForRecargador = transaction.package_name.includes('<i class="fas fa-crown"></i>') 
-                   ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins') 
-                   : transaction.package_name;
+                const transactionId = data.replace('send_whatsapp_', '');
+                const transaction = await getTransaction(transactionId);
+                
+                if (!transaction) {
+                    return { statusCode: 200, body: "Error fetching transaction for send_whatsapp" };
+                }
+                
+                const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
+                
+                // Limpiar packageName para el mensaje del recargador
+                const cleanedPackageNameForRecargador = transaction.package_name.includes('<i class="fas fa-crown"></i>') 
+                    ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins') 
+                    : transaction.package_name;
 
-               let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
-               whatsappMessageRecargador += `*ID de Jugador:* ${transaction.player_id || 'N/A'}\n`;
-               whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageNameForRecargador || 'N/A'}\n`; 
-               
-               const whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
+                // Escapamos player_id y cleanedPackageNameForRecargador
+                let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
+                whatsappMessageRecargador += `*ID de Jugador:* ${escapeMarkdownV2(transaction.player_id || 'N/A')}\n`;
+                whatsappMessageRecargador += `*Paquete a Recargar:* ${escapeMarkdownV2(cleanedPackageNameForRecargador || 'N/A')}\n`; 
+                
+                const whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
 
-               await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-                   callback_query_id: callbackQuery.id,
-                   text: `Generando enlace de WhatsApp para el recargador...`,
-                   show_alert: false
-               });
-               
-               await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                   chat_id: chatId,
-                   text: escapeMarkdownV2(`👉 *Enlace para el recargador de la transacción \`${transactionId}\`:* [Haz clic aquí](${whatsappLinkRecargador})`),
-                   parse_mode: 'MarkdownV2',
-                   disable_web_page_preview: true
-               });
+                await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
+                    callback_query_id: callbackQuery.id,
+                    text: `Generando enlace de WhatsApp para el recargador...`,
+                    show_alert: false
+                });
+                
+                await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                    chat_id: chatId,
+                    // Corrected: using string concatenation for the problematic backtick part
+                    text: escapeMarkdownV2('👉 *Enlace para el recargador de la transacción `' + transactionId + '`:* [Haz clic aquí](' + whatsappLinkRecargador + ')'),
+                    parse_mode: 'MarkdownV2',
+                    disable_web_page_preview: true
+                });
 
-               console.log(`Enlace de WhatsApp para recargador generado (desde viejo callback) para transacción ${transactionId}: ${whatsappLinkRecargador}`);
+                console.log(`Enlace de WhatsApp para recargador generado (desde viejo callback) para transacción ${transactionId}: ${whatsappLinkRecargador}`);
             }
             // --- Handler para callbacks de estado finalizados/informativos ---
             else if (data.startsWith('completed_status_') || data.startsWith('no_whatsapp_factura_')) {
