@@ -49,22 +49,27 @@ exports.handler = async function(event, context) {
             const userId = callbackQuery.from.id;
             const userName = callbackQuery.from.first_name || `Usuario ${userId}`;
             const data = callbackQuery.data;
-            const callbackQueryId = callbackQuery.id; // Store the callback_query_id
+            const callbackQueryId = callbackQuery.id; 
 
-            // Helper function to answer callback queries
+            let hasAnsweredCallback = false;
             const answerCallback = async (queryId, text, showAlert = false) => {
+                if (hasAnsweredCallback) {
+                    console.log(`WARNING: Attempted to answer callback_query ${queryId} more than once.`);
+                    return; 
+                }
                 try {
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
                         callback_query_id: queryId,
                         text: text,
                         show_alert: showAlert
                     });
+                    hasAnsweredCallback = true; 
                 } catch (ansError) {
                     console.error(`Error al responder al callback_query ${queryId}:`, ansError.response ? ansError.response.data : ansError.message);
+                    hasAnsweredCallback = true; 
                 }
             };
 
-            // Helper to get transaction without answering the callback internally
             async function getTransaction(id) {
                 const { data: transaction, error: fetchError } = await supabase
                     .from('transactions')
@@ -74,21 +79,19 @@ exports.handler = async function(event, context) {
 
                 if (fetchError || !transaction) {
                     console.error("Error al obtener la transacción de Supabase:", fetchError ? fetchError.message : "Transacción no encontrada.");
-                    // Do NOT answer callback here, it's handled by the main flow
                     return null;
                 }
                 return transaction;
             }
 
-            // --- Handler para 'mark_done_' (juegos existentes) ---
+            // --- Handler para 'mark_done_' (juegos existentes - recargas generales) ---
             if (data.startsWith('mark_done_')) {
                 const transactionId = data.replace('mark_done_', '');
-                await answerCallback(callbackQueryId, `Procesando recarga ${transactionId}...`, false); // Respond immediately
-
-                const transaction = await getTransaction(transactionId); // Removed callbackQueryId from here
+                
+                const transaction = await getTransaction(transactionId);
 
                 if (!transaction) {
-                    // If transaction not found after initial acknowledgement, send a new message
+                    await answerCallback(callbackQueryId, "❌ Error: Transacción no encontrada.", true); 
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                         chat_id: chatId,
                         text: escapeMarkdownV2("❌ Error: Transacción no encontrada para la ID proporcionada."),
@@ -97,11 +100,10 @@ exports.handler = async function(event, context) {
                     return { statusCode: 200, body: "Error fetching transaction for mark_done" };
                 }
 
-                console.log(`DEBUG: Estado actual de la transacción ${transactionId} al hacer clic: ${transaction.status}`);
-
                 if (transaction.status === 'realizada') {
-                    console.log(`DEBUG: Transacción ${transactionId} ya marcada como 'realizada'. Enviando alerta.`);
-                    await answerCallback(callbackQueryId, "¡Esta recarga ya fue marcada como realizada!", true); // Alert if already done
+                    await answerCallback(callbackQueryId, "¡Esta recarga ya fue marcada como realizada!", true); 
+                    console.log(`DEBUG: Transacción ${transactionId} ya marcada como 'realizada'.`);
+                    
                     const currentMessageText = callbackQuery.message.text;
                     const newTextIfAlreadyDone = currentMessageText.includes('REALIZADA') ? currentMessageText : currentMessageText.replace('Estado: `PENDIENTE`', 'Estado: `REALIZADA` ✅');
                     
@@ -121,6 +123,8 @@ exports.handler = async function(event, context) {
 
                     return { statusCode: 200, body: "Already completed" };
                 }
+
+                await answerCallback(callbackQueryId, `Procesando recarga ${transactionId}...`, false); 
 
                 const now = new Date();
                 const day = String(now.getDate()).padStart(2, '0');
@@ -244,12 +248,11 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
             // --- Handler para 'release_kingcoins_' ---
             else if (data.startsWith('release_kingcoins_')) {
                 const transactionId = data.replace('release_kingcoins_', '');
-                await answerCallback(callbackQueryId, `Liberando KingCoins para transacción ${transactionId}...`, false); // Respond immediately
 
-                const transaction = await getTransaction(transactionId); // Removed callbackQueryId from here
+                const transaction = await getTransaction(transactionId);
 
                 if (!transaction) {
-                    // If transaction not found after initial acknowledgement, send a new message
+                    await answerCallback(callbackQueryId, "❌ Error: Transacción no encontrada.", true);
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                         chat_id: chatId,
                         text: escapeMarkdownV2("❌ Error: Transacción no encontrada para la ID proporcionada."),
@@ -259,7 +262,7 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
                 }
 
                 if (transaction.status === 'realizada') {
-                    await answerCallback(callbackQueryId, "¡Estos KingCoins ya fueron liberados!", true); // Alert if already released
+                    await answerCallback(callbackQueryId, "¡Estos KingCoins ya fueron liberados!", true); 
                     let newCaption = callbackQuery.message.text;
                     newCaption = newCaption.replace('Estado: `PENDIENTE`', 'Estado: `LIBERADO` ✅');
                     newCaption += `\n\nKingCoins liberados por: *${escapeMarkdownV2(userName)}*`; 
@@ -307,10 +310,13 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
                             disable_web_page_preview: true
                         });
                     } catch (editErrorAlreadyReleased) {
-                        console.error(`ERROR: Fallo al editar mensaje de Telegram (ya liberados) para ${transactionId}:`, editErrorAlreadyReleased.response ? editErrorAlreadyReleased.response.data : editErrorAlreadyReleased.message);
+                        console.error(`ERROR: Fallo al editar mensaje de Telegram (ya liberados) para ${transactionId}:`, editErrorAlreadyReleased.response ? editErrorAlreadyReleased.data : editErrorAlreadyReleased.message);
                     }
                     return { statusCode: 200, body: "KingCoins already confirmed" };
                 }
+
+                await answerCallback(callbackQueryId, `Liberando KingCoins para transacción ${transactionId}...`, false); 
+
 
                 const now = new Date();
                 const day = String(now.getDate()).padStart(2, '0');
@@ -480,12 +486,11 @@ Puedes ver los detalles de tu factura aquí: ${invoiceLink}
             }
             else if (data.startsWith('send_invoice_kingcoins:')) {
                 const transactionId = data.split(':')[1];
-                await answerCallback(callbackQueryId, `Generando enlace de factura para ${transactionId}...`, false); // Respond immediately
+                await answerCallback(callbackQueryId, `Generando enlace de factura para ${transactionId}...`, false); 
 
-                const transaction = await getTransaction(transactionId); // Removed callbackQueryId from here
+                const transaction = await getTransaction(transactionId);
 
                 if (!transaction) {
-                    // If transaction not found after initial acknowledgement, send a new message
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                         chat_id: chatId,
                         text: escapeMarkdownV2("❌ Error: Transacción no encontrada para la ID proporcionada."),
@@ -535,12 +540,11 @@ Puedes verla aquí: ${invoiceLink}
             // --- Handler para 'send_whatsapp_' (existente para recargador) ---
             else if (data.startsWith('send_whatsapp_')) { 
                 const transactionId = data.replace('send_whatsapp_', '');
-                await answerCallback(callbackQueryId, `Generando enlace de WhatsApp para el recargador...`, false); // Respond immediately
+                await answerCallback(callbackQueryId, `Generando enlace de WhatsApp para el recargador...`, false); 
 
-                const transaction = await getTransaction(transactionId); // Removed callbackQueryId from here
+                const transaction = await getTransaction(transactionId);
                 
                 if (!transaction) {
-                    // If transaction not found after initial acknowledgement, send a new message
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                         chat_id: chatId,
                         text: escapeMarkdownV2("❌ Error: Transacción no encontrada para la ID proporcionada."),
@@ -572,7 +576,7 @@ Puedes verla aquí: ${invoiceLink}
             }
             // --- Handler para callbacks de estado finalizados/informativos ---
             else if (data.startsWith('completed_status_') || data.startsWith('no_whatsapp_factura_')) {
-                await answerCallback(callbackQueryId, "Acción ya completada o informativa.", false); // Respond for informative clicks
+                await answerCallback(callbackQueryId, "Acción ya completada o informativa.", false); 
             }
         }
 
