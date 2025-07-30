@@ -87,7 +87,6 @@ exports.handler = async function(event, context) {
                         show_alert: true
                     });
                     
-                    // Asegurarse de que el texto del mensaje actual se escape correctamente
                     const currentMessageText = callbackQuery.message.text;
                     const newTextIfAlreadyDone = currentMessageText.includes('REALIZADA') ? currentMessageText : currentMessageText.replace('Estado: `PENDIENTE`', 'Estado: `REALIZADA` ✅');
                     
@@ -129,8 +128,6 @@ exports.handler = async function(event, context) {
                 const minutes = String(now.getMinutes()).padStart(2, '0');
                 const formattedTime = `${hours}:${minutes}`;
                 
-                // --- Construimos la factura de texto para guardar ---
-                // NO SE ESCAPA AQUÍ PORQUE ES PARA LA BASE DE DATOS, NO PARA TELEGRAM DIRECTAMENTE
                 let invoiceTextContent = `
 🎉 ¡Hola! 👋
 
@@ -175,39 +172,33 @@ Aquí tienes los detalles de tu recarga:
                 newCaption = newCaption.replace('Estado: `PENDIENTE`', 'Estado: `REALIZADA` ✅');
                 newCaption += `\n\nRecarga marcada por: *${escapeMarkdownV2(userName)}* (${escapeMarkdownV2(formattedTime)} ${escapeMarkdownV2(formattedDate)})`;
 
-                // --- Generar el enlace corto de WhatsApp para el cliente ---
-                let whatsappLinkCompletedCustomer = null;
-                if (transaction.whatsapp_number && transaction.whatsapp_number.trim() !== '') {
-                    const customerWhatsappNumberFormatted = transaction.whatsapp_number.startsWith('+') ? transaction.whatsapp_number : `+${transaction.whatsapp_number}`;
-                    
-                    const invoiceLink = `${NETLIFY_SITE_URL}/.netlify/functions/get-invoice?id=${encodeURIComponent(transaction.id_transaccion)}`;
-                    
-                    const shortWhatsappMessage = `
-🎉 ¡Hola! 👋
-
-¡Tu recarga con la ID de transaccion: \`${escapeMarkdownV2(transaction.id_transaccion)}\` ha sido *COMPLETADA* por GamingKings!
-
-Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
-
-¡Gracias por tu compra! ✨
-                    `.trim();
-
-                    whatsappLinkCompletedCustomer = `https://wa.me/${customerWhatsappNumberFormatted}?text=${encodeURIComponent(shortWhatsappMessage)}`;
-                    
-                    console.log(`Enlace de WhatsApp 'Factura Completada' generado para cliente ${transaction.whatsapp_number}.`);
-                } else {
-                    console.log(`No hay número de WhatsApp para el cliente de la transacción ${transactionId}. No se generará el enlace de WhatsApp de factura.`);
-                }
+                // --- Se elimina la lógica para generar y añadir el botón de WhatsApp (Factura) aquí ---
+                // let whatsappLinkCompletedCustomer = null;
+                // if (transaction.whatsapp_number && transaction.whatsapp_number.trim() !== '') {
+                //     const customerWhatsappNumberFormatted = transaction.whatsapp_number.startsWith('+') ? transaction.whatsapp_number : `+${transaction.whatsapp_number}`;
+                //     const invoiceLink = `${NETLIFY_SITE_URL}/.netlify/functions/get-invoice?id=${encodeURIComponent(transaction.id_transaccion)}`;
+                //     const shortWhatsappMessage = `
+                // 🎉 ¡Hola! 👋
+                // ¡Tu recarga con la ID de transaccion: \`${escapeMarkdownV2(transaction.id_transaccion)}\` ha sido *COMPLETADA* por GamingKings!
+                // Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
+                // ¡Gracias por tu compra! ✨
+                //     `.trim();
+                //     whatsappLinkCompletedCustomer = `https://wa.me/${customerWhatsappNumberFormatted}?text=${encodeURIComponent(shortWhatsappMessage)}`;
+                //     console.log(`Enlace de WhatsApp 'Factura Completada' generado para cliente ${transaction.whatsapp_number}.`);
+                // } else {
+                //     console.log(`No hay número de WhatsApp para el cliente de la transacción ${transactionId}. No se generará el enlace de WhatsApp de factura.`);
+                // }
 
                 // Definir los nuevos botones para el mensaje editado
                 let updatedInlineKeyboard = [];
                 updatedInlineKeyboard.push([{ text: "✅ Recarga Realizada", callback_data: `completed_status_${transactionId}` }]); 
 
-                if (whatsappLinkCompletedCustomer) {
-                    updatedInlineKeyboard.push([{ text: "📲 WhatsApp Cliente (Factura)", url: whatsappLinkCompletedCustomer }]);
-                } else {
-                    updatedInlineKeyboard.push([{ text: "⚠️ Cliente sin WhatsApp para factura", callback_data: `no_whatsapp_factura_${transactionId}` }]);
-                }
+                // --- Se eliminan los botones relacionados con la factura aquí ---
+                // if (whatsappLinkCompletedCustomer) {
+                //     updatedInlineKeyboard.push([{ text: "📲 WhatsApp Cliente (Factura)", url: whatsappLinkCompletedCustomer }]);
+                // } else {
+                //     updatedInlineKeyboard.push([{ text: "⚠️ Cliente sin WhatsApp para factura", callback_data: `no_whatsapp_factura_${transactionId}` }]);
+                // }
 
                 const updatedReplyMarkup = {
                     inline_keyboard: updatedInlineKeyboard
@@ -266,31 +257,30 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
                     let updatedInlineKeyboard = [];
                     updatedInlineKeyboard.push([{ text: "✅ KingCoins Liberados", callback_data: `completed_status_${transactionId}` }]); 
 
-                    let whatsappLinkCompletedCustomer = null;
-                    if (transaction.whatsapp_number && transaction.whatsapp_number.trim() !== '') {
-                        const customerWhatsappNumberFormatted = transaction.whatsapp_number.startsWith('+') ? transaction.whatsapp_number : `+${transaction.whatsapp_number}`;
-                        const invoiceLink = `${NETLIFY_SITE_URL}/.netlify/functions/get-invoice?id=${encodeURIComponent(transaction.id_transaccion)}`;
-                        const cleanedPackageName = transaction.package_name.includes('<i class="fas fa-crown"></i>') 
-                            ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins') 
-                            : transaction.package_name;
+                    // --- Se elimina la lógica para generar y añadir el botón de WhatsApp (Factura) aquí ---
+                    // let whatsappLinkCompletedCustomer = null;
+                    // if (transaction.whatsapp_number && transaction.whatsapp_number.trim() !== '') {
+                    //     const customerWhatsappNumberFormatted = transaction.whatsapp_number.startsWith('+') ? transaction.whatsapp_number : `+${transaction.whatsapp_number}`;
+                    //     const invoiceLink = `${NETLIFY_SITE_URL}/.netlify/functions/get-invoice?id=${encodeURIComponent(transaction.id_transaccion)}`;
+                    //     const cleanedPackageName = transaction.package_name.includes('<i class="fas fa-crown"></i>') 
+                    //         ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins') 
+                    //         : transaction.package_name;
 
-                        const shortWhatsappMessage = `
-🎉 ¡Hola! 👋
+                    //     const shortWhatsappMessage = `
+                    // 🎉 ¡Hola! 👋
+                    // ¡Tu compra de KingCoins (Transaccion: \`${escapeMarkdownV2(transaction.id_transaccion)}\`) ha sido *COMPLETADA* por GamingKings!
+                    // Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
+                    // ¡Gracias por tu compra! ✨
+                    //     `.trim();
+                    //     whatsappLinkCompletedCustomer = `https://wa.me/${customerWhatsappNumberFormatted}?text=${encodeURIComponent(shortWhatsappMessage)}`;
+                    // }
 
-¡Tu compra de KingCoins (Transaccion: \`${escapeMarkdownV2(transaction.id_transaccion)}\`) ha sido *COMPLETADA* por GamingKings!
-
-Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
-
-¡Gracias por tu compra! ✨
-                        `.trim();
-                        whatsappLinkCompletedCustomer = `https://wa.me/${customerWhatsappNumberFormatted}?text=${encodeURIComponent(shortWhatsappMessage)}`;
-                    }
-
-                    if (whatsappLinkCompletedCustomer) {
-                        updatedInlineKeyboard.push([{ text: "📲 WhatsApp Cliente (Factura)", url: whatsappLinkCompletedCustomer }]);
-                    } else {
-                        updatedInlineKeyboard.push([{ text: "⚠️ Cliente sin WhatsApp para factura", callback_data: `no_whatsapp_factura_${transactionId}` }]);
-                    }
+                    // --- Se eliminan los botones relacionados con la factura aquí ---
+                    // if (whatsappLinkCompletedCustomer) {
+                    //     updatedInlineKeyboard.push([{ text: "📲 WhatsApp Cliente (Factura)", url: whatsappLinkCompletedCustomer }]);
+                    // } else {
+                    //     updatedInlineKeyboard.push([{ text: "⚠️ Cliente sin WhatsApp para factura", callback_data: `no_whatsapp_factura_${transactionId}` }]);
+                    // }
 
                     const updatedReplyMarkup = {
                         inline_keyboard: updatedInlineKeyboard
@@ -319,14 +309,12 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
                     return { statusCode: 200, body: "KingCoins already confirmed" };
                 }
 
-                // El mensaje de respuesta a la callback_query debe ser escapado si usa Markdown.
                 await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
                     callback_query_id: callbackQuery.id,
                     text: `Liberando KingCoins para transacción ${escapeMarkdownV2(transactionId)}...`,
                     show_alert: false
                 });
 
-                // --- Lógica para liberar KingCoins (actualizar Supabase y tu sistema interno) ---
                 const now = new Date();
                 const day = String(now.getDate()).padStart(2, '0');
                 const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -336,63 +324,52 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
                 const minutes = String(now.getMinutes()).padStart(2, '0');
                 const formattedTime = `${hours}:${minutes}`;
 
-                // Limpiar packageName para la factura y mensajes
                 const cleanedPackageName = transaction.package_name.includes('<i class="fas fa-crown"></i>') 
                     ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins') 
                     : transaction.package_name;
 
-                // Extraer la cantidad numérica de KingCoins del package_name
                 const kingcoinAmountMatch = cleanedPackageName.match(/(\d+)\s*KingCoins/i);
                 const kingcoinAmount = kingcoinAmountMatch ? parseInt(kingcoinAmountMatch[1], 10) : 0;
 
-                let kingcoinsCreditedMessage = ''; // Mensaje para indicar si se acreditaron los KingCoins
+                let kingcoinsCreditedMessage = ''; 
 
-                // ACREDITAR KINGCOINS EN user_wallets
-                if (kingcoinAmount > 0 && transaction.player_id) { // Usamos transaction.player_id como el user_id (UUID)
+                if (kingcoinAmount > 0 && transaction.player_id) { 
                     try {
-                        // Intentar obtener el saldo actual del usuario
                         const { data: userWallet, error: fetchWalletError } = await supabase
-                            .from('user_wallets') // Usamos 'user_wallets'
-                            .select('balance') // Seleccionamos la columna 'balance'
-                            .eq('user_id', transaction.player_id) // Buscamos por 'user_id'
+                            .from('user_wallets') 
+                            .select('balance') 
+                            .eq('user_id', transaction.player_id) 
                             .single();
 
-                        if (fetchWalletError && fetchWalletError.code === 'PGRST116') { // No rows found
-                            // Si el usuario no existe, inserta una nueva entrada
+                        if (fetchWalletError && fetchWalletError.code === 'PGRST116') { 
                             const { error: insertWalletError } = await supabase
-                                .from('user_wallets') // Usamos 'user_wallets'
+                                .from('user_wallets') 
                                 .insert({
-                                    user_id: transaction.player_id, // Insertamos en 'user_id'
-                                    balance: kingcoinAmount // Insertamos en 'balance'
+                                    user_id: transaction.player_id, 
+                                    balance: kingcoinAmount 
                                 });
                             if (insertWalletError) {
                                 console.error("Error al insertar nueva wallet de usuario:", insertWalletError.message);
-                                // NO ESCAPAR EL PLAYER_ID DENTRO DE LOS BACKTICKS AQUÍ
                                 kingcoinsCreditedMessage = `\n⚠️ Error al crear wallet para \`${transaction.player_id}\`: ${escapeMarkdownV2(insertWalletError.message)}`;
                             } else {
                                 console.log(`Wallet creada y ${kingcoinAmount} KingCoins acreditados a ${transaction.player_id}.`);
-                                // NO ESCAPAR EL PLAYER_ID DENTRO DE LOS BACKTICKS AQUÍ
                                 kingcoinsCreditedMessage = `\n✅ ${kingcoinAmount} KingCoins acreditados a \`${transaction.player_id}\`.`;
                             }
                         } else if (fetchWalletError) {
                             console.error("Error al obtener wallet de usuario:", fetchWalletError.message);
-                            // NO ESCAPAR EL PLAYER_ID DENTRO DE LOS BACKTICKS AQUÍ
                             kingcoinsCreditedMessage = `\n⚠️ Error al obtener wallet para \`${transaction.player_id}\`: ${escapeMarkdownV2(fetchWalletError.message)}`;
                         } else {
-                            // Si el usuario existe, actualiza el saldo
-                            const newBalance = userWallet.balance + kingcoinAmount; // Sumamos al 'balance' existente
+                            const newBalance = userWallet.balance + kingcoinAmount; 
                             const { error: updateWalletError } = await supabase
-                                .from('user_wallets') // Usamos 'user_wallets'
-                                .update({ balance: newBalance }) // Actualizamos 'balance'
-                                .eq('user_id', transaction.player_id); // Buscamos por 'user_id'
+                                .from('user_wallets') 
+                                .update({ balance: newBalance }) 
+                                .eq('user_id', transaction.player_id); 
 
                             if (updateWalletError) {
                                 console.error("Error al actualizar wallet de usuario:", updateWalletError.message);
-                                // NO ESCAPAR EL PLAYER_ID DENTRO DE LOS BACKTICKS AQUÍ
                                 kingcoinsCreditedMessage = `\n⚠️ Error al actualizar wallet para \`${transaction.player_id}\`: ${escapeMarkdownV2(updateWalletError.message)}`;
                             } else {
                                 console.log(`${kingcoinAmount} KingCoins acreditados a ${transaction.player_id}. Nuevo saldo: ${newBalance}`);
-                                // NO ESCAPAR EL PLAYER_ID NI NEWBALANCE DENTRO DE LOS BACKTICKS AQUÍ
                                 kingcoinsCreditedMessage = `\n✅ ${kingcoinAmount} KingCoins acreditados a \`${transaction.player_id}\`. Nuevo saldo: \`${newBalance}\`.`;
                             }
                         }
@@ -404,7 +381,6 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
                     kingcoinsCreditedMessage = `\nℹ️ No se pudieron acreditar KingCoins (cantidad 0 o ID de jugador/usuario no válida).`;
                 }
 
-                // Construimos la factura de texto para KingCoins (Esto es para la DB, no necesita escape aquí)
                 let invoiceTextContent = `
 🎉 ¡Hola! 👋
 
@@ -425,10 +401,10 @@ Aquí tienes los detalles de tu transacción:
                 const { error: updateError } = await supabase
                     .from('transactions')
                     .update({
-                        status: 'realizada', // Usamos 'realizada' consistentemente
+                        status: 'realizada', 
                         completed_at: new Date().toISOString(),
                         completed_by: userName,
-                        invoice_text_content: invoiceTextContent // Guarda la factura de texto limpia
+                        invoice_text_content: invoiceTextContent 
                     })
                     .eq('id_transaccion', transactionId);
 
@@ -447,41 +423,38 @@ Aquí tienes los detalles de tu transacción:
                 let newCaption = callbackQuery.message.text;
                 newCaption = newCaption.replace('Estado: `PENDIENTE`', 'Estado: `LIBERADO` ✅');
                 newCaption += `\n\nKingCoins liberados por: *${escapeMarkdownV2(userName)}* (${escapeMarkdownV2(formattedTime)} ${escapeMarkdownV2(formattedDate)})`;
-                newCaption += kingcoinsCreditedMessage; // Añadir el mensaje de acreditación
+                newCaption += kingcoinsCreditedMessage; 
 
                 // Definir los nuevos botones para el mensaje editado de KingCoins
                 let updatedInlineKeyboard = [];
                 updatedInlineKeyboard.push([{ text: "✅ KingCoins Liberados", callback_data: `completed_status_${transactionId}` }]); 
                 
-                // Botón de factura por WhatsApp para el cliente (se genera aquí también para el mensaje editado)
-                let whatsappLinkCompletedCustomer = null;
-                if (transaction.whatsapp_number && transaction.whatsapp_number.trim() !== '') {
-                    const customerWhatsappNumberFormatted = transaction.whatsapp_number.startsWith('+') ? transaction.whatsapp_number : `+${transaction.whatsapp_number}`;
-                    const invoiceLink = `${NETLIFY_SITE_URL}/.netlify/functions/get-invoice?id=${encodeURIComponent(transaction.id_transaccion)}`;
-                    const shortWhatsappMessage = `
-🎉 ¡Hola! 👋
+                // --- Se elimina la lógica para generar y añadir el botón de WhatsApp (Factura) aquí ---
+                // let whatsappLinkCompletedCustomer = null;
+                // if (transaction.whatsapp_number && transaction.whatsapp_number.trim() !== '') {
+                //     const customerWhatsappNumberFormatted = transaction.whatsapp_number.startsWith('+') ? transaction.whatsapp_number : `+${transaction.whatsapp_number}`;
+                //     const invoiceLink = `${NETLIFY_SITE_URL}/.netlify/functions/get-invoice?id=${encodeURIComponent(transaction.id_transaccion)}`;
+                //     const shortWhatsappMessage = `
+                // 🎉 ¡Hola! 👋
+                // ¡Tu compra de KingCoins (Transaccion: \`${escapeMarkdownV2(transaction.id_transaccion)}\`) ha sido *COMPLETADA* por GamingKings!
+                // Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
+                // ¡Gracias por tu compra! ✨
+                //     `.trim();
+                //     whatsappLinkCompletedCustomer = `https://wa.me/${customerWhatsappNumberFormatted}?text=${encodeURIComponent(shortWhatsappMessage)}`;
+                // }
 
-¡Tu compra de KingCoins (Transaccion: \`${escapeMarkdownV2(transaction.id_transaccion)}\`) ha sido *COMPLETADA* por GamingKings!
-
-Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
-
-¡Gracias por tu compra! ✨
-                    `.trim();
-                    whatsappLinkCompletedCustomer = `https://wa.me/${customerWhatsappNumberFormatted}?text=${encodeURIComponent(shortWhatsappMessage)}`;
-                }
-
-                if (whatsappLinkCompletedCustomer) {
-                    updatedInlineKeyboard.push([{ text: "📲 WhatsApp Cliente (Factura)", url: whatsappLinkCompletedCustomer }]);
-                } else {
-                    updatedInlineKeyboard.push([{ text: "⚠️ Cliente sin WhatsApp para factura", callback_data: `no_whatsapp_factura_${transactionId}` }]);
-                }
+                // --- Se eliminan los botones relacionados con la factura aquí ---
+                // if (whatsappLinkCompletedCustomer) {
+                //     updatedInlineKeyboard.push([{ text: "📲 WhatsApp Cliente (Factura)", url: whatsappLinkCompletedCustomer }]);
+                // } else {
+                //     updatedInlineKeyboard.push([{ text: "⚠️ Cliente sin WhatsApp para factura", callback_data: `no_whatsapp_factura_${transactionId}` }]);
+                // }
 
                 const updatedReplyMarkup = {
                     inline_keyboard: updatedInlineKeyboard
                 };
 
                 try {
-                    // *** NUEVO CONSOLE.LOG PARA DEBUGGING ***
                     console.log(`DEBUG (release_kingcoins_): Texto FINAL del mensaje a Telegram ANTES de escapar:\n${newCaption}`);
                     console.log(`DEBUG (release_kingcoins_): Texto FINAL del mensaje a Telegram DESPUÉS de escapar:\n${JSON.stringify(escapeMarkdownV2(newCaption))}`);
 
@@ -511,11 +484,8 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
                     }
                 }
             }
-            // --- Handler para 'send_invoice_kingcoins' (este es el que se activaría si tuvieras un botón separado para la factura) ---
-            // NOTA: Este bloque ahora se activa si el callback_data es 'send_invoice_kingcoins:',
-            // pero el botón de factura se genera automáticamente después de liberar KingCoins.
-            // Si tuvieras un botón separado para la factura, su callback_data debería ser 'send_invoice_kingcoins_TRANSACTIONID'
-            // para que este handler lo procese.
+            // --- Handler para 'send_invoice_kingcoins' ---
+            // Este handler se mantiene, pero ningún botón debería activarlo ahora.
             else if (data.startsWith('send_invoice_kingcoins:')) {
                 const transactionId = data.split(':')[1];
                 const transaction = await getTransaction(transactionId);
@@ -536,7 +506,6 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
                     
                     const invoiceLink = `${NETLIFY_SITE_URL}/.netlify/functions/get-invoice?id=${encodeURIComponent(transaction.id_transaccion)}`;
                     
-                    // Limpiar packageName para el mensaje de la factura
                     const cleanedPackageName = transaction.package_name.includes('<i class="fas fa-crown"></i>') 
                         ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins') 
                         : transaction.package_name;
@@ -580,7 +549,6 @@ Puedes verla aquí: ${escapeMarkdownV2(invoiceLink)}
                
                const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
                
-               // Limpiar packageName para el mensaje del recargador
                const cleanedPackageNameForRecargador = transaction.package_name.includes('<i class="fas fa-crown"></i>') 
                    ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins') 
                    : transaction.package_name;
