@@ -30,126 +30,276 @@
             font-size: 0.9em;
             transition: background-color 0.3s ease;
         }
-        .copy-button:hover {
-            background-color: #0056b3;
+
+        /* Estilos generales (pueden venir de style.css, pero se incluyen aquí para que funcione) */
+        :root {
+            --primary-color: #8A2BE2; /* Morado azulado */
+            --button-text-color: #FFFFFF; /* Blanco */
+            --secondary-pink: #FF69B4; /* Rosa vibrante */
+            --card-bg: #2D2D2D; /* Gris oscuro */
+            --text-color: #E0E0E0; /* Texto claro */
+            --primary-color-dark: #6A1E9E; /* Tono más oscuro del morado principal */
+            --background-color: #1a1a2e; /* Fondo oscuro */
         }
-        .copy-feedback {
-            display: none;
-            margin-left: 10px;
-            color: #28a745;
-            font-size: 0.9em;
-            font-weight: bold;
-        }
-        /* Estilo para la etiqueta de la dirección */
-        .address-label {
-            font-weight: bold;
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background-color);
             color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
-        /* Estilo para los nuevos campos de correo y whatsapp */
-        .input-group {
-            margin-bottom: 15px;
+        header {
+            background-color: #16213e;
+            padding: 1rem 0;
+            border-bottom: 2px solid var(--primary-color);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
         }
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: var(--text-color);
+        .logo-img {
+            height: 50px;
         }
-        .input-group input[type="email"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 5px;
-            background-color: var(--input-background);
-            color: var(--text-color);
-            box-sizing: border-box; /* Asegura que el padding no aumente el ancho */
-        }
-        /* Estilo para el mensaje de éxito */
-        .payment-success-message {
-            margin-top: 30px;
+        main {
+            flex: 1;
             padding: 20px;
-            background-color: var(--accent-green-light); /* Un color de fondo suave para el éxito */
-            border: 1px solid var(--accent-green);
-            border-radius: 8px;
-            text-align: center;
-            color: var(--accent-green); /* Color del texto */
+            max-width: 1200px;
+            margin: 20px auto;
+            background-color: #0f3460;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
         }
-        .payment-success-message h2 {
-            margin-top: 0;
-            color: var(--accent-green);
-        }
-        .payment-success-message p {
-            margin-bottom: 0;
-        }
-        /* Estilos para los pasos */
-        .form-section-step {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border-color);
-        }
-        .form-section-step h3 {
-            color: var(--primary-color);
-            margin-bottom: 20px;
-            font-size: 1.3em;
+        .payment-container {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            max-width: 600px;
+            margin: 2rem auto;
             text-align: center;
         }
-        /* Nuevo estilo para el header del juego en la página de pago */
         .game-payment-header {
-            text-align: center;
-            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            gap: 15px;
         }
         .game-payment-header img {
-            width: 100%;
-            max-height: 200px; /* Ajusta la altura máxima para banners */
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
             object-fit: cover;
-            border-radius: 8px;
-            margin-bottom: 15px;
+            border: 3px solid var(--primary-color);
         }
-        .game-payment-header h2 {
-            margin-top: 0;
-            color: var(--heading-color);
-            font-size: 2em;
+        .game-payment-header h1 {
+            font-size: 2.2em;
+            color: var(--secondary-pink);
+            margin: 0;
+            text-shadow: 1px 1px 5px rgba(0,0,0,0.7);
         }
-
-        /* payment.html - Estilos para el selector de prefijo de país */
-        .phone-input-group {
+        .detail-item {
             display: flex;
-            gap: 10px; /* Espacio entre el selector de país y el input */
-            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
         }
-
-        .phone-input-group .country-code-select {
-            padding: 10px 15px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            background-color: var(--input-background); /* Usar la variable existente */
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+        .detail-item span:first-child {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        .detail-item span:last-child {
             color: var(--text-color);
+        }
+        .form-group {
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group input[type="file"],
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid #444;
+            background-color: #333;
+            color: var(--text-color);
+            box-sizing: border-box;
             font-size: 1em;
-            -webkit-appearance: none; /* Eliminar estilos predeterminados del navegador */
-            -moz-appearance: none;
-            appearance: none;
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            background-size: 10px;
+        }
+        .form-group input[type="file"] {
+            padding: 0.5rem;
+            background-color: #444;
             cursor: pointer;
-            min-width: 100px; /* Asegura que el select no sea demasiado pequeño */
         }
-
-        .phone-input-group .country-code-select:focus {
-            outline: none;
-            border-color: var(--primary-purple);
-            box-shadow: 0 0 0 3px rgba(138, 43, 226, 0.3);
+        .form-group input[type="file"]::file-selector-button {
+            background-color: var(--primary-color);
+            color: var(--button-text-color);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
         }
-
-        .phone-input-group input[type="tel"] {
-            flex-grow: 1; /* Permite que el input ocupe el espacio restante */
-            padding: 10px 15px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            background-color: var(--input-background); /* Usar la variable existente */
+        .form-group input[type="file"]::file-selector-button:hover {
+            background-color: var(--primary-color-dark);
+        }
+        .payment-method-info {
+            background-color: #1f4068;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1.5rem;
+            border: 1px solid var(--secondary-pink);
+            text-align: left;
+        }
+        .payment-method-info p {
+            margin-bottom: 0.5rem;
             color: var(--text-color);
-            font-size: 1em;
-            box-sizing: border-box; /* Asegura que el padding no aumente el ancho */
+        }
+        .payment-method-info strong {
+            color: var(--secondary-pink);
+        }
+        .finalize-btn {
+            background-color: var(--primary-color);
+            color: var(--button-text-color);
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin-top: 2rem;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            width: 100%;
+            font-weight: bold;
+        }
+        .finalize-btn:hover {
+            background-color: var(--primary-color-dark);
+            transform: translateY(-2px);
+        }
+        .finalize-btn:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+        .success-message {
+            background-color: #1f4068;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            text-align: center;
+            color: #4CAF50; /* Verde para éxito */
+            font-size: 1.5em;
+            font-weight: bold;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+        }
+        .whatsapp-message-container, .tiktok-message-container {
+            background-color: #1f4068;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            text-align: center;
+            margin-top: 2rem;
+            border: 1px solid var(--secondary-pink);
+        }
+        .whatsapp-message-container p, .tiktok-message-container p {
+            margin-bottom: 1rem;
+            color: var(--text-color);
+        }
+        .whatsapp-link {
+            display: inline-block;
+            background-color: #25D366;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+        .whatsapp-link:hover {
+            background-color: #1DA851;
+        }
+        .tiktok-copy-button {
+            background-color: #000; /* Negro para TikTok */
+            color: white;
+            border: 1px solid #EE1D52; /* Rojo TikTok */
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.3s ease;
+            margin-top: 10px;
+        }
+        .tiktok-copy-button:hover {
+            background-color: #333;
+        }
+        footer {
+            background-color: #16213e;
+            color: var(--text-color);
+            text-align: center;
+            padding: 1rem 0;
+            border-top: 2px solid var(--primary-color);
+            margin-top: 20px;
+        }
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        .footer-links a {
+            color: var(--secondary-pink);
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+        .whatsapp-link-footer {
+            display: inline-block;
+            margin-top: 10px;
+            background-color: #25D366;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+        .whatsapp-link-footer:hover {
+            background-color: #1DA851;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .game-payment-header h1 {
+                font-size: 1.8em;
+            }
+            .payment-container {
+                padding: 1.5rem;
+                margin: 1rem auto;
+            }
+        }
+        @media (max-width: 480px) {
+            .game-payment-header img {
+                width: 60px;
+                height: 60px;
+            }
+            .game-payment-header h1 {
+                font-size: 1.5em;
+            }
+            .finalize-btn {
+                font-size: 1em;
+                padding: 0.6rem 1rem;
+            }
         }
     </style>
 </head>
@@ -160,326 +310,93 @@
                 <img src="images/gamingkings_logo.png" alt="GamingKings Logo" class="logo-img">
             </a>
         </div>
+        <!-- Puedes añadir el search bar y el currency selector aquí si los necesitas en payment.html -->
         <div class="header-right">
-            <div class="search-bar">
-                <input type="text" placeholder="Buscar juego...">
-                <i class="fas fa-search"></i>
-            </div>
-            </div>
+            <!-- Espacio para elementos adicionales en el header si los necesitas -->
+        </div>
     </header>
 
-    <main class="payment-main">
-        <div class="form-container">
-            <div id="game-payment-header" class="game-payment-header" style="display: none;">
-                <img id="gameBannerDisplay" src="" alt="Game Banner">
-                <h2 id="gameTitleDisplay">Confirmar Recarga</h2>
+    <main>
+        <div class="payment-container">
+            <div id="gamePaymentHeader" class="game-payment-header">
+                <img id="gameLogo" src="" alt="Game Logo">
+                <h1 id="gameNameDisplay"></h1>
             </div>
 
-            <div id="transaction-summary" class="transaction-summary">
+            <h2 class="text-2xl font-bold text-white mb-4">Detalles de la Recarga</h2>
+            
+            <div class="mb-6 text-left">
+                <div class="detail-item">
+                    <span>Paquete:</span>
+                    <span id="packageNameDisplay"></span>
+                </div>
+                <div class="detail-item">
+                    <span>Total a Pagar:</span>
+                    <span id="finalPriceDisplay"></span>
+                </div>
             </div>
 
-            <form id="payment-form">
-                <div class="form-section-step">
-                    <h3>Paso 1: Selecciona tu Método de Pago</h3>
-                    <div class="form-group">
-                        <label>Método de Pago:</label>
-                        <div class="payment-methods" id="payment-methods">
-                        </div>
-                    </div>
+            <form id="paymentForm" class="text-left">
+                <div class="form-group">
+                    <label for="email">Correo Electrónico:</label>
+                    <input type="email" id="email" name="email" placeholder="tu@ejemplo.com" required class="w-full">
+                </div>
+                <div class="form-group">
+                    <label for="fullName">Nombre Completo:</label>
+                    <input type="text" id="fullName" name="fullName" placeholder="Tu Nombre Completo" required class="w-full">
+                </div>
+                <div class="form-group">
+                    <label for="whatsappNumber">Número de WhatsApp (con código de país):</label>
+                    <input type="text" id="whatsappNumber" name="whatsappNumber" placeholder="+584123456789" required class="w-full">
+                </div>
+                <div class="form-group">
+                    <label for="paymentMethod">Método de Pago:</label>
+                    <select id="paymentMethod" name="paymentMethod" class="w-full p-2 border rounded">
+                        <option value="">Selecciona un método de pago</option>
+                        <option value="pago-movil">Pago Móvil (Venezuela)</option>
+                        <option value="binance">Binance (USDT TRC20)</option>
+                        <option value="zinli">Zinli</option>
+                        <option value="zelle">Zelle</option>
+                    </select>
                 </div>
 
-                <div class="form-section-step">
-                    <h3>Paso 2: Realiza el Pago y Sube tu Comprobante</h3>
-                    <div id="payment-details-form" class="payment-details-form">
-                    </div>
-                </div>
-                
-                <div class="form-section-step">
-                    <h3>Paso 3: Información de Contacto para Notificaciones</h3>
-                    <div class="input-group">
-                        <label for="whatsappNumber">Número de WhatsApp:</label>
-                        <div class="phone-input-group">
-                            <select id="countryCode" name="countryCode" class="country-code-select">
-                                <option value="">Selecciona País</option>
-                                <option value="+93">Afganistán (+93)</option>
-                                <option value="+355">Albania (+355)</option>
-                                <option value="+213">Argelia (+213)</option>
-                                <option value="+1684">Samoa Americana (+1684)</option>
-                                <option value="+376">Andorra (+376)</option>
-                                <option value="+244">Angola (+244)</option>
-                                <option value="+1264">Anguila (+1264)</option>
-                                <option value="+672">Antártida (+672)</option>
-                                <option value="+1268">Antigua y Barbuda (+1268)</option>
-                                <option value="+54">Argentina (+54)</option>
-                                <option value="+374">Armenia (+374)</option>
-                                <option value="+297">Aruba (+297)</option>
-                                <option value="+61">Australia (+61)</option>
-                                <option value="+43">Austria (+43)</option>
-                                <option value="+994">Azerbaiyán (+994)</option>
-                                <option value="+1242">Bahamas (+1242)</option>
-                                <option value="+973">Bahréin (+973)</option>
-                                <option value="+880">Bangladés (+880)</option>
-                                <option value="+1246">Barbados (+1246)</option>
-                                <option value="+375">Bielorrusia (+375)</option>
-                                <option value="+32">Bélgica (+32)</option>
-                                <option value="+501">Belice (+501)</option>
-                                <option value="+229">Benín (+229)</option>
-                                <option value="+1441">Bermudas (+1441)</option>
-                                <option value="+975">Bután (+975)</option>
-                                <option value="+591">Bolivia (+591)</option>
-                                <option value="+387">Bosnia y Herzegovina (+387)</option>
-                                <option value="+267">Botsuana (+267)</option>
-                                <option value="+55">Brasil (+55)</option>
-                                <option value="+246">Territorio Británico del Océano Índico (+246)</option>
-                                <option value="+1284">Islas Vírgenes Británicas (+1284)</option>
-                                <option value="+673">Brunéi Darussalam (+673)</option>
-                                <option value="+359">Bulgaria (+359)</option>
-                                <option value="+226">Burkina Faso (+226)</option>
-                                <option value="+257">Burundi (+257)</option>
-                                <option value="+855">Camboya (+855)</option>
-                                <option value="+237">Camerún (+237)</option>
-                                <option value="+1">Canadá (+1)</option>
-                                <option value="+238">Cabo Verde (+238)</option>
-                                <option value="+1345">Islas Caimán (+1345)</option>
-                                <option value="+236">República Centroafricana (+236)</option>
-                                <option value="+235">Chad (+235)</option>
-                                <option value="+56">Chile (+56)</option>
-                                <option value="+86">China (+86)</option>
-                                <option value="+61">Isla de Navidad (+61)</option>
-                                <option value="+61">Islas Cocos (Keeling) (+61)</option>
-                                <option value="+57">Colombia (+57)</option>
-                                <option value="+269">Comoras (+269)</option>
-                                <option value="+242">Congo - Brazzaville (+242)</option>
-                                <option value="+243">Congo - Kinshasa (+243)</option>
-                                <option value="+682">Islas Cook (+682)</option>
-                                <option value="+506">Costa Rica (+506)</option>
-                                <option value="+385">Croacia (+385)</option>
-                                <option value="+53">Cuba (+53)</option>
-                                <option value="+357">Chipre (+357)</option>
-                                <option value="+420">República Checa (+420)</option>
-                                <option value="+45">Dinamarca (+45)</option>
-                                <option value="+253">Yibuti (+253)</option>
-                                <option value="+1767">Dominica (+1767)</option>
-                                <option value="+1809">República Dominicana (+1809)</option>
-                                <option value="+1829"></option>
-                                <option value="+1849"></option>
-                                <option value="+593">Ecuador (+593)</option>
-                                <option value="+20">Egipto (+20)</option>
-                                <option value="+503">El Salvador (+503)</option>
-                                <option value="+240">Guinea Ecuatorial (+240)</option>
-                                <option value="+291">Eritrea (+291)</option>
-                                <option value="+372">Estonia (+372)</option>
-                                <option value="+251">Etiopía (+251)</option>
-                                <option value="+500">Islas Malvinas (+500)</option>
-                                <option value="+298">Islas Feroe (+298)</option>
-                                <option value="+679">Fiyi (+679)</option>
-                                <option value="+358">Finlandia (+358)</option>
-                                <option value="+33">Francia (+33)</option>
-                                <option value="+594">Guayana Francesa (+594)</option>
-                                <option value="+689">Polinesia Francesa (+689)</option>
-                                <option value="+241">Gabón (+241)</option>
-                                <option value="+220">Gambia (+220)</option>
-                                <option value="+995">Georgia (+995)</option>
-                                <option value="+49">Alemania (+49)</option>
-                                <option value="+233">Ghana (+233)</option>
-                                <option value="+350">Gibraltar (+350)</option>
-                                <option value="+30">Grecia (+30)</option>
-                                <option value="+299">Groenlandia (+299)</option>
-                                <option value="+1473">Granada (+1473)</option>
-                                <option value="+590">Guadalupe (+590)</option>
-                                <option value="+ Guam">Guam (+1671)</option>
-                                <option value="+502">Guatemala (+502)</option>
-                                <option value="+44">Guernsey (+44)</option>
-                                <option value="+224">Guinea (+224)</option>
-                                <option value="+245">Guinea-Bisáu (+245)</option>
-                                <option value="+592">Guyana (+592)</option>
-                                <option value="+509">Haití (+509)</option>
-                                <option value="+379">Ciudad del Vaticano (+379)</option>
-                                <option value="+504">Honduras (+504)</option>
-                                <option value="+852">Hong Kong (RAE de China) (+852)</option>
-                                <option value="+36">Hungría (+36)</option>
-                                <option value="+354">Islandia (+354)</option>
-                                <option value="+91">India (+91)</option>
-                                <option value="+62">Indonesia (+62)</option>
-                                <option value="+98">Irán (+98)</option>
-                                <option value="+964">Irak (+964)</option>
-                                <option value="+353">Irlanda (+353)</option>
-                                <option value="+44">Isla de Man (+44)</option>
-                                <option value="+972">Israel (+972)</option>
-                                <option value="+39">Italia (+39)</option>
-                                <option value="+225">Costa de Marfil (+225)</option>
-                                <option value="+1876">Jamaica (+1876)</option>
-                                <option value="+81">Japón (+81)</option>
-                                <option value="+44">Jersey (+44)</option>
-                                <option value="+962">Jordania (+962)</option>
-                                <option value="+7">Kazajistán (+7)</option>
-                                <option value="+254">Kenia (+254)</option>
-                                <option value="+686">Kiribati (+686)</option>
-                                <option value="+850">Corea del Norte (+850)</option>
-                                <option value="+82">Corea del Sur (+82)</option>
-                                <option value="+965">Kuwait (+965)</option>
-                                <option value="+996">Kirguistán (+996)</option>
-                                <option value="+856">Laos (+856)</option>
-                                <option value="+371">Letonia (+371)</option>
-                                <option value="+961">Líbano (+961)</option>
-                                <option value="+266">Lesoto (+266)</option>
-                                <option value="+231">Liberia (+231)</option>
-                                <option value="+218">Libia (+218)</option>
-                                <option value="+423">Liechtenstein (+423)</option>
-                                <option value="+370">Lituania (+370)</option>
-                                <option value="+352">Luxemburgo (+352)</option>
-                                <option value="+853">Macao (RAE de China) (+853)</option>
-                                <option value="+389">Macedonia del Norte (+389)</option>
-                                <option value="+261">Madagascar (+261)</option>
-                                <option value="+265">Malaui (+265)</option>
-                                <option value="+60">Malasia (+60)</option>
-                                <option value="+960">Maldivas (+960)</option>
-                                <option value="+223">Malí (+223)</option>
-                                <option value="+356">Malta (+356)</option>
-                                <option value="+692">Islas Marshall (+692)</option>
-                                <option value="+596">Martinica (+596)</option>
-                                <option value="+222">Mauritania (+222)</option>
-                                <option value="+230">Mauricio (+230)</option>
-                                <option value="+262">Mayotte (+262)</option>
-                                <option value="+52">México (+52)</option>
-                                <option value="+691">Micronesia (+691)</option>
-                                <option value="+373">Moldavia (+373)</option>
-                                <option value="+377">Mónaco (+377)</option>
-                                <option value="+976">Mongolia (+976)</option>
-                                <option value="+382">Montenegro (+382)</option>
-                                <option value="+1664">Montserrat (+1664)</option>
-                                <option value="+212">Marruecos (+212)</option>
-                                <option value="+258">Mozambique (+258)</option>
-                                <option value="+95">Birmania (Myanmar) (+95)</option>
-                                <option value="+264">Namibia (+264)</option>
-                                <option value="+674">Nauru (+674)</option>
-                                <option value="+977">Nepal (+977)</option>
-                                <option value="+31">Países Bajos (+31)</option>
-                                <option value="+599">Caribe Neerlandés (+599)</option>
-                                <option value="+687">Nueva Caledonia (+687)</option>
-                                <option value="+64">Nueva Zelanda (+64)</option>
-                                <option value="+505">Nicaragua (+505)</option>
-                                <option value="+227">Níger (+227)</option>
-                                <option value="+234">Nigeria (+234)</option>
-                                <option value="+683">Niue (+683)</option>
-                                <option value="+672">Isla Norfolk (+672)</option>
-                                <option value="+1670">Islas Marianas del Norte (+1670)</option>
-                                <option value="+47">Noruega (+47)</option>
-                                <option value="+968">Omán (+968)</option>
-                                <option value="+92">Pakistán (+92)</option>
-                                <option value="+680">Palaos (+680)</option>
-                                <option value="+970">Territorios Palestinos (+970)</option>
-                                <option value="+507">Panamá (+507)</option>
-                                <option value="+675">Papúa Nueva Guinea (+675)</option>
-                                <option value="+595">Paraguay (+595)</option>
-                                <option value="+51">Perú (+51)</option>
-                                <option value="+63">Filipinas (+63)</option>
-                                <option value="+870">Islas Pitcairn (+870)</option>
-                                <option value="+48">Polonia (+48)</option>
-                                <option value="+351">Portugal (+351)</option>
-                                <option value="+1787">Puerto Rico (+1787)</option>
-                                <option value="+1939"></option>
-                                <option value="+974">Catar (+974)</option>
-                                <option value="+262">Reunión (+262)</option>
-                                <option value="+40">Rumanía (+40)</option>
-                                <option value="+7">Rusia (+7)</option>
-                                <option value="+250">Ruanda (+250)</option>
-                                <option value="+590">San Bartolomé (+590)</option>
-                                <option value="+290">Santa Elena, Ascensión y Tristán de Acuña (+290)</option>
-                                <option value="+1869">San Cristóbal y Nieves (+1869)</option>
-                                <option value="+1758">Santa Lucía (+1758)</option>
-                                <option value="+590">San Martín (parte francesa) (+590)</option>
-                                <option value="+508">San Pedro y Miquelón (+508)</option>
-                                <option value="+1784">San Vicente y las Granadinas (+1784)</option>
-                                <option value="+685">Samoa (+685)</option>
-                                <option value="+378">San Marino (+378)</option>
-                                <option value="+239">Santo Tomé y Príncipe (+239)</option>
-                                <option value="+966">Arabia Saudita (+966)</option>
-                                <option value="+221">Senegal (+221)</option>
-                                <option value="+381">Serbia (+381)</option>
-                                <option value="+248">Seychelles (+248)</option>
-                                <option value="+232">Sierra Leona (+232)</option>
-                                <option value="+65">Singapur (+65)</option>
-                                <option value="+1721">Sint Maarten (parte holandesa) (+1721)</option>
-                                <option value="+421">Eslovaquia (+421)</option>
-                                <option value="+386">Eslovenia (+386)</option>
-                                <option value="+677">Islas Salomón (+677)</option>
-                                <option value="+252">Somalia (+252)</option>
-                                <option value="+27">Sudáfrica (+27)</option>
-                                <option value="+500">Georgia del Sur y las Islas Sandwich del Sur (+500)</option>
-                                <option value="+211">Sudán del Sur (+211)</option>
-                                <option value="+34">España (+34)</option>
-                                <option value="+94">Sri Lanka (+94)</option>
-                                <option value="+249">Sudán (+249)</option>
-                                <option value="+597">Surinam (+597)</option>
-                                <option value="+47">Svalbard y Jan Mayen (+47)</option>
-                                <option value="+268">Suazilandia (+268)</option>
-                                <option value="+46">Suecia (+46)</option>
-                                <option value="+41">Suiza (+41)</option>
-                                <option value="+963">Siria (+963)</option>
-                                <option value="+886">Taiwán (+886)</option>
-                                <option value="+992">Tayikistán (+992)</option>
-                                <option value="+255">Tanzania (+255)</option>
-                                <option value="+66">Tailandia (+66)</option>
-                                <option value="+670">Timor Oriental (+670)</option>
-                                <option value="+228">Togo (+228)</option>
-                                <option value="+690">Tokelau (+690)</option>
-                                <option value="+676">Tonga (+676)</option>
-                                <option value="+1868">Trinidad y Tobago (+1868)</option>
-                                <option value="+216">Túnez (+216)</option>
-                                <option value="+90">Turquía (+90)</option>
-                                <option value="+993">Turkmenistán (+993)</option>
-                                <option value="+1649">Islas Turcas y Caicos (+1649)</option>
-                                <option value="+688">Tuvalu (+688)</option>
-                                <option value="+256">Uganda (+256)</option>
-                                <option value="+380">Ucrania (+380)</option>
-                                <option value="+971">Emiratos Árabes Unidos (+971)</option>
-                                <option value="+44">Reino Unido (+44)</option>
-                                <option value="+1">Estados Unidos (+1)</option>
-                                <option value="+1340">Islas Vírgenes de EE. UU. (+1340)</option>
-                                <option value="+598">Uruguay (+598)</option>
-                                <option value="+998">Uzbekistán (+998)</option>
-                                <option value="+678">Vanuatu (+678)</option>
-                                <option value="+58">Venezuela (+58)</option>
-                                <option value="+84">Vietnam (+84)</option>
-                                <option value="+681">Wallis y Futuna (+681)</option>
-                                <option value="+967">Yemen (+967)</option>
-                                <option value="+260">Zambia (+260)</option>
-                                <option value="+263">Zimbabue (+263)</option>
-                            </select>
-                            <input type="tel" id="whatsappNumber" name="whatsappNumber" placeholder="Ej: 4121234567" required>
-                        </div>
-                        <small>Por favor, ingresa tu número sin el prefijo del país si ya lo seleccionaste.</small>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="email">Correo Electrónico (Opcional, para factura):</label>
-                        <input type="email" id="email" name="email" placeholder="tu_correo@ejemplo.com">
-                    </div>
-
-                </div>
-                <div id="whatsapp-message-container" class="payment-confirmation-message" style="margin-top: 30px; margin-bottom: 20px; text-align: center; display: none;">
-                    <p style="font-size: 1.1em; color: var(--text-color); margin-bottom: 15px;">
-                        ¡Importante! Una vez realizado el pago con el método seleccionado, <strong>envía la captura de tu comprobante y tus datos de TikTok</strong> al siguiente número de WhatsApp para que tu recarga sea procesada rápidamente:
-                    </p>
-                    <a href="https://wa.me/573021090841?text=Hola%2C%20acabo%20de%20realizar%20un%20pago%20para%20recarga%20de%20TikTok.%20Mis%20datos%20de%20TikTok%20son%3A%20%5BAQUI_TUS_DATOS%5D."
-                        class="whatsapp-link"
-                        target="_blank"
-                        style="font-size: 1.1em; padding: 12px 25px;">
-                        <i class="fab fa-whatsapp"></i> Enviar Captura al WhatsApp
-                    </a>
-                    <p class="small-text" style="margin-top: 15px;">
-                        (Por favor, no olvides incluir tus datos de TikTok en el mensaje de WhatsApp).
-                    </p>
+                <div id="paymentMethodInfo" class="payment-method-info">
+                    <p>Por favor, selecciona un método de pago para ver los detalles.</p>
                 </div>
 
-                <button type="submit" class="btn-primary" id="finalize-recharge-btn" disabled>Finalizar Recarga</button>
+                <div class="form-group mt-4">
+                    <label for="paymentReceipt">Comprobante de Pago (captura de pantalla):</label>
+                    <input type="file" id="paymentReceipt" name="paymentReceipt" accept="image/*" class="w-full">
+                </div>
+
+                <button type="submit" id="finalizeBtn" class="finalize-btn">Finalizar Recarga</button>
             </form>
 
-            <div id="success-message-display" class="payment-success-message" style="display: none;">
-                <h2>🎉 ¡Notificación Enviada! 🎉</h2>
-                <p>Hemos recibido tu solicitud de recarga. Te enviaremos un correo de confirmación y la factura virtual una vez que tu recarga sea procesada.</p>
-                <p>¡Gracias por usar GamingKings!</p>
+            <!-- Mensaje de éxito -->
+            <div id="successMessage" class="success-message hidden">
+                <p>¡Solicitud de recarga enviada con éxito!</p>
+                <p>Te enviaremos una confirmación por WhatsApp pronto.</p>
+            </div>
+
+            <!-- Mensaje específico para TikTok -->
+            <div id="tiktokMessageContainer" class="tiktok-message-container hidden">
+                <h2 class="text-xl font-bold text-white mb-2">¡Importante para TikTok!</h2>
+                <p class="mb-2">Por favor, realiza la recarga a la siguiente cuenta de TikTok:</p>
+                <p class="text-lg font-bold text-yellow-400 mb-2">Usuario TikTok: <span id="tiktokAccountDisplay"></span></p>
+                <p class="text-lg font-bold text-green-400 mb-2">Paquete: <span id="tiktokPackageDisplay"></span></p>
+                <p class="text-lg font-bold text-blue-400 mb-4">Monto: <span id="tiktokPriceDisplay"></span></p>
+                <div class="copy-container justify-center">
+                    <span class="wallet-address" id="tiktokWalletAddress">GamingKingsRecargas</span> <!-- Dirección o nombre de usuario real de TikTok -->
+                    <button type="button" class="tiktok-copy-button">Copiar Usuario TikTok</button>
+                </div>
+                <p class="mt-4">Una vez realizado el pago, nuestro equipo verificará y procesará tu recarga.</p>
+            </div>
+
+            <!-- Mensaje de WhatsApp (ahora solo se muestra si es necesario, después de procesar) -->
+            <div id="whatsappMessageContainer" class="whatsapp-message-container hidden">
+                <p>¡Tu recarga ha sido recibida!</p>
+                <p>Te enviaremos los detalles y la confirmación por WhatsApp.</p>
+                <a id="whatsappLinkDisplay" href="#" target="_blank" class="whatsapp-link">Abrir WhatsApp</a>
             </div>
         </div>
     </main>
@@ -491,7 +408,7 @@
                 <a href="privacy.html">Políticas de Privacidad</a>
                 <a href="terms.html">Términos de Servicio</a>
             </div>
-            <a href="https://wa.me/573021090841" target="_blank" class="whatsapp-link">
+            <a href="https://wa.me/573021090841" target="_blank" class="whatsapp-link-footer">
                 <i class="fab fa-whatsapp"></i> Contáctanos por WhatsApp
             </a>
         </div>
@@ -499,11 +416,13 @@
 
     <script src="script.js"></script>
     <script>
-        let supabase; // Declaración global, sin inicializar aún
-
         // Configuración de Supabase (¡REEMPLAZA ESTO CON TUS PROPIAS CLAVES!)
         const SUPABASE_URL = 'TU_SUPABASE_URL'; 
         const SUPABASE_ANON_KEY = 'TU_SUPABASE_ANON_KEY'; 
+
+        // Inicializa Supabase Client de forma global
+        const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        console.log("Supabase client initialized globally."); // Para depuración
         
         const paymentDetailsTemplates = {
             'pago-movil': `
@@ -573,10 +492,6 @@
         const gameTitleDisplay = document.getElementById('gameTitleDisplay'); // Nuevo elemento
 
         document.addEventListener('DOMContentLoaded', () => {
-            // INICIALIZACIÓN DE SUPABASE AHORA DENTRO DE DOMContentLoaded
-            supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            console.log("Supabase client initialized inside DOMContentLoaded."); // Para depuración
-
             const transactionSummaryDiv = document.getElementById('transaction-summary');
             const paymentMethodsDiv = document.getElementById('payment-methods');
             const paymentDetailsFormDiv = document.getElementById('payment-details-form');
