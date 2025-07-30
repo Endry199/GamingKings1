@@ -103,7 +103,8 @@ exports.handler = async function(event, context) {
                         });
                     } catch (editErrorIfAlreadyDone) {
                          console.error(`ERROR (Already Done): Fallo al editar mensaje de Telegram para ${transactionId}:`, editErrorIfAlreadyDone.response ? editErrorIfAlreadyDone.response.data : editErrorIfAlreadyDone.message);
-                         if (editErrorIfAlreadyDone.response && editErrorIfAlreadyDone.response.data && editErrorIfAlreadyDone.response.data.description && editErrorIfAlreadyDone.response.data.description.includes('message is not modified')) {
+                         if (editErrorIfAlreadyDone.response && editErrorIfAlreadyDone.response.status === 400 && 
+                           (editErrorIfAlreadyDone.response.data.description && editErrorIfAlreadyDone.response.data.description.includes('message is not modified'))) {
                              console.log(`DEBUG: Mensaje ${messageId} para ${transactionId} no modificado (ya tenía el estado 'REALIZADA').`);
                          } else {
                              console.error(`ERROR: Fallo al re-editar mensaje para transacción ${transactionId} que ya estaba realizada.`);
@@ -213,6 +214,7 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
                 };
 
                 try {
+                    console.log(`DEBUG (mark_done_): Intentando editar mensaje con el siguiente texto escapado:\n${JSON.stringify(escapeMarkdownV2(newCaption))}`);
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
                         chat_id: chatId,
                         message_id: messageId,
@@ -295,6 +297,7 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
                     };
 
                     try {
+                        console.log(`DEBUG (release_kingcoins_ - Already Liberated): Intentando editar mensaje con el siguiente texto escapado:\n${JSON.stringify(escapeMarkdownV2(newCaption))}`);
                         await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
                             chat_id: chatId,
                             message_id: messageId,
@@ -473,6 +476,10 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
                 };
 
                 try {
+                    // *** NUEVO CONSOLE.LOG PARA DEBUGGING ***
+                    console.log(`DEBUG (release_kingcoins_): Texto FINAL del mensaje a Telegram ANTES de escapar:\n${newCaption}`);
+                    console.log(`DEBUG (release_kingcoins_): Texto FINAL del mensaje a Telegram DESPUÉS de escapar:\n${JSON.stringify(escapeMarkdownV2(newCaption))}`);
+
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
                         chat_id: chatId,
                         message_id: messageId,
