@@ -86,7 +86,10 @@
     </footer>
 
     <script src="script.js"></script>
-    <script>
+    <script type="module">
+        // Importa supabaseClient.js
+        import { supabase } from './supabaseClient.js'; // Asegúrate de que esta ruta es correcta
+
         const kingscoinsPackages = [
             { id: 1, name: '5 <i class="fas fa-crown"></i>', priceUSD: 1.00, priceVES: 168.50 },
             { id: 2, name: '10 <i class="fas fa-crown"></i>', priceUSD: 3.00, priceVES: 507.49 },
@@ -96,15 +99,39 @@
             { id: 6, name: '3000 <i class="fas fa-crown"></i>', priceUSD: 3.00, priceVES: 507.49 },
             { id: 7, name: '5000 <i class="fas fa-crown"></i>', priceUSD: 5.00, priceVES: 845.00 },
             { id: 8, name: '10000 <i class="fas fa-crown"></i>', priceUSD: 10.00, priceVES: 1689.96 }
-
         ];
 
-        document.addEventListener('DOMContentLoaded', () => {
+        let selectedPackage = null;
+        let userId = null; // Variable para almacenar el ID del usuario
+
+        // Función para obtener el ID del usuario autenticado
+        async function getAuthenticatedUserId() {
+            const { data: { user }, error } = await supabase.auth.getUser();
+            if (error) {
+                console.error('Error al obtener el usuario autenticado:', error.message);
+                alert('Tu sesión ha expirado o no has iniciado sesión. Por favor, inicia sesión para continuar.');
+                window.location.href = 'login.html'; // Redirigir al login
+                return null;
+            }
+            if (!user) {
+                alert('No has iniciado sesión. Por favor, inicia sesión para comprar KingCoins.');
+                window.location.href = 'login.html'; // Redirigir al login
+                return null;
+            }
+            return user.id;
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => { // Añade 'async' aquí
             const packageListDiv = document.getElementById('package-list');
             const confirmBtn = document.getElementById('confirm-recharge-btn');
             const currencyDisplaySpan = document.getElementById('currency-display');
             
-            let selectedPackage = null;
+            // Obtener el ID del usuario tan pronto como la página cargue
+            userId = await getAuthenticatedUserId();
+            if (!userId) {
+                // Si no hay userId, la función getAuthenticatedUserId ya habrá redirigido
+                return;
+            }
 
             function formatPrice(price, currency) {
                 if (currency === 'VES') {
@@ -148,8 +175,8 @@
             }
 
             function checkFormValidity() {
-                // Now only depends on whether a package is selected
-                confirmBtn.disabled = !selectedPackage;
+                // Ahora solo depende de si un paquete está seleccionado y si el userId está disponible
+                confirmBtn.disabled = !selectedPackage || !userId;
             }
 
             const initialCurrency = localStorage.getItem('selectedCurrency') || 'VES';
@@ -162,7 +189,7 @@
 
             document.getElementById('kingscoins-recharge-form').addEventListener('submit', (e) => {
                 e.preventDefault();
-                if (selectedPackage) {
+                if (selectedPackage && userId) { // Asegurarse de que tenemos un paquete seleccionado y el userId
                     const packageName = selectedPackage.querySelector('span:first-child').innerHTML;
                     const basePriceUSD = parseFloat(selectedPackage.dataset.priceUsd);
                     const basePriceVES = parseFloat(selectedPackage.dataset.priceVes);
@@ -177,6 +204,7 @@
                     
                     const transactionDetails = {
                         game: "KingsCoins",
+                        playerId: userId, // <<< AÑADIDO: El ID del usuario autenticado
                         package: packageName,
                         priceUSD: basePriceUSD.toFixed(2),
                         finalPrice: finalPrice.toFixed(2),
@@ -186,7 +214,8 @@
                     localStorage.setItem('transactionDetails', JSON.stringify(transactionDetails));
                     window.location.href = 'payment.html';
                 } else {
-                    console.error('Por favor, selecciona un paquete de KingsCoins.');
+                    console.error('Por favor, selecciona un paquete de KingsCoins o asegúrate de haber iniciado sesión.');
+                    alert('Por favor, selecciona un paquete de KingsCoins antes de continuar. Si el problema persiste, inicia sesión de nuevo.');
                 }
             });
         });
