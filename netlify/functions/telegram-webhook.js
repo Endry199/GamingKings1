@@ -367,14 +367,17 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
                                 });
                             if (insertWalletError) {
                                 console.error("Error al insertar nueva wallet de usuario:", insertWalletError.message);
-                                kingcoinsCreditedMessage = `\n⚠️ Error al crear wallet para \`${escapeMarkdownV2(transaction.player_id)}\`: ${escapeMarkdownV2(insertWalletError.message)}`;
+                                // NO ESCAPAR EL PLAYER_ID DENTRO DE LOS BACKTICKS AQUÍ
+                                kingcoinsCreditedMessage = `\n⚠️ Error al crear wallet para \`${transaction.player_id}\`: ${escapeMarkdownV2(insertWalletError.message)}`;
                             } else {
                                 console.log(`Wallet creada y ${kingcoinAmount} KingCoins acreditados a ${transaction.player_id}.`);
-                                kingcoinsCreditedMessage = `\n✅ ${kingcoinAmount} KingCoins acreditados a \`${escapeMarkdownV2(transaction.player_id)}\`.`;
+                                // NO ESCAPAR EL PLAYER_ID DENTRO DE LOS BACKTICKS AQUÍ
+                                kingcoinsCreditedMessage = `\n✅ ${kingcoinAmount} KingCoins acreditados a \`${transaction.player_id}\`.`;
                             }
                         } else if (fetchWalletError) {
                             console.error("Error al obtener wallet de usuario:", fetchWalletError.message);
-                            kingcoinsCreditedMessage = `\n⚠️ Error al obtener wallet para \`${escapeMarkdownV2(transaction.player_id)}\`: ${escapeMarkdownV2(fetchWalletError.message)}`;
+                            // NO ESCAPAR EL PLAYER_ID DENTRO DE LOS BACKTICKS AQUÍ
+                            kingcoinsCreditedMessage = `\n⚠️ Error al obtener wallet para \`${transaction.player_id}\`: ${escapeMarkdownV2(fetchWalletError.message)}`;
                         } else {
                             // Si el usuario existe, actualiza el saldo
                             const newBalance = userWallet.balance + kingcoinAmount; // Sumamos al 'balance' existente
@@ -385,10 +388,12 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
 
                             if (updateWalletError) {
                                 console.error("Error al actualizar wallet de usuario:", updateWalletError.message);
-                                kingcoinsCreditedMessage = `\n⚠️ Error al actualizar wallet para \`${escapeMarkdownV2(transaction.player_id)}\`: ${escapeMarkdownV2(updateWalletError.message)}`;
+                                // NO ESCAPAR EL PLAYER_ID DENTRO DE LOS BACKTICKS AQUÍ
+                                kingcoinsCreditedMessage = `\n⚠️ Error al actualizar wallet para \`${transaction.player_id}\`: ${escapeMarkdownV2(updateWalletError.message)}`;
                             } else {
                                 console.log(`${kingcoinAmount} KingCoins acreditados a ${transaction.player_id}. Nuevo saldo: ${newBalance}`);
-                                kingcoinsCreditedMessage = `\n✅ ${kingcoinAmount} KingCoins acreditados a \`${escapeMarkdownV2(transaction.player_id)}\`. Nuevo saldo: \`${newBalance}\`.`;
+                                // NO ESCAPAR EL PLAYER_ID NI NEWBALANCE DENTRO DE LOS BACKTICKS AQUÍ
+                                kingcoinsCreditedMessage = `\n✅ ${kingcoinAmount} KingCoins acreditados a \`${transaction.player_id}\`. Nuevo saldo: \`${newBalance}\`.`;
                             }
                         }
                     } catch (walletOperationError) {
