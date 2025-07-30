@@ -14,27 +14,6 @@ function escapeMarkdownV2(text) {
     return text.replace(specialChars, '\\$&');
 }
 
-// --- NUEVA FUNCIÓN: Construye los botones iniciales de Telegram según el juego ---
-function buildInitialTelegramButtons(transactionId, gameType) {
-    let buttons = [];
-
-    if (gameType === 'KingCoins') {
-        buttons.push([
-            { text: "👑 Liberar KingCoins", callback_data: `release_kingcoins_${transactionId}` }
-        ]);
-    } else { // Para todos los demás juegos (incluido Free Fire)
-        buttons.push(
-            [{ text: "✅ Recarga Realizada", callback_data: `game_done_${transactionId}` }],
-            [{ text: "⏳ Recarga en Verificación", callback_data: `game_pending_${transactionId}` }]
-        );
-        if (gameType === 'Free Fire') {
-            buttons.push([{ text: "➡️ WhatsApp Recargador (FF)", callback_data: `ff_recargador_${transactionId}` }]);
-        }
-    }
-    return buttons;
-}
-// --- FIN NUEVA FUNCIÓN ---
-
 exports.handler = async function(event, context) {
     if (event.httpMethod !== "POST") {
         return { statusCode: 405, body: "Method Not Allowed" };
@@ -244,11 +223,9 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
         const cleanedPackageNameForWhatsappRecargador = (cleanedDisplayPackageName || 'N/A').replace(/\+/g, '%2B');
 
         let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
-        whatsappMessageRecargador += `*Juego:* ${escapeMarkdownV2(game)}\n`; // Añadir el juego aquí también
-        whatsappMessageRecargador += `*ID de Jugador:* ${escapeMarkdownV2(playerId || 'N/A')}\n`;
-        whatsappMessageRecargador += `*Paquete a Recargar:* ${escapeMarkdownV2(cleanedPackageNameForWhatsappRecargador)}\n`; 
-        whatsappMessageRecargador += `*Transacción #:* ${escapeMarkdownV2(id_transaccion_generado)}\n`; // Añadir la ID de transacción
-
+        whatsappMessageRecargador += `*ID de Jugador:* ${playerId || 'N/A'}\n`;
+        whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageNameForWhatsappRecargador}\n`; 
+        
         whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
         console.log("DEBUG: whatsappLinkRecargador generado:", whatsappLinkRecargador);
     } else {
@@ -280,8 +257,21 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
         messageText += `📊 Referencia Zinli: ${referenceNumber}\n`;
     }
 
-    // --- MODIFICACIÓN CLAVE AQUÍ: Usamos la nueva función para construir los botones ---
-    const inlineKeyboard = buildInitialTelegramButtons(id_transaccion_generado, game);
+    // --- MODIFICACIÓN CLAVE AQUÍ ---
+    let inlineKeyboard = [];
+    // Condicionalmente añadir el botón "Liberar KingCoins"
+    if (cleanedDisplayPackageName.includes('KingCoins')) {
+        inlineKeyboard.push([
+            { text: "👑 Liberar KingCoins", callback_data: `release_kingcoins_${id_transaccion_generado}` }
+        ]);
+    } else {
+        // Si no son KingCoins, puedes añadir otros botones aquí o dejarlo vacío
+        // Por ejemplo, si tenías un botón genérico antes, podrías ponerlo aquí:
+        // inlineKeyboard.push([
+        //     { text: "✅ Marcar como Completado", callback_data: `complete_transaction_${id_transaccion_generado}` }
+        // ]);
+        console.log("No se añadió el botón 'Liberar KingCoins' porque no es una compra de KingCoins.");
+    }
     
     const replyMarkup = {
         inline_keyboard: inlineKeyboard
