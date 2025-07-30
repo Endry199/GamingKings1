@@ -256,18 +256,17 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
         messageText += `📊 Referencia Zinli: ${referenceNumber}\n`;
     }
 
-    // --- Lógica para los botones de Telegram: Restaurada ---
+    // --- Lógica de botones de Telegram: SÓLO botones específicos ---
     let inlineKeyboard = [];
     
-    // Si es KingCoins, solo el botón "Liberar KingCoins"
+    // Si es KingCoins, añade solo el botón "Liberar KingCoins"
     if (cleanedDisplayPackageName.includes('KingCoins')) {
         inlineKeyboard.push([
             { text: "👑 Liberar KingCoins", callback_data: `release_kingcoins_${id_transaccion_generado}` }
         ]);
     } 
-    // Si es Free Fire, los botones de WhatsApp para el recargador y gestión
+    // Si es Free Fire, añade solo el botón "WhatsApp Recargador"
     else if (game && game.toLowerCase() === 'free fire') {
-        // Botón de WhatsApp para el recargador
         if (WHATSAPP_NUMBER_RECARGADOR) {
             const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
             const cleanedPackageNameForWhatsappRecargador = (cleanedDisplayPackageName || 'N/A').replace(/\+/g, '%2B');
@@ -282,30 +281,12 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
                 { text: "📲 WhatsApp Recargador", url: whatsappLinkRecargadorButton }
             ]);
         } else {
-            console.log("Advertencia: WHATSAPP_NUMBER_RECARGADOR no está configurado para Free Fire.");
+            console.log("Advertencia: WHATSAPP_NUMBER_RECARGADOR no está configurado para Free Fire. El botón no se mostrará.");
         }
-
-        // Botones de gestión (Completado/Cancelado) para Free Fire
-        inlineKeyboard.push(
-            [
-                { text: "✅ Marcar como Completado", callback_data: `complete_transaction_${id_transaccion_generado}` }
-            ],
-            [
-                { text: "❌ Marcar como Cancelado", callback_data: `cancel_transaction_${id_transaccion_generado}` }
-            ]
-        );
     } 
-    // Para el resto de los juegos (no KingCoins, no Free Fire), los botones genéricos de gestión
+    // Para cualquier otro juego, no se añade ningún botón.
     else {
-        inlineKeyboard.push(
-            [
-                { text: "✅ Marcar como Completado", callback_data: `complete_transaction_${id_transaccion_generado}` }
-            ],
-            [
-                { text: "❌ Marcar como Cancelado", callback_data: `cancel_transaction_${id_transaccion_generado}` }
-            ]
-        );
-        console.log(`Botones de 'Completado' y 'Cancelado' añadidos para el juego ${game} y la transacción ${id_transaccion_generado}.`);
+        console.log(`No se añadieron botones de acción para el juego ${game} y la transacción ${id_transaccion_generado} según la nueva política.`);
     }
     
     const replyMarkup = {
