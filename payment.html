@@ -499,12 +499,11 @@
 
     <script src="script.js"></script>
     <script>
-        // Configuración de Supabase (¡REEMPLAZA ESTO CON TUS PROPIAS CLAVES!)
-const SUPABASE_URL = 'TU_SUPABASE_URL'; 
-const SUPABASE_ANON_KEY = 'TU_SUPABASE_ANON_KEY'; 
+        let supabase; // Declaración global, sin inicializar aún
 
-// Inicializa Supabase Client
-const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Configuración de Supabase (¡REEMPLAZA ESTO CON TUS PROPIAS CLAVES!)
+        const SUPABASE_URL = 'TU_SUPABASE_URL'; 
+        const SUPABASE_ANON_KEY = 'TU_SUPABASE_ANON_KEY'; 
         
         const paymentDetailsTemplates = {
             'pago-movil': `
@@ -574,6 +573,10 @@ const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         const gameTitleDisplay = document.getElementById('gameTitleDisplay'); // Nuevo elemento
 
         document.addEventListener('DOMContentLoaded', () => {
+            // INICIALIZACIÓN DE SUPABASE AHORA DENTRO DE DOMContentLoaded
+            supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            console.log("Supabase client initialized inside DOMContentLoaded."); // Para depuración
+
             const transactionSummaryDiv = document.getElementById('transaction-summary');
             const paymentMethodsDiv = document.getElementById('payment-methods');
             const paymentDetailsFormDiv = document.getElementById('payment-details-form');
@@ -805,28 +808,28 @@ const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 // Update the whatsappNumber in formData with the combined value
                 formData.set('whatsappNumber', fullWhatsappNumber);
                 // INICIO DE MODIFICACIÓN: Lógica para obtener user_id de Supabase y asignarlo a playerId
-let currentUserId = null;
-try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session && session.user) {
-        currentUserId = session.user.id;
-        console.log("Supabase User ID (from payment.html):", currentUserId);
-    } else {
-        console.warn("No hay sesión de usuario activa en Supabase en payment.html. El playerId para KingsCoins será 'anon'.");
-    }
-} catch (error) {
-    console.error("Error al obtener la sesión de Supabase en payment.html:", error);
-}
+                let currentUserId = null;
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session && session.user) {
+                        currentUserId = session.user.id;
+                        console.log("Supabase User ID (from payment.html):", currentUserId);
+                    } else {
+                        console.warn("No hay sesión de usuario activa en Supabase en payment.html. El playerId para KingsCoins será 'anon'.");
+                    }
+                } catch (error) {
+                    console.error("Error al obtener la sesión de Supabase en payment.html:", error);
+                }
 
-// Si el juego es KingCoins, usa el user_id de Supabase como playerId
-if (transactionDetails.game === "KingsCoins") {
-    formData.append('playerId', currentUserId || 'anon'); // Usa 'anon' si no hay user_id
-} else {
-    // Para otros juegos, usa el playerId original de la transacción
-    // Asegúrate de que transactionDetails.playerId exista para otros juegos
-    formData.append('playerId', transactionDetails.playerId || ''); 
-}
-// FIN DE MODIFICACIÓN
+                // Si el juego es KingCoins, usa el user_id de Supabase como playerId
+                if (transactionDetails.game === "KingsCoins") {
+                    formData.append('playerId', currentUserId || 'anon'); // Usa 'anon' si no hay user_id
+                } else {
+                    // Para otros juegos, usa el playerId original de la transacción
+                    // Asegúrate de que transactionDetails.playerId exista para otros juegos
+                    formData.append('playerId', transactionDetails.playerId || ''); 
+                }
+                // FIN DE MODIFICACIÓN
                 
 
                 // Add transactionDetails to formData (these are not direct form inputs)
