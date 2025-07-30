@@ -194,7 +194,10 @@ exports.handler = async function(event, context) {
     if (whatsappNumber && whatsappNumber.trim() !== '') {
         const customerNamePart = fullName && fullName.trim() !== '' ? `${fullName.split(' ')[0]}` : '';
         const greeting = customerNamePart ? `¡Hola ${customerNamePart}! 👋` : `¡Hola! 👋`;
-        const gameAndPlayerId = playerId ? ` para *${game}* (ID: \`${escapeMarkdownV2(playerId)}\`)` : ` para *${game}*`;
+        // Modificación: Eliminar playerId del mensaje de WhatsApp al cliente si es KingCoins
+        const gameAndPlayerId = (game && cleanedDisplayPackageName.includes('KingCoins')) 
+            ? ` para *${game}*` // Si es KingCoins, no incluir ID de jugador aquí
+            : (playerId ? ` para *${game}* (ID: \`${escapeMarkdownV2(playerId)}\`)` : ` para *${game}*`);
         
         // Usar cleanedDisplayPackageName para el mensaje de WhatsApp del cliente
         const whatsappMessageCustomer = `
@@ -236,7 +239,12 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
     messageText += `*ID de Transacción:* \`${escapeMarkdownV2(id_transaccion_generado || 'N/A')}\`\n`;
     messageText += `*Estado:* \`PENDIENTE\`\n\n`;
     messageText += `🎮 Juego: *${escapeMarkdownV2(game)}*\n`;
-    messageText += `👤 ID de Jugador: *${escapeMarkdownV2(playerId || 'N/A')}*\n`;
+    
+    // MODIFICACIÓN CLAVE: No mostrar el ID de Jugador si el juego es KingCoins
+    if (game && !cleanedDisplayPackageName.includes('KingCoins')) {
+        messageText += `👤 ID de Jugador: *${escapeMarkdownV2(playerId || 'N/A')}*\n`;
+    }
+
     messageText += `📦 Paquete: *${escapeMarkdownV2(cleanedDisplayPackageName)}*\n`; // Usar la variable limpia aquí
     messageText += `💰 Total a Pagar: *${escapeMarkdownV2(finalPrice)} ${escapeMarkdownV2(currency)}*\n`;
     messageText += `💳 Método de Pago: *${escapeMarkdownV2(paymentMethod.replace('-', ' ').toUpperCase())}*\n`;
