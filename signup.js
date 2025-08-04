@@ -1,9 +1,42 @@
-// register.js
 import { supabase } from './supabaseClient.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    // ... (El resto de tu código para el select de país) ...
 
+    const countryCodeSelect = document.getElementById('country-code');
+    
+    if (countryCodeSelect) {
+        const originalOptionsText = {};
+        for (const option of countryCodeSelect.options) {
+            if (option.value) {
+                originalOptionsText[option.value] = option.textContent;
+            }
+        }
+
+        function updateSelectedOptionDisplay() {
+            const selectedOption = countryCodeSelect.options[countryCodeSelect.selectedIndex];
+            if (selectedOption && selectedOption.value) {
+                const fullText = originalOptionsText[selectedOption.value];
+                const match = fullText.match(/\+\d+/);
+                selectedOption.textContent = match ? match[0] : selectedOption.value;
+            }
+        }
+
+        function restoreAllOptionsText() {
+            for (const option of countryCodeSelect.options) {
+                if (option.value && originalOptionsText[option.value]) {
+                    option.textContent = originalOptionsText[option.value];
+                }
+            }
+        }
+
+        countryCodeSelect.addEventListener('change', updateSelectedOptionDisplay);
+        countryCodeSelect.addEventListener('focus', restoreAllOptionsText);
+        countryCodeSelect.addEventListener('mousedown', restoreAllOptionsText);
+        countryCodeSelect.addEventListener('blur', updateSelectedOptionDisplay);
+
+        updateSelectedOptionDisplay();
+    }
+    
     const registerForm = document.getElementById('register-form');
     const authMessage = document.getElementById('auth-message');
 
@@ -34,7 +67,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     email: email,
                     password: password,
                     options: {
-                        data: { name, last_name: lastName, country_code: countryCode, phone }
+                        data: { name, last_name: lastName, country_code: countryCode, phone },
+                        emailRedirectTo: 'https://gamingkings.netlify.app/login.html'
                     }
                 });
 
