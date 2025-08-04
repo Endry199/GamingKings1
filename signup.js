@@ -2,7 +2,6 @@
 import { supabase } from './supabaseClient.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-
     // ... (El resto de tu código para el select de país) ...
 
     const registerForm = document.getElementById('register-form');
@@ -31,54 +30,22 @@ document.addEventListener('DOMContentLoaded', () => {
             authMessage.classList.remove('success', 'error');
             
             try {
-                // CORRECTO: La respuesta de signUp devuelve un objeto 'data' y 'error'
                 const { data, error: authError } = await supabase.auth.signUp({
                     email: email,
-                    password: password
+                    password: password,
+                    options: {
+                        data: { name, last_name: lastName, country_code: countryCode, phone }
+                    }
                 });
 
                 if (authError) {
                     throw authError;
                 }
                 
-                // Ahora, el objeto del usuario se encuentra en data.user
-                const user = data.user;
-
-                if (user) {
-                    // Paso 2: Insertar la información adicional en la tabla de perfiles
-                    const { data: profileData, error: profileError } = await supabase
-                        .from('profiles')
-                        .insert([
-                            {
-                                id: user.id,
-                                name: name,
-                                last_name: lastName,
-                                country_code: countryCode,
-                                phone: phone,
-                                email: email
-                            }
-                        ]);
-
-                    if (profileError) {
-                        // Si falla la inserción del perfil, podemos eliminar el usuario recién creado
-                        // aunque esto es opcional, es una buena práctica.
-                        console.error('Error al insertar perfil, eliminando usuario...', profileError);
-                        await supabase.auth.signOut(); // Esto solo cierra la sesión, no elimina. Habría que usar una función de Admin.
-                        throw profileError;
-                    }
-                    
-                    authMessage.textContent = '¡Registro exitoso! Por favor, revisa tu correo electrónico para verificar tu cuenta.';
-                    authMessage.classList.add('success');
-                    authMessage.classList.remove('hidden');
-                    registerForm.reset();
-                    
-                } else {
-                    // Este bloque ahora no debería ser alcanzable si no hay un error
-                    // pero lo dejamos como fallback por si acaso.
-                    authMessage.textContent = 'Parece que ya tienes una cuenta o hubo un problema desconocido. Intenta iniciar sesión.';
-                    authMessage.classList.add('error');
-                    authMessage.classList.remove('hidden');
-                }
+                authMessage.textContent = '¡Registro exitoso! Por favor, revisa tu correo electrónico para verificar tu cuenta.';
+                authMessage.classList.add('success');
+                authMessage.classList.remove('hidden');
+                registerForm.reset();
 
             } catch (error) {
                 console.error('Error durante el registro:', error.message);
