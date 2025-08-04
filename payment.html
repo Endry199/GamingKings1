@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detalles de Pago - GamingKings</title>
+    <title>Página de Pago - GamingKings</title>
     <link rel="icon" href="images/favicon.ico" type="image/x-icon">
     <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* Estilos para el botón de copiar y el mensaje */
         .copy-container {
@@ -151,6 +150,48 @@
             font-size: 1em;
             box-sizing: border-box; /* Asegura que el padding no aumente el ancho */
         }
+
+        /* Estilos del menú de usuario/invitado */
+        .hidden {
+            display: none !important;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .user-menu-container, .guest-menu-container {
+            position: relative;
+        }
+        .user-menu-button, .guest-menu-button {
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 24px;
+            color: #fff;
+            padding: 10px;
+        }
+        .user-menu-dropdown, .guest-menu-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: #333;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 100;
+            border-radius: 5px;
+            padding: 10px 0;
+        }
+        .user-menu-item, .guest-menu-item {
+            color: white;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            text-align: left;
+        }
+        .user-menu-item:hover, .guest-menu-item:hover {
+            background-color: #575757;
+        }
     </style>
 </head>
 <body>
@@ -162,10 +203,27 @@
         </div>
         <div class="header-right">
             <div class="search-bar">
-                <input type="text" placeholder="Buscar juego...">
-                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Buscar juego..."><i class="fas fa-search"></i>
             </div>
+
+            <div class="user-menu-container hidden">
+                <button class="user-menu-button" aria-expanded="false" aria-label="Menú de usuario"><i class="fas fa-user-circle"></i></button>
+                <div class="user-menu-dropdown hidden">
+                    <a href="#" class="user-menu-item" id="user-display-name"></a>
+                    <a href="dashboard.html" class="user-menu-item">Dashboard</a>
+                    <a href="orders.html" class="user-menu-item">Pedidos</a>
+                    <a href="settings.html" class="user-menu-item">Configuración</a>
+                    <a href="#" class="user-menu-item" id="logout-button">Cerrar Sesión</a>
+                </div>
             </div>
+            <div class="guest-menu-container">
+                <button class="guest-menu-button" aria-label="Menú de invitado"><i class="fas fa-user-circle"></i></button>
+                <div class="guest-menu-dropdown hidden">
+                    <a href="login.html" class="guest-menu-item">Iniciar Sesión</a>
+                    <a href="signup.html" class="guest-menu-item">Registrarse</a>
+                </div>
+            </div>
+        </div>
     </header>
 
     <main class="payment-main">
@@ -176,9 +234,10 @@
             </div>
 
             <div id="transaction-summary" class="transaction-summary">
+                <p>Cargando detalles de la transacción...</p>
             </div>
 
-            <form id="payment-form">
+            <form id="payment-form" style="display: none;">
                 <div class="form-section-step">
                     <h3>Paso 1: Selecciona tu Método de Pago</h3>
                     <div class="form-group">
@@ -194,270 +253,6 @@
                     </div>
                 </div>
                 
-                <div class="form-section-step">
-                    <h3>Paso 3: Información de Contacto para Notificaciones</h3>
-                    <div class="input-group">
-                        <label for="whatsappNumber">Número de WhatsApp:</label>
-                        <div class="phone-input-group">
-                            <select id="countryCode" name="countryCode" class="country-code-select">
-                                <option value="">Selecciona País</option>
-                                <option value="+93">Afganistán (+93)</option>
-                                <option value="+355">Albania (+355)</option>
-                                <option value="+213">Argelia (+213)</option>
-                                <option value="+1684">Samoa Americana (+1684)</option>
-                                <option value="+376">Andorra (+376)</option>
-                                <option value="+244">Angola (+244)</option>
-                                <option value="+1264">Anguila (+1264)</option>
-                                <option value="+672">Antártida (+672)</option>
-                                <option value="+1268">Antigua y Barbuda (+1268)</option>
-                                <option value="+54">Argentina (+54)</option>
-                                <option value="+374">Armenia (+374)</option>
-                                <option value="+297">Aruba (+297)</option>
-                                <option value="+61">Australia (+61)</option>
-                                <option value="+43">Austria (+43)</option>
-                                <option value="+994">Azerbaiyán (+994)</option>
-                                <option value="+1242">Bahamas (+1242)</option>
-                                <option value="+973">Bahréin (+973)</option>
-                                <option value="+880">Bangladés (+880)</option>
-                                <option value="+1246">Barbados (+1246)</option>
-                                <option value="+375">Bielorrusia (+375)</option>
-                                <option value="+32">Bélgica (+32)</option>
-                                <option value="+501">Belice (+501)</option>
-                                <option value="+229">Benín (+229)</option>
-                                <option value="+1441">Bermudas (+1441)</option>
-                                <option value="+975">Bután (+975)</option>
-                                <option value="+591">Bolivia (+591)</option>
-                                <option value="+387">Bosnia y Herzegovina (+387)</option>
-                                <option value="+267">Botsuana (+267)</option>
-                                <option value="+55">Brasil (+55)</option>
-                                <option value="+246">Territorio Británico del Océano Índico (+246)</option>
-                                <option value="+1284">Islas Vírgenes Británicas (+1284)</option>
-                                <option value="+673">Brunéi Darussalam (+673)</option>
-                                <option value="+359">Bulgaria (+359)</option>
-                                <option value="+226">Burkina Faso (+226)</option>
-                                <option value="+257">Burundi (+257)</option>
-                                <option value="+855">Camboya (+855)</option>
-                                <option value="+237">Camerún (+237)</option>
-                                <option value="+1">Canadá (+1)</option>
-                                <option value="+238">Cabo Verde (+238)</option>
-                                <option value="+1345">Islas Caimán (+1345)</option>
-                                <option value="+236">República Centroafricana (+236)</option>
-                                <option value="+235">Chad (+235)</option>
-                                <option value="+56">Chile (+56)</option>
-                                <option value="+86">China (+86)</option>
-                                <option value="+61">Isla de Navidad (+61)</option>
-                                <option value="+61">Islas Cocos (Keeling) (+61)</option>
-                                <option value="+57">Colombia (+57)</option>
-                                <option value="+269">Comoras (+269)</option>
-                                <option value="+242">Congo - Brazzaville (+242)</option>
-                                <option value="+243">Congo - Kinshasa (+243)</option>
-                                <option value="+682">Islas Cook (+682)</option>
-                                <option value="+506">Costa Rica (+506)</option>
-                                <option value="+385">Croacia (+385)</option>
-                                <option value="+53">Cuba (+53)</option>
-                                <option value="+357">Chipre (+357)</option>
-                                <option value="+420">República Checa (+420)</option>
-                                <option value="+45">Dinamarca (+45)</option>
-                                <option value="+253">Yibuti (+253)</option>
-                                <option value="+1767">Dominica (+1767)</option>
-                                <option value="+1809">República Dominicana (+1809)</option>
-                                <option value="+1829"></option>
-                                <option value="+1849"></option>
-                                <option value="+593">Ecuador (+593)</option>
-                                <option value="+20">Egipto (+20)</option>
-                                <option value="+503">El Salvador (+503)</option>
-                                <option value="+240">Guinea Ecuatorial (+240)</option>
-                                <option value="+291">Eritrea (+291)</option>
-                                <option value="+372">Estonia (+372)</option>
-                                <option value="+251">Etiopía (+251)</option>
-                                <option value="+500">Islas Malvinas (+500)</option>
-                                <option value="+298">Islas Feroe (+298)</option>
-                                <option value="+679">Fiyi (+679)</option>
-                                <option value="+358">Finlandia (+358)</option>
-                                <option value="+33">Francia (+33)</option>
-                                <option value="+594">Guayana Francesa (+594)</option>
-                                <option value="+689">Polinesia Francesa (+689)</option>
-                                <option value="+241">Gabón (+241)</option>
-                                <option value="+220">Gambia (+220)</option>
-                                <option value="+995">Georgia (+995)</option>
-                                <option value="+49">Alemania (+49)</option>
-                                <option value="+233">Ghana (+233)</option>
-                                <option value="+350">Gibraltar (+350)</option>
-                                <option value="+30">Grecia (+30)</option>
-                                <option value="+299">Groenlandia (+299)</option>
-                                <option value="+1473">Granada (+1473)</option>
-                                <option value="+590">Guadalupe (+590)</option>
-                                <option value="+ Guam">Guam (+1671)</option>
-                                <option value="+502">Guatemala (+502)</option>
-                                <option value="+44">Guernsey (+44)</option>
-                                <option value="+224">Guinea (+224)</option>
-                                <option value="+245">Guinea-Bisáu (+245)</option>
-                                <option value="+592">Guyana (+592)</option>
-                                <option value="+509">Haití (+509)</option>
-                                <option value="+379">Ciudad del Vaticano (+379)</option>
-                                <option value="+504">Honduras (+504)</option>
-                                <option value="+852">Hong Kong (RAE de China) (+852)</option>
-                                <option value="+36">Hungría (+36)</option>
-                                <option value="+354">Islandia (+354)</option>
-                                <option value="+91">India (+91)</option>
-                                <option value="+62">Indonesia (+62)</option>
-                                <option value="+98">Irán (+98)</option>
-                                <option value="+964">Irak (+964)</option>
-                                <option value="+353">Irlanda (+353)</option>
-                                <option value="+44">Isla de Man (+44)</option>
-                                <option value="+972">Israel (+972)</option>
-                                <option value="+39">Italia (+39)</option>
-                                <option value="+225">Costa de Marfil (+225)</option>
-                                <option value="+1876">Jamaica (+1876)</option>
-                                <option value="+81">Japón (+81)</option>
-                                <option value="+44">Jersey (+44)</option>
-                                <option value="+962">Jordania (+962)</option>
-                                <option value="+7">Kazajistán (+7)</option>
-                                <option value="+254">Kenia (+254)</option>
-                                <option value="+686">Kiribati (+686)</option>
-                                <option value="+850">Corea del Norte (+850)</option>
-                                <option value="+82">Corea del Sur (+82)</option>
-                                <option value="+965">Kuwait (+965)</option>
-                                <option value="+996">Kirguistán (+996)</option>
-                                <option value="+856">Laos (+856)</option>
-                                <option value="+371">Letonia (+371)</option>
-                                <option value="+961">Líbano (+961)</option>
-                                <option value="+266">Lesoto (+266)</option>
-                                <option value="+231">Liberia (+231)</option>
-                                <option value="+218">Libia (+218)</option>
-                                <option value="+423">Liechtenstein (+423)</option>
-                                <option value="+370">Lituania (+370)</option>
-                                <option value="+352">Luxemburgo (+352)</option>
-                                <option value="+853">Macao (RAE de China) (+853)</option>
-                                <option value="+389">Macedonia del Norte (+389)</option>
-                                <option value="+261">Madagascar (+261)</option>
-                                <option value="+265">Malaui (+265)</option>
-                                <option value="+60">Malasia (+60)</option>
-                                <option value="+960">Maldivas (+960)</option>
-                                <option value="+223">Malí (+223)</option>
-                                <option value="+356">Malta (+356)</option>
-                                <option value="+692">Islas Marshall (+692)</option>
-                                <option value="+596">Martinica (+596)</option>
-                                <option value="+222">Mauritania (+222)</option>
-                                <option value="+230">Mauricio (+230)</option>
-                                <option value="+262">Mayotte (+262)</option>
-                                <option value="+52">México (+52)</option>
-                                <option value="+691">Micronesia (+691)</option>
-                                <option value="+373">Moldavia (+373)</option>
-                                <option value="+377">Mónaco (+377)</option>
-                                <option value="+976">Mongolia (+976)</option>
-                                <option value="+382">Montenegro (+382)</option>
-                                <option value="+1664">Montserrat (+1664)</option>
-                                <option value="+212">Marruecos (+212)</option>
-                                <option value="+258">Mozambique (+258)</option>
-                                <option value="+95">Birmania (Myanmar) (+95)</option>
-                                <option value="+264">Namibia (+264)</option>
-                                <option value="+674">Nauru (+674)</option>
-                                <option value="+977">Nepal (+977)</option>
-                                <option value="+31">Países Bajos (+31)</option>
-                                <option value="+599">Caribe Neerlandés (+599)</option>
-                                <option value="+687">Nueva Caledonia (+687)</option>
-                                <option value="+64">Nueva Zelanda (+64)</option>
-                                <option value="+505">Nicaragua (+505)</option>
-                                <option value="+227">Níger (+227)</option>
-                                <option value="+234">Nigeria (+234)</option>
-                                <option value="+683">Niue (+683)</option>
-                                <option value="+672">Isla Norfolk (+672)</option>
-                                <option value="+1670">Islas Marianas del Norte (+1670)</option>
-                                <option value="+47">Noruega (+47)</option>
-                                <option value="+968">Omán (+968)</option>
-                                <option value="+92">Pakistán (+92)</option>
-                                <option value="+680">Palaos (+680)</option>
-                                <option value="+970">Territorios Palestinos (+970)</option>
-                                <option value="+507">Panamá (+507)</option>
-                                <option value="+675">Papúa Nueva Guinea (+675)</option>
-                                <option value="+595">Paraguay (+595)</option>
-                                <option value="+51">Perú (+51)</option>
-                                <option value="+63">Filipinas (+63)</option>
-                                <option value="+870">Islas Pitcairn (+870)</option>
-                                <option value="+48">Polonia (+48)</option>
-                                <option value="+351">Portugal (+351)</option>
-                                <option value="+1787">Puerto Rico (+1787)</option>
-                                <option value="+1939"></option>
-                                <option value="+974">Catar (+974)</option>
-                                <option value="+262">Reunión (+262)</option>
-                                <option value="+40">Rumanía (+40)</option>
-                                <option value="+7">Rusia (+7)</option>
-                                <option value="+250">Ruanda (+250)</option>
-                                <option value="+590">San Bartolomé (+590)</option>
-                                <option value="+290">Santa Elena, Ascensión y Tristán de Acuña (+290)</option>
-                                <option value="+1869">San Cristóbal y Nieves (+1869)</option>
-                                <option value="+1758">Santa Lucía (+1758)</option>
-                                <option value="+590">San Martín (parte francesa) (+590)</option>
-                                <option value="+508">San Pedro y Miquelón (+508)</option>
-                                <option value="+1784">San Vicente y las Granadinas (+1784)</option>
-                                <option value="+685">Samoa (+685)</option>
-                                <option value="+378">San Marino (+378)</option>
-                                <option value="+239">Santo Tomé y Príncipe (+239)</option>
-                                <option value="+966">Arabia Saudita (+966)</option>
-                                <option value="+221">Senegal (+221)</option>
-                                <option value="+381">Serbia (+381)</option>
-                                <option value="+248">Seychelles (+248)</option>
-                                <option value="+232">Sierra Leona (+232)</option>
-                                <option value="+65">Singapur (+65)</option>
-                                <option value="+1721">Sint Maarten (parte holandesa) (+1721)</option>
-                                <option value="+421">Eslovaquia (+421)</option>
-                                <option value="+386">Eslovenia (+386)</option>
-                                <option value="+677">Islas Salomón (+677)</option>
-                                <option value="+252">Somalia (+252)</option>
-                                <option value="+27">Sudáfrica (+27)</option>
-                                <option value="+500">Georgia del Sur y las Islas Sandwich del Sur (+500)</option>
-                                <option value="+211">Sudán del Sur (+211)</option>
-                                <option value="+34">España (+34)</option>
-                                <option value="+94">Sri Lanka (+94)</option>
-                                <option value="+249">Sudán (+249)</option>
-                                <option value="+597">Surinam (+597)</option>
-                                <option value="+47">Svalbard y Jan Mayen (+47)</option>
-                                <option value="+268">Suazilandia (+268)</option>
-                                <option value="+46">Suecia (+46)</option>
-                                <option value="+41">Suiza (+41)</option>
-                                <option value="+963">Siria (+963)</option>
-                                <option value="+886">Taiwán (+886)</option>
-                                <option value="+992">Tayikistán (+992)</option>
-                                <option value="+255">Tanzania (+255)</option>
-                                <option value="+66">Tailandia (+66)</option>
-                                <option value="+670">Timor Oriental (+670)</option>
-                                <option value="+228">Togo (+228)</option>
-                                <option value="+690">Tokelau (+690)</option>
-                                <option value="+676">Tonga (+676)</option>
-                                <option value="+1868">Trinidad y Tobago (+1868)</option>
-                                <option value="+216">Túnez (+216)</option>
-                                <option value="+90">Turquía (+90)</option>
-                                <option value="+993">Turkmenistán (+993)</option>
-                                <option value="+1649">Islas Turcas y Caicos (+1649)</option>
-                                <option value="+688">Tuvalu (+688)</option>
-                                <option value="+256">Uganda (+256)</option>
-                                <option value="+380">Ucrania (+380)</option>
-                                <option value="+971">Emiratos Árabes Unidos (+971)</option>
-                                <option value="+44">Reino Unido (+44)</option>
-                                <option value="+1">Estados Unidos (+1)</option>
-                                <option value="+1340">Islas Vírgenes de EE. UU. (+1340)</option>
-                                <option value="+598">Uruguay (+598)</option>
-                                <option value="+998">Uzbekistán (+998)</option>
-                                <option value="+678">Vanuatu (+678)</option>
-                                <option value="+58">Venezuela (+58)</option>
-                                <option value="+84">Vietnam (+84)</option>
-                                <option value="+681">Wallis y Futuna (+681)</option>
-                                <option value="+967">Yemen (+967)</option>
-                                <option value="+260">Zambia (+260)</option>
-                                <option value="+263">Zimbabue (+263)</option>
-                            </select>
-                            <input type="tel" id="whatsappNumber" name="whatsappNumber" placeholder="Ej: 4121234567" required>
-                        </div>
-                        <small>Por favor, ingresa tu número sin el prefijo del país si ya lo seleccionaste.</small>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="email">Correo Electrónico (Opcional, para factura):</label>
-                        <input type="email" id="email" name="email" placeholder="tu_correo@ejemplo.com">
-                    </div>
-
-                </div>
                 <div id="whatsapp-message-container" class="payment-confirmation-message" style="margin-top: 30px; margin-bottom: 20px; text-align: center; display: none;">
                     <p style="font-size: 1.1em; color: var(--text-color); margin-bottom: 15px;">
                         ¡Importante! Una vez realizado el pago con el método seleccionado, <strong>envía la captura de tu comprobante y tus datos de TikTok</strong> al siguiente número de WhatsApp para que tu recarga sea procesada rápidamente:
@@ -496,9 +291,23 @@
             </a>
         </div>
     </footer>
+    
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script type="module">
+        import { supabase } from './supabaseClient.js';
+        
+        const userMenuContainer = document.querySelector('.user-menu-container');
+        const guestMenuContainer = document.querySelector('.guest-menu-container');
+        const userDisplayName = document.getElementById('user-display-name');
+        const logoutButton = document.getElementById('logout-button');
+        const userMenuButton = document.querySelector('.user-menu-button');
+        const userMenuDropdown = document.querySelector('.user-menu-dropdown');
+        const guestMenuButton = document.querySelector('.guest-menu-button');
+        const guestMenuDropdown = document.querySelector('.guest-menu-dropdown');
 
-    <script src="script.js"></script>
-    <script>
+        let userProfileData = null;
+        let transactionDetails = null;
+
         const paymentDetailsTemplates = {
             'pago-movil': `
                 <p><strong>Paso 1:</strong> Realiza el Pago Móvil a los siguientes datos:</p>
@@ -556,311 +365,304 @@
             { id: 'binance', name: 'Binance', type: 'usd', icon: 'fab fa-bitcoin' },
             { id: 'zinli', name: 'Zinli', type: 'usd', icon: 'fas fa-wallet' }
         ];
-
-        let transactionDetails = null;
+        
         const paymentForm = document.getElementById('payment-form');
         const whatsappMessageContainer = document.getElementById('whatsapp-message-container');
         const finalizeBtn = document.getElementById('finalize-recharge-btn');
         const successMessageDisplay = document.getElementById('success-message-display'); 
-        const gamePaymentHeader = document.getElementById('game-payment-header'); // Nuevo elemento
-        const gameBannerDisplay = document.getElementById('gameBannerDisplay'); // Nuevo elemento
-        const gameTitleDisplay = document.getElementById('gameTitleDisplay'); // Nuevo elemento
+        const gamePaymentHeader = document.getElementById('game-payment-header');
+        const gameBannerDisplay = document.getElementById('gameBannerDisplay');
+        const gameTitleDisplay = document.getElementById('gameTitleDisplay');
+        const transactionSummaryDiv = document.getElementById('transaction-summary');
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const transactionSummaryDiv = document.getElementById('transaction-summary');
-            const paymentMethodsDiv = document.getElementById('payment-methods');
-            const paymentDetailsFormDiv = document.getElementById('payment-details-form');
+        function toggleDropdown(dropdown) {
+            dropdown.classList.toggle('hidden');
+        }
+
+        function setupEventListeners() {
+            userMenuButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleDropdown(userMenuDropdown);
+                if (!guestMenuDropdown.classList.contains('hidden')) {
+                    toggleDropdown(guestMenuDropdown);
+                }
+            });
+
+            guestMenuButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleDropdown(guestMenuDropdown);
+                if (!userMenuDropdown.classList.contains('hidden')) {
+                    toggleDropdown(userMenuDropdown);
+                }
+            });
+
+            document.addEventListener('click', () => {
+                if (!userMenuDropdown.classList.contains('hidden')) {
+                    toggleDropdown(userMenuDropdown);
+                }
+                if (!guestMenuDropdown.classList.contains('hidden')) {
+                    toggleDropdown(guestMenuDropdown);
+                }
+            });
+
+            if (logoutButton) {
+                logoutButton.addEventListener('click', handleLogout);
+            }
+        }
+
+        async function fetchUserProfile(userId) {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('name, last_name, country_code, phone')
+                .eq('id', userId)
+                .single();
+
+            if (error) {
+                console.error('Error fetching user profile:', error.message);
+                return null;
+            }
+            return data;
+        }
+
+        async function checkUserSession() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                userMenuContainer.classList.remove('hidden');
+                guestMenuContainer.classList.add('hidden');
+                userDisplayName.textContent = session.user.email || 'Usuario';
+                
+                userProfileData = await fetchUserProfile(session.user.id);
+                if (userProfileData && userProfileData.name) {
+                    userDisplayName.textContent = `${userProfileData.name} ${userProfileData.last_name || ''}`;
+                }
+            } else {
+                userMenuContainer.classList.add('hidden');
+                guestMenuContainer.classList.remove('hidden');
+            }
+            return userProfileData;
+        }
+
+        async function handleLogout() {
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+                console.error('Error al cerrar sesión:', error.message);
+            } else {
+                window.location.href = 'index.html';
+            }
+        }
+        
+        function updateGameHeader() {
+            if (transactionDetails && transactionDetails.game) {
+                gamePaymentHeader.style.display = 'block';
+                gameTitleDisplay.textContent = `Confirmar Recarga para ${transactionDetails.game}`;
+                if (transactionDetails.gameBanner) {
+                    gameBannerDisplay.src = transactionDetails.gameBanner;
+                    gameBannerDisplay.style.display = 'block';
+                } else {
+                    gameBannerDisplay.style.display = 'none';
+                }
+            } else {
+                gamePaymentHeader.style.display = 'none';
+            }
+        }
+
+        function updateTransactionSummary() {
+            if (!transactionDetails) {
+                transactionSummaryDiv.innerHTML = '<p>No se encontraron detalles de la transacción.</p>';
+                return;
+            }
             
-            const storedDetails = localStorage.getItem('transactionDetails');
-            if (storedDetails) {
-                transactionDetails = JSON.parse(storedDetails);
-                updateGameHeader(); // Llamada a la nueva función
-                updateTransactionSummary();
-                updatePaymentMethods();
+            const displayAmount = parseFloat(transactionDetails.finalPrice);
+            const displayCurrency = transactionDetails.currency;
+            
+            let otherCurrencyDisplay = '';
+            if (transactionDetails.priceUSD && transactionDetails.priceVES) {
+                if (displayCurrency === 'VES') {
+                    otherCurrencyDisplay = ` (~ $${parseFloat(transactionDetails.priceUSD).toFixed(2)} USD)`;
+                } else if (displayCurrency === 'USD') {
+                    otherCurrencyDisplay = ` (~ Bs. ${parseFloat(transactionDetails.priceVES).toFixed(2)} VES)`;
+                }
+            }
+
+            const playerIdHtml = transactionDetails.playerId ? `<p><strong>ID de Jugador:</strong> ${transactionDetails.playerId}</p>` : '';
+            
+            let greeting = 'Por favor, realiza el pago por el monto exacto y selecciona tu método a continuación.';
+            if (userProfileData && userProfileData.name) {
+                greeting = `Hola ${userProfileData.name} ${userProfileData.last_name || ''}, por favor, realiza el pago por el monto exacto y selecciona tu método a continuación.`;
+            }
+
+            transactionSummaryDiv.innerHTML = `
+                <p><strong>Juego:</strong> ${transactionDetails.game}</p>
+                ${playerIdHtml}
+                <p><strong>Plan Seleccionado:</strong> ${transactionDetails.package}</p>
+                <p><strong>Total a Pagar:</strong> <span class="amount">${displayCurrency === 'VES' ? 'Bs.' : '$'} ${displayAmount.toFixed(2)} ${displayCurrency}</span>${otherCurrencyDisplay}</p>
+                <p>${greeting}</p>
+            `;
+        }
+
+        function updatePaymentMethods() {
+            const paymentMethodsDiv = document.getElementById('payment-methods');
+            paymentMethodsDiv.innerHTML = '';
+            if (!transactionDetails) return;
+            const currentCurrency = transactionDetails.currency;
+            const methods = currentCurrency === 'VES' ? paymentMethodsVES : paymentMethodsUSD;
+
+            methods.forEach(method => {
+                const methodItem = document.createElement('div');
+                methodItem.classList.add('payment-method-option');
+                methodItem.innerHTML = `
+                    <input type="radio" id="method-${method.id}" name="paymentMethod" value="${method.id}" data-type="${method.type}">
+                    <label for="method-${method.id}">
+                        <i class="${method.icon}"></i>
+                        <span>${method.name}</span>
+                    </label>
+                `;
+                paymentMethodsDiv.appendChild(methodItem);
+            });
+
+            paymentMethodsDiv.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
+                radio.addEventListener('change', (event) => {
+                    const selectedMethodId = event.target.value;
+                    loadPaymentDetails(selectedMethodId);
+                    checkFormValidity();
+                });
+            });
+            checkFormValidity();
+        }
+
+        function loadPaymentDetails(methodId) {
+            const paymentDetailsFormDiv = document.getElementById('payment-details-form');
+            let methodHtml = paymentDetailsTemplates[methodId];
+
+            if (methodHtml) {
+                paymentDetailsFormDiv.innerHTML = methodHtml;
 
                 if (transactionDetails.game === "TikTok") {
-                    whatsappMessageContainer.style.display = 'block';
-                    finalizeBtn.style.display = 'none';
-                    // El email ya no es requerido por defecto en el HTML, por lo que no hace falta setearlo aquí.
+                    const fieldsContainer = paymentDetailsFormDiv.querySelector('.payment-fields-container');
+                    if (fieldsContainer) {
+                        fieldsContainer.style.display = 'none';
+                    }
                 } else {
-                    whatsappMessageContainer.style.display = 'none';
-                    finalizeBtn.style.display = 'block';
+                    const fileInput = document.getElementById('payment-receipt');
+                    if (fileInput) {
+                        fileInput.addEventListener('change', checkFormValidity);
+                        fileInput.required = true; 
+                    }
+                }
+
+                const copyButton = paymentDetailsFormDiv.querySelector('.copy-button');
+                if (copyButton) {
+                    copyButton.addEventListener('click', handleCopyButtonClick);
                 }
 
             } else {
-                transactionSummaryDiv.innerHTML = '<p>No se encontraron detalles de la transacción. Por favor, regresa a la página de inicio.</p>';
-                finalizeBtn.style.display = 'none';
-                whatsappMessageContainer.style.display = 'none';
-                gamePaymentHeader.style.display = 'none'; // Oculta el header si no hay detalles
+                paymentDetailsFormDiv.innerHTML = '<p>Selecciona un método de pago para ver los detalles.</p>';
             }
+            checkFormValidity();
+        }
 
-            // Nueva función para actualizar el encabezado del juego
-            function updateGameHeader() {
-                if (transactionDetails && transactionDetails.game) {
-                    gamePaymentHeader.style.display = 'block';
-                    gameTitleDisplay.textContent = `Confirmar Recarga para ${transactionDetails.game}`;
-                    if (transactionDetails.gameBanner) {
-                        gameBannerDisplay.src = transactionDetails.gameBanner;
-                        gameBannerDisplay.style.display = 'block';
-                    } else {
-                        gameBannerDisplay.style.display = 'none'; // Oculta si no hay banner
+        async function handleCopyButtonClick(event) {
+            const button = event.currentTarget;
+            const targetId = button.dataset.copyTarget;
+            const textToCopyElement = document.getElementById(targetId);
+            const feedbackElement = document.getElementById(`${targetId}-copy-feedback`);
+
+            if (textToCopyElement && navigator.clipboard) {
+                try {
+                    await navigator.clipboard.writeText(textToCopyElement.textContent);
+                    if (feedbackElement) {
+                        feedbackElement.textContent = '¡Copiado!';
+                        feedbackElement.style.display = 'inline-block';
+                        setTimeout(() => {
+                            feedbackElement.style.display = 'none';
+                        }, 1500);
                     }
+                } catch (err) {
+                    console.error('Error al copiar: ', err);
+                    if (feedbackElement) {
+                        feedbackElement.textContent = 'Error al copiar';
+                        feedbackElement.style.display = 'inline-block';
+                        setTimeout(() => {
+                            feedbackElement.style.display = 'none';
+                        }, 1500);
+                    }
+                    alert('No se pudo copiar el texto. Por favor, cópialo manualmente.');
+                }
+            } else {
+                alert('Tu navegador no soporta la copia automática o no se encontró el elemento. Por favor, selecciona y copia la dirección manualmente.');
+            }
+        }
+
+        function checkFormValidity() {
+            const selectedRadio = document.querySelector('input[name="paymentMethod"]:checked');
+            const isMethodSelected = selectedRadio !== null;
+            
+            let areDetailsFilled = false;
+            if (isMethodSelected) {
+                if (transactionDetails.game === "TikTok") {
+                    areDetailsFilled = true;
                 } else {
-                    gamePaymentHeader.style.display = 'none';
-                }
-            }
-
-            function updateTransactionSummary() {
-                if (!transactionDetails) return;
-
-                const displayAmount = parseFloat(transactionDetails.finalPrice);
-                const displayCurrency = transactionDetails.currency;
-                
-                let otherCurrencyDisplay = '';
-                if (transactionDetails.priceUSD && transactionDetails.priceVES) {
-                    if (displayCurrency === 'VES') {
-                        otherCurrencyDisplay = ` (~ $${parseFloat(transactionDetails.priceUSD).toFixed(2)} USD)`;
-                    } else if (displayCurrency === 'USD') {
-                        otherCurrencyDisplay = ` (~ Bs. ${parseFloat(transactionDetails.priceVES).toFixed(2)} VES)`;
-                    }
-                }
-
-                const playerIdHtml = transactionDetails.playerId ? `<p><strong>ID de Jugador:</strong> ${transactionDetails.playerId}</p>` : '';
-
-                transactionSummaryDiv.innerHTML = `
-                    <p><strong>Juego:</strong> ${transactionDetails.game}</p>
-                    ${playerIdHtml}
-                    <p><strong>Plan Seleccionado:</strong> ${transactionDetails.package}</p>
-                    <p><strong>Total a Pagar:</strong> <span class="amount">${displayCurrency === 'VES' ? 'Bs.' : '$'} ${displayAmount.toFixed(2)} ${displayCurrency}</span>${otherCurrencyDisplay}</p>
-                    <p>Por favor, realiza el pago por el monto exacto y selecciona tu método a continuación.</p>
-                `;
-            }
-
-            function updatePaymentMethods() {
-                paymentMethodsDiv.innerHTML = '';
-                const currentCurrency = transactionDetails.currency;
-                const methods = currentCurrency === 'VES' ? paymentMethodsVES : paymentMethodsUSD;
-
-                methods.forEach(method => {
-                    const methodItem = document.createElement('div');
-                    methodItem.classList.add('payment-method-option');
-                    methodItem.innerHTML = `
-                        <input type="radio" id="method-${method.id}" name="paymentMethod" value="${method.id}" data-type="${method.type}">
-                        <label for="method-${method.id}">
-                            <i class="${method.icon}"></i>
-                            <span>${method.name}</span>
-                        </label>
-                    `;
-                    paymentMethodsDiv.appendChild(methodItem);
-                });
-
-                paymentMethodsDiv.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
-                    radio.addEventListener('change', (event) => {
-                        const selectedMethodId = event.target.value;
-                        loadPaymentDetails(selectedMethodId);
-                        checkFormValidity();
-                    });
-                });
-                checkFormValidity();
-            }
-
-            function loadPaymentDetails(methodId) {
-                let methodHtml = paymentDetailsTemplates[methodId];
-
-                if (methodHtml) {
-                    paymentDetailsFormDiv.innerHTML = methodHtml;
-
-                    if (transactionDetails.game === "TikTok") {
-                        const fieldsContainer = paymentDetailsFormDiv.querySelector('.payment-fields-container');
-                        if (fieldsContainer) {
-                            fieldsContainer.style.display = 'none'; // Oculta la subida del comprobante para TikTok
-                        }
-                    } else {
-                        // Only add event listener for the file input if it's not TikTok
-                        const fileInput = document.getElementById('payment-receipt');
-                        if (fileInput) {
-                            fileInput.addEventListener('change', checkFormValidity);
-                            // El atributo 'required' ya está en el template HTML de paymentDetailsTemplates,
-                            // por lo que no es necesario setearlo aquí, pero no hace daño.
-                            fileInput.required = true; 
-                        }
-                    }
-
-                    const copyButton = paymentDetailsFormDiv.querySelector('.copy-button');
-                    if (copyButton) {
-                        copyButton.addEventListener('click', handleCopyButtonClick);
-                    }
-
-                } else {
-                    paymentDetailsFormDiv.innerHTML = '<p>Selecciona un método de pago para ver los detalles.</p>';
-                }
-                checkFormValidity();
-
-                // Add event listeners to email and whatsapp inputs for validity check
-                document.getElementById('email').addEventListener('input', checkFormValidity);
-                // Attach listener to both countryCode and whatsappNumber inputs
-                document.getElementById('countryCode').addEventListener('change', checkFormValidity); 
-                document.getElementById('whatsappNumber').addEventListener('input', checkFormValidity);
-            }
-
-            async function handleCopyButtonClick(event) {
-                const button = event.currentTarget;
-                const targetId = button.dataset.copyTarget;
-                const textToCopyElement = document.getElementById(targetId);
-                const feedbackElement = document.getElementById(`${targetId}-copy-feedback`);
-
-                if (textToCopyElement && navigator.clipboard) {
-                    try {
-                        await navigator.clipboard.writeText(textToCopyElement.textContent);
-                        if (feedbackElement) {
-                            feedbackElement.textContent = '¡Copiado!';
-                            feedbackElement.style.display = 'inline-block';
-                            setTimeout(() => {
-                                feedbackElement.style.display = 'none';
-                            }, 1500);
-                        }
-                    } catch (err) {
-                        console.error('Error al copiar: ', err);
-                        if (feedbackElement) {
-                            feedbackElement.textContent = 'Error al copiar';
-                            feedbackElement.style.display = 'inline-block';
-                            setTimeout(() => {
-                                feedbackElement.style.display = 'none';
-                            }, 1500);
-                        }
-                        alert('No se pudo copiar el texto. Por favor, cópialo manualmente.');
-                    }
-                } else {
-                    alert('Tu navegador no soporta la copia automática o no se encontró el elemento. Por favor, selecciona y copia la dirección manualmente.');
-                }
-            }
-
-            function checkFormValidity() {
-                const selectedRadio = document.querySelector('input[name="paymentMethod"]:checked');
-                const isMethodSelected = selectedRadio !== null;
-                
-                // Get values from the country code and whatsapp number inputs
-                const countryCodeInput = document.getElementById('countryCode');
-                const whatsappInput = document.getElementById('whatsappNumber');
-                
-                // WhatsApp is now required, ensure both parts are filled
-                const isWhatsappFilled = whatsappInput && whatsappInput.value.trim() !== '';
-                const isCountryCodeSelected = countryCodeInput && countryCodeInput.value.trim() !== '' && countryCodeInput.value !== ''; // Also check if a valid option is selected
-
-                // Combined check for WhatsApp number including country code
-                const isFullWhatsappValid = isWhatsappFilled && isCountryCodeSelected;
-                
-                // The email field is optional, only check validity IF filled
-                const emailInput = document.getElementById('email');
-                const isEmailValidIfFilled = (!emailInput || emailInput.value.trim() === '' || emailInput.checkValidity());
-
-                let areDetailsFilled = true;
-
-                if (transactionDetails && transactionDetails.game === "TikTok") {
-                    // For TikTok, payment receipt is not required, but WhatsApp is
-                    areDetailsFilled = isFullWhatsappValid; 
-                } else if (isMethodSelected) {
-                    // For other games, payment receipt AND WhatsApp are required
                     const fileInput = document.getElementById('payment-receipt');
-                    if (fileInput && fileInput.files.length === 0) {
-                        areDetailsFilled = false;
-                    }
-                    // Combine with full WhatsApp validity
-                    areDetailsFilled = areDetailsFilled && isFullWhatsappValid;
-                } else {
-                    areDetailsFilled = false;
-                }
-                
-                // The finalize button is enabled if:
-                // 1. A method is selected (unless TikTok, where no receipt)
-                // 2. Payment details (receipt) are filled (if applicable) AND WhatsApp is fully filled.
-                // 3. Email is valid (if filled).
-                if (transactionDetails.game !== "TikTok") {
-                    finalizeBtn.disabled = !(isMethodSelected && areDetailsFilled && isEmailValidIfFilled);
-                } else {
-                    // For TikTok, the button depends on WhatsApp being fully filled and email being valid if filled
-                    finalizeBtn.disabled = !(isFullWhatsappValid && isEmailValidIfFilled); 
+                    areDetailsFilled = fileInput && fileInput.files.length > 0;
                 }
             }
+            
+            finalizeBtn.disabled = !areDetailsFilled;
+        }
 
-
-            document.getElementById('payment-form').addEventListener('submit', async (e) => {
+        function handleFormSubmission() {
+            paymentForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
+                
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) {
+                    alert('Debes iniciar sesión para finalizar el pago.');
+                    window.location.href = 'login.html';
+                    return;
+                }
 
-                // Get values from the country code and whatsapp number inputs
-                const countryCode = document.getElementById('countryCode').value;
-                const whatsappNumberInput = document.getElementById('whatsappNumber').value.trim();
-                const fullWhatsappNumber = countryCode + whatsappNumberInput; // Combine them here
-
-                // Get form data using FormData API
                 const formData = new FormData(paymentForm);
 
-                // Update the whatsappNumber in formData with the combined value
-                formData.set('whatsappNumber', fullWhatsappNumber);
-
-                // Add transactionDetails to formData (these are not direct form inputs)
-                for (const key in transactionDetails) {
-                    // Avoid re-appending whatsappNumber if it's already set from the combined value
-                    if (key === 'whatsappNumber') continue; 
-                    formData.append(key, transactionDetails[key]);
+                if (session.user.email) {
+                    formData.append('userEmail', session.user.email);
+                }
+                if (userProfileData && userProfileData.country_code && userProfileData.phone) {
+                    const fullPhoneNumber = `${userProfileData.country_code}${userProfileData.phone}`;
+                    formData.append('whatsappNumber', fullPhoneNumber);
                 }
 
-                // New: Check if WhatsApp is fully filled (now required)
-                if (!whatsappNumberInput || !countryCode || countryCode === "") { // Added check for empty countryCode
-                    alert('Por favor, ingresa tu número de WhatsApp y selecciona el prefijo del país para poder contactarte.');
-                    // You might want to focus on the problematic input, e.g., whatsappNumber or countryCode
-                    if (!countryCode || countryCode === "") document.getElementById('countryCode').focus();
-                    else document.getElementById('whatsappNumber').focus();
-                    return;
-                }
-
-                // El email es opcional, solo se valida si está lleno
-                const emailInput = document.getElementById('email');
-                if (emailInput && emailInput.value.trim() !== '' && !emailInput.checkValidity()) {
-                    alert('Por favor, ingresa un correo electrónico válido si deseas recibir la factura.');
-                    emailInput.focus();
-                    return;
-                }
-                
-                // Check for payment receipt if it's not a TikTok game
                 if (transactionDetails.game !== "TikTok") {
                     const paymentReceipt = document.getElementById('payment-receipt');
                     if (!paymentReceipt || paymentReceipt.files.length === 0) {
-                        alert('Por favor, sube tu comprobante de pago.');
+                        alert('Por favor, sube tu comprobante de pago para continuar.');
                         return;
                     }
                 }
 
-                // Log FormData entries for debugging (not the file content itself)
-                console.log('Datos a enviar (FormData):');
-                for (let pair of formData.entries()) {
-                   console.log(pair[0]+ ': ' + pair[1]);
+                for (const key in transactionDetails) {
+                    formData.append(key, transactionDetails[key]);
                 }
                 
-                // Disable button and show loading message
                 finalizeBtn.disabled = true;
                 finalizeBtn.textContent = 'Enviando...';
                 
                 try {
-                    // Send FormData directly; fetch will set Content-Type header to multipart/form-data automatically
                     const response = await fetch('/.netlify/functions/process-payment', {
                         method: 'POST',
                         body: formData
                     });
 
                     if (response.ok) {
-                        // Show success message and hide form
                         paymentForm.style.display = 'none';
-                        whatsappMessageContainer.style.display = 'none'; // Hide TikTok specific message if shown
+                        whatsappMessageContainer.style.display = 'none';
                         successMessageDisplay.style.display = 'block';
-                        gamePaymentHeader.style.display = 'none'; // Oculta el encabezado del juego al completar
+                        gamePaymentHeader.style.display = 'none';
 
-                        localStorage.removeItem('transactionDetails'); // Clear stored details
+                        localStorage.removeItem('transactionDetails');
 
-                        // Redirect after a short delay
                         setTimeout(() => {
                             window.location.href = 'index.html';
-                        }, 5000); // 5 seconds
+                        }, 5000);
                     } else {
                         const errorData = await response.json();
                         alert(`Ocurrió un error: ${errorData.message || response.statusText}. Por favor, verifica tus datos e inténtalo de nuevo.`);
@@ -875,6 +677,53 @@
                     finalizeBtn.textContent = 'Finalizar Recarga';
                 }
             });
+        }
+        
+        // Lógica principal
+        document.addEventListener('DOMContentLoaded', async () => {
+            setupEventListeners();
+            
+            const storedDetails = localStorage.getItem('transactionDetails');
+            if (storedDetails) {
+                try {
+                    transactionDetails = JSON.parse(storedDetails);
+                    if (transactionDetails && transactionDetails.game && transactionDetails.package && transactionDetails.finalPrice) {
+                        // Cargar sesión de usuario y perfil de forma asíncrona
+                        await checkUserSession();
+                        
+                        updateGameHeader();
+                        updatePaymentMethods();
+                        updateTransactionSummary();
+
+                        paymentForm.style.display = 'block';
+                        handleFormSubmission(); // Configurar el manejador del formulario después de que todo esté cargado
+
+                        if (transactionDetails.game === "TikTok") {
+                            whatsappMessageContainer.style.display = 'block';
+                            finalizeBtn.style.display = 'none';
+                            // Para TikTok no se necesita comprobante, el botón puede estar habilitado.
+                            finalizeBtn.disabled = false;
+                        } else {
+                            whatsappMessageContainer.style.display = 'none';
+                            finalizeBtn.style.display = 'block';
+                            // La función checkFormValidity() se encargará de habilitar el botón
+                        }
+                    } else {
+                        throw new Error('Transaction details are incomplete or invalid.');
+                    }
+                } catch (e) {
+                    console.error("Error parsing transaction details from localStorage:", e);
+                    transactionSummaryDiv.innerHTML = '<p>Error al cargar los detalles de la transacción. Por favor, regresa a la página de inicio y selecciona un plan para la recarga.</p>';
+                    paymentForm.style.display = 'none';
+                    whatsappMessageContainer.style.display = 'none';
+                    gamePaymentHeader.style.display = 'none';
+                }
+            } else {
+                transactionSummaryDiv.innerHTML = '<p>No se encontraron detalles de la transacción. Por favor, regresa a la página de inicio y selecciona un plan para la recarga.</p>';
+                paymentForm.style.display = 'none';
+                whatsappMessageContainer.style.display = 'none';
+                gamePaymentHeader.style.display = 'none';
+            }
         });
     </script>
 </body>

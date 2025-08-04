@@ -42,22 +42,21 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    overflow-x: hidden; /* Mantener para evitar scroll horizontal no deseado */
+    overflow-x: hidden;
 }
 
 main {
     flex: 1;
-    /* Removido padding y max-width aquí para que las secciones internas lo controlen */
-    margin: 0 auto; /* Centrar main content si es necesario, pero sections internas tienen max-width */
+    margin: 0 auto;
     width: 100%;
-    box-sizing: border-box; /* Asegurar que el padding no desborde el 100% de width */
+    box-sizing: border-box;
 }
 
 h1, h2, h3 {
-    color: var(--primary-purple); /* Títulos en morado */
+    color: var(--primary-purple);
     text-align: center;
     margin-bottom: 25px;
-    font-weight: 700; /* Más negrita */
+    font-weight: 700;
     text-shadow: 1px 1px 3px var(--shadow-dark);
 }
 
@@ -74,16 +73,16 @@ p {
 
 /* Header */
 header {
-    background-color: #121212; /* Fondo oscuro similar a la imagen */
-    padding: 10px 25px; /* Ajustando el padding vertical */
+    background-color: #121212;
+    padding: 10px 25px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: none; /* Eliminando el borde inferior */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8); /* Sombra más pronunciada */
-    flex-wrap: wrap;
-    position: sticky; /* Se mantiene en la parte superior al hacer scroll */
-    top: 0; /* Se pega a la parte superior */
+    border-bottom: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+    flex-wrap: wrap; /* Permite que los elementos se envuelvan en pantallas pequeñas */
+    position: sticky;
+    top: 0;
     z-index: 1000;
     width: 100%;
     box-sizing: border-box;
@@ -112,7 +111,7 @@ header {
 }
 
 .search-bar input {
-    background-color: var(--input-bg); /* Fondo de input más oscuro */
+    background-color: var(--input-bg);
     border: 1px solid var(--border-color);
     border-radius: 20px;
     padding: 10px 15px 10px 40px;
@@ -140,7 +139,7 @@ header {
     position: relative;
     cursor: pointer;
     user-select: none;
-    background-color: var(--input-bg); /* Fondo de input más oscuro */
+    background-color: var(--input-bg);
     border: 1px solid var(--border-color);
     border-radius: 20px;
     padding: 10px 15px;
@@ -264,7 +263,7 @@ header {
 }
 
 .btn-secondary {
-    background-color: var(--accent-grey); /* Usar gris de acento */
+    background-color: var(--accent-grey);
     color: #ffffff;
     padding: 9px 18px;
     border: none;
@@ -276,33 +275,31 @@ header {
 }
 
 .btn-secondary:hover {
-    background-color: #5A5A5A; /* Gris un poco más oscuro */
+    background-color: #5A5A5A;
     transform: translateY(-1px);
 }
 
 /* Secciones principales */
-/* Ajuste para que las secciones dentro de main no tengan recuadro por defecto */
 main > section {
-    background-color: transparent; /* Fondo transparente */
-    padding: 35px 20px; /* Manteniendo el padding interno */
+    background-color: transparent;
+    padding: 35px 20px;
     margin-bottom: 25px;
-    border-radius: 0; /* Sin bordes redondeados */
-    box-shadow: none; /* Sin sombra */
+    border-radius: 0;
+    box-shadow: none;
     text-align: center;
-    border: none; /* Sin borde */
-    max-width: 1200px; /* Limita el ancho de las secciones de contenido si es necesario */
+    border: none;
+    max-width: 1200px;
     margin-left: auto;
     margin-right: auto;
 }
 
-/* ESTILO ESPECÍFICO PARA EL HERO SECTION EN INDEX.HTML (se eliminó en index.html, pero dejo el estilo por si lo necesitas más adelante) */
 .hero {
-    background: linear-gradient(135deg, var(--primary-purple) 0%, var(--secondary-pink) 100%); /* Gradiente morado-rosa */
+    background: linear-gradient(135deg, var(--primary-purple) 0%, var(--secondary-pink) 100%);
     padding: 60px 25px;
     border-radius: 15px;
     margin-bottom: 30px;
     color: #ffffff;
-    box-shadow: 0 0 25px rgba(138, 43, 226, 0.6); /* Sombra de brillo más intensa (morada) */
+    box-shadow: 0 0 25px rgba(138, 43, 226, 0.6);
     border: none;
 }
 
@@ -331,25 +328,24 @@ main > section {
 }
 
 .game-card {
-    background-color: #1C1C1E; /* Manteniendo el fondo oscuro de las tarjetas */
-    border: none; /* Eliminando el borde de las tarjetas */
+    background-color: #1C1C1E;
+    border: none;
     border-radius: 15px;
     overflow: hidden;
     text-decoration: none;
     color: var(--text-color);
-    transition: transform 0.3s ease, box-shadow 0.3s ease; /* Quitamos border-color de la transición */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
     display: flex;
     flex-direction: column;
     align-items: stretch;
     padding-bottom: 20px;
     position: relative;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8); /* Sombra para las tarjetas */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8);
 }
 
 .game-card:hover {
     transform: translateY(-10px);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.9); /* Sombra más intensa en hover */
-    /* border-color: var(--primary-purple); Eliminamos cambio de borde en hover */
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.9);
 }
 
 .game-card img {
@@ -373,7 +369,6 @@ main > section {
     line-height: 1.3;
 }
 
-/* Nuevo estilo para la descripción */
 .game-card .game-description {
     font-size: 0.95em;
     color: var(--secondary-text);
@@ -382,7 +377,7 @@ main > section {
     line-height: 1.4;
 }
 
-/* Input de Jugador (Aplicado a todas las páginas de formulario) */
+/* Input de Jugador */
 .input-group {
     margin-bottom: 20px;
     text-align: center;
@@ -428,14 +423,14 @@ main > section {
 
 .player-name-display {
     font-weight: 600;
-    color: var(--secondary-pink); /* Usar rosa para el nombre del jugador */
+    color: var(--secondary-pink);
     margin-top: 10px;
     min-height: 1.2em;
     font-size: 1.1em;
 }
 
-/* Opciones de Paquetes - NUEVO DISEÑO Y VISIBILIDAD FORZADA */
-.package-list { /* Used on Free Fire and Blood Strike pages */
+/* Opciones de Paquetes */
+.package-list {
     display: grid !important;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 15px;
@@ -446,8 +441,8 @@ main > section {
     overflow: visible !important;
 }
 
-.package-item { /* Used on Free Fire and Blood Strike pages */
-    background-color: var(--card-bg); /* Changed from --input-bg to --card-bg for consistency */
+.package-item {
+    background-color: var(--card-bg);
     border: 2px solid var(--border-color);
     border-radius: 10px;
     padding: 15px;
@@ -472,9 +467,8 @@ main > section {
     box-shadow: var(--item-shadow-hover);
 }
 
-/* Efecto de "check" al seleccionar */
 .package-item.selected {
-    background: linear-gradient(90deg, var(--primary-purple), var(--secondary-pink)); /* Gradiente para seleccionado */
+    background: linear-gradient(90deg, var(--primary-purple), var(--secondary-pink));
     color: var(--item-selected-text);
     border-color: var(--item-selected-border);
     transform: translateY(-2px) scale(1.02);
@@ -485,7 +479,6 @@ main > section {
     color: var(--item-selected-text);
 }
 
-/* Icono de check para el elemento seleccionado */
 .package-item.selected::after {
     content: '\f00c';
     font-family: 'Font Awesome 5 Free';
@@ -494,7 +487,7 @@ main > section {
     top: 8px;
     right: 8px;
     color: var(--white);
-    background-color: var(--success-green); /* Mantener verde para éxito */
+    background-color: var(--success-green);
     border-radius: 50%;
     width: 24px;
     height: 24px;
@@ -513,7 +506,7 @@ main > section {
 
 .package-item .price {
     font-weight: 700;
-    color: var(--secondary-pink); /* Precios en rosa para resaltar */
+    color: var(--secondary-pink);
     font-size: 1.25em;
 }
 
@@ -560,7 +553,6 @@ main > section {
     box-shadow: var(--item-selected-shadow);
 }
 
-/* Icono de check para el método de pago seleccionado */
 .payment-method-option input[type="radio"]:checked + label::after {
     content: '\f00c';
     font-family: 'Font Awesome 5 Free';
@@ -606,7 +598,6 @@ main > section {
 .payment-method-option input[type="radio"]:checked + label img {
     filter: grayscale(0);
 }
-
 
 /* Footer */
 footer {
@@ -655,14 +646,14 @@ footer p {
 }
 
 .footer-links a:hover {
-    color: var(--primary-purple); /* Enlaces en hover morados */
+    color: var(--primary-purple);
 }
 
 .whatsapp-link {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background-color: var(--success-green); /* Mantener verde para WhatsApp */
+    background-color: var(--success-green);
     color: #ffffff;
     padding: 10px 18px;
     border-radius: 20px;
@@ -683,7 +674,7 @@ footer p {
     font-size: 1.2em;
 }
 
-/* General Form & Card Styles (used across pages) */
+/* General Form & Card Styles */
 .form-container, .info-card, .payment-details-card {
     background-color: var(--card-bg);
     border-radius: 12px;
@@ -741,17 +732,6 @@ footer p {
     text-align: center;
 }
 
-.payment-details-card {
-    background-color: var(--card-bg);
-    border-radius: 12px;
-    padding: 35px;
-    max-width: 650px;
-    margin: 0 auto;
-    box-shadow: 0 5px 15px var(--shadow-dark);
-    border: 1px solid var(--border-color);
-    box-sizing: border-box;
-}
-
 .payment-details-card h2 {
     color: var(--primary-purple);
     margin-bottom: 25px;
@@ -765,7 +745,7 @@ footer p {
 }
 
 .payment-details-card strong {
-    color: var(--secondary-pink); /* Usar rosa para resaltar info importante */
+    color: var(--secondary-pink);
 }
 
 .payment-instructions {
@@ -783,7 +763,7 @@ footer p {
 }
 
 .payment-instructions code {
-    background-color: rgba(138, 43, 226, 0.1); /* Fondo del código con toque morado */
+    background-color: rgba(138, 43, 226, 0.1);
     border-radius: 4px;
     padding: 2px 6px;
     font-family: 'Consolas', 'Courier New', monospace;
@@ -793,32 +773,32 @@ footer p {
     word-break: break-all;
 }
 
-/* Specific styles for game recharge pages (freefire.html, bloodstrike.html) */
+/* Specific styles for game recharge pages */
 .game-main {
     width: 100%;
     margin-top: 0;
-    padding: 0; /* Remove main padding to allow game-hero to be full width */
+    padding: 0;
 }
 
 .game-main .game-hero {
     position: relative;
     width: 100%;
-    height: 250px; /* Altura del banner, ajustada para un mejor balance */
+    height: 250px;
     overflow: hidden;
-    margin-bottom: 40px; /* Espacio debajo del banner */
+    margin-bottom: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    background-color: var(--dark-grey-bg); /* Fallback background */
-    border-radius: 0; /* No border-radius for full-width banner */
-    box-shadow: 0 10px 25px var(--shadow-dark); /* Unified shadow */
+    background-color: var(--dark-grey-bg);
+    border-radius: 0;
+    box-shadow: 0 10px 25px var(--shadow-dark);
 }
 
 .game-main .game-hero img {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* Asegura que la imagen cubra el área sin distorsionarse */
+    object-fit: cover;
     display: block;
 }
 
@@ -828,43 +808,43 @@ footer p {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.4); /* Sombra para mejor legibilidad del texto */
+    background: rgba(0, 0, 0, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1; /* Ensure overlay is above image */
+    z-index: 1;
 }
 
 .game-main .game-hero h1 {
     color: var(--white);
-    font-size: 3em; /* Ajustado para ser más impactante */
+    font-size: 3em;
     text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
     margin: 0;
-    position: relative; /* Ensure text is above overlay */
+    position: relative;
     z-index: 2;
 }
 
 /* Contenedor principal del contenido del juego (formulario y detalles) */
 .game-content-wrapper {
-    max-width: 900px; /* Ancho máximo para el contenido principal */
-    margin: 0 auto 40px auto; /* Centrar y añadir margen inferior */
-    padding: 0 20px; /* Espaciado a los lados */
+    max-width: 900px;
+    margin: 0 auto 40px auto;
+    padding: 0 20px;
     box-sizing: border-box;
 }
 
-/* Tarjeta de información del juego (donde está la moneda y la instrucción del ID) */
+/* Tarjeta de información del juego */
 .game-info-card {
     background-color: var(--card-bg);
-    border-radius: 12px; /* Changed from 10px to 12px for consistency */
+    border-radius: 12px;
     padding: 25px;
     margin-bottom: 30px;
-    box-shadow: 0 4px 15px var(--shadow-dark); /* Unified shadow */
+    box-shadow: 0 4px 15px var(--shadow-dark);
     color: var(--text-color);
-    border: 1px solid var(--border-color); /* Added border */
+    border: 1px solid var(--border-color);
 }
 
 .game-info-card h2 {
-    color: var(--primary-purple); /* Color de acento para los títulos */
+    color: var(--primary-purple);
     margin-top: 0;
     margin-bottom: 15px;
     font-size: 1.8em;
@@ -879,17 +859,17 @@ footer p {
 
 .game-info-card span {
     font-weight: bold;
-    color: var(--secondary-pink); /* Color de acento para la moneda, using new palette */
+    color: var(--secondary-pink);
 }
 
-/* Formulario específico de recarga (Blood Strike y Free Fire) */
+/* Formulario específico de recarga */
 #bloodstrike-recharge-form,
 #freefire-recharge-form {
-    background-color: var(--card-bg); /* Unified background */
-    border-radius: 12px; /* Unified border-radius */
+    background-color: var(--card-bg);
+    border-radius: 12px;
     padding: 30px;
-    box-shadow: 0 4px 15px var(--shadow-dark); /* Unified shadow */
-    border: 1px solid var(--border-color); /* Added border */
+    box-shadow: 0 4px 15px var(--shadow-dark);
+    border: 1px solid var(--border-color);
 }
 
 .form-group {
@@ -904,7 +884,7 @@ footer p {
 }
 
 .form-group input[type="text"] {
-    width: calc(100% - 30px); /* Adjust width for padding */
+    width: calc(100% - 30px);
     padding: 12px 15px;
     border: 1px solid var(--border-color);
     border-radius: 8px;
@@ -921,22 +901,20 @@ footer p {
     box-shadow: 0 0 8px var(--shadow-light);
 }
 
-/* Grid para la selección de paquetes (used by .package-list) */
 .package-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* Adjust minmax for better layout */
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 15px;
 }
 
-/* Estilo del botón de confirmar (used by .btn-primary) */
-#confirm-recharge-btn { /* More specific selector to override general .btn-primary if needed */
+#confirm-recharge-btn {
     display: block;
     width: 100%;
     padding: 15px;
-    background: var(--button-gradient); /* Use gradient */
+    background: var(--button-gradient);
     color: var(--white);
     border: none;
-    border-radius: 30px; /* More rounded */
+    border-radius: 30px;
     font-size: 1.3em;
     font-weight: bold;
     cursor: pointer;
@@ -972,25 +950,25 @@ footer p {
 .transaction-summary p {
     margin-bottom: 10px;
     font-size: 1.05em;
-    text-align: left; /* Ensure alignment */
+    text-align: left;
 }
 
 .transaction-summary strong {
-    color: var(--secondary-pink); /* Usar rosa para resaltar */
+    color: var(--secondary-pink);
 }
 
 /* Styles for Info Pages (Privacy, Terms) */
-.content-page { /* Cambiado de info-page-main */
+.content-page {
     padding: 40px 20px;
-    max-width: 900px; /* Constrain width for readability */
-    margin: 40px auto; /* Center the content */
+    max-width: 900px;
+    margin: 40px auto;
     background-color: var(--card-bg);
     border-radius: 12px;
     box-shadow: 0 5px 15px var(--shadow-dark);
     border: 1px solid var(--border-color);
 }
 
-.content-page h1 { /* Para el título principal de las páginas de contenido */
+.content-page h1 {
     color: var(--primary-purple);
     font-size: 2.5em;
     margin-bottom: 30px;
@@ -1002,7 +980,7 @@ footer p {
     margin-top: 35px;
     margin-bottom: 15px;
     font-size: 1.8em;
-    text-align: left; /* Alineado a la izquierda */
+    text-align: left;
 }
 
 .content-page h3 {
@@ -1010,14 +988,14 @@ footer p {
     margin-top: 25px;
     margin-bottom: 12px;
     font-size: 1.5em;
-    text-align: left; /* Alineado a la izquierda */
+    text-align: left;
 }
 
 .content-page p {
     margin-bottom: 15px;
     font-size: 0.95em;
     color: var(--text-color);
-    text-align: left; /* Alineado a la izquierda */
+    text-align: left;
 }
 
 .content-page ul {
@@ -1025,7 +1003,7 @@ footer p {
     margin-left: 25px;
     margin-bottom: 20px;
     color: var(--text-color);
-    text-align: left; /* Asegura que la lista también se alinee a la izquierda */
+    text-align: left;
 }
 
 .content-page li {
@@ -1044,7 +1022,7 @@ footer p {
 
 /* Añadido para el asterisco de requerido */
 .required-star {
-    color: var(--secondary-pink); /* Usar rosa para el asterisco */
+    color: var(--secondary-pink);
     margin-left: 3px;
     font-size: 0.85em;
 }
@@ -1061,12 +1039,10 @@ footer p {
     margin-bottom: 10px;
 }
 
-/* La dirección de billetera que permanece oculta */
 .copy-container .wallet-address {
     display: none;
 }
 
-/* Etiqueta "Dirección de Billetera BEP20:" */
 .address-label {
     font-weight: 600;
     color: var(--text-color);
@@ -1074,7 +1050,6 @@ footer p {
     white-space: nowrap;
 }
 
-/* Botón de copiar */
 .copy-button {
     background: var(--button-gradient);
     color: var(--white);
@@ -1102,11 +1077,10 @@ footer p {
     box-shadow: 0 1px 5px var(--shadow-dark);
 }
 
-/* Mensaje de feedback "¡Copiado!" */
 .copy-feedback {
     display: none;
     margin-left: 10px;
-    color: var(--secondary-pink); /* Usar rosa para el éxito de copiado */
+    color: var(--secondary-pink);
     font-size: 0.9em;
     font-weight: bold;
     white-space: nowrap;
@@ -1122,8 +1096,6 @@ footer p {
     margin-bottom: 8px;
 }
 
-/* Ajustes para que los campos de referencia no afecten el espaciado
-    cuando se muestran o se ocultan dinámicamente */
 .payment-fields-container {
     margin-top: 20px;
     padding-top: 15px;
@@ -1135,18 +1107,17 @@ footer p {
     margin-bottom: 15px;
 }
 
-
 /* Estilos para el Carrusel */
 .carousel-container {
     position: relative;
     overflow: hidden;
-    width: 100vw; /* Ocupa el 100% del ancho del viewport */
-    margin-left: calc(50% - 50vw); /* Centra el carrusel y lo pega a los bordes */
-    height: 350px; /* Altura del carrusel, AUMENTADA */
-    margin-bottom: 20px; /* Mantener un margen inferior si lo deseas */
-    border-radius: 0; /* Asegura que no tenga bordes redondeados */
-    box-shadow: 0 40px 60px rgba(0, 0, 0, 0.8); /* Sombra para integrar */
-    border: none; /* Asegura que no haya ningún borde */
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    height: 350px;
+    margin-bottom: 20px;
+    border-radius: 0;
+    box-shadow: 0 40px 60px rgba(0, 0, 0, 0.8);
+    border: none;
 }
 
 .carousel-slide {
@@ -1159,13 +1130,13 @@ footer p {
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: #333; /* Fondo de respaldo si la imagen no carga */
+    background-color: #333;
 }
 
 .carousel-slide img {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* Asegura que la imagen cubra el área sin distorsionarse */
+    object-fit: cover;
     display: block;
 }
 
@@ -1176,10 +1147,10 @@ footer p {
     background: rgba(0, 0, 0, 0.5);
     color: white;
     border: none;
-    padding: 15px 10px; /* Aumentar padding para botones más visibles */
+    padding: 15px 10px;
     cursor: pointer;
     z-index: 10;
-    font-size: 1.5rem; /* Tamaño de flecha */
+    font-size: 1.5rem;
     border-radius: 5px;
     opacity: 0.7;
     transition: opacity 0.3s ease;
@@ -1207,17 +1178,17 @@ footer p {
 }
 
 .carousel-dot {
-    width: 12px; /* Tamaño de los puntos */
+    width: 12px;
     height: 12px;
     border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.5); /* Puntos semitransparentes */
+    background-color: rgba(255, 255, 255, 0.5);
     margin: 0 6px;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
 
 .carousel-dot.active {
-    background-color: white; /* Punto activo blanco */
+    background-color: white;
 }
 
 /* Responsive Design */
@@ -1263,11 +1234,11 @@ footer p {
         font-size: 1em;
     }
 
-    .home-main h1 { /* Assuming this class is used for the main title on index.html */
+    .home-main h1 {
         font-size: 1.8em;
     }
 
-    main > section { /* Ajuste responsive para la sección de juegos */
+    main > section {
         padding: 20px 15px;
     }
 
@@ -1316,6 +1287,7 @@ footer p {
     .footer-content {
         padding: 0 20px;
     }
+
     .footer-links {
         gap: 15px;
         max-width: 400px;
@@ -1325,17 +1297,20 @@ footer p {
         height: 200px;
         margin-bottom: 30px;
     }
+
     .game-main .game-hero h1 {
         font-size: 2em;
     }
     
     .carousel-container {
-        height: 280px; /* Altura aún más reducida en móviles, AJUSTADA */
+        height: 280px;
     }
+
     .carousel-prev, .carousel-next {
         padding: 10px 8px;
         font-size: 1.2rem;
     }
+
     .carousel-dot {
         width: 10px;
         height: 10px;
@@ -1372,9 +1347,11 @@ footer p {
     footer {
         padding: 15px;
     }
+
     .footer-content {
         padding: 0 15px;
     }
+
     .footer-links {
         flex-direction: column;
         gap: 8px;
@@ -1403,15 +1380,16 @@ footer p {
     }
 
     .game-main .game-hero {
-        height: 150px; /* Further reduced for very small screens */
+        height: 150px;
         margin-bottom: 25px;
     }
+
     .game-main .game-hero h1 {
         font-size: 1.8em;
     }
     
     .carousel-container {
-        height: 200px; /* Altura para pantallas muy pequeñas, AJUSTADA */
+        height: 200px;
     }
 }
 
@@ -1430,4 +1408,20 @@ footer p {
     .address-label, .copy-feedback {
         font-size: 0.85em;
     }
+}
+
+/* Eliminación del aspecto de "recuadro" solo para los formularios de recarga */
+#bloodstrike-recharge-form,
+#freefire-recharge-form {
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+
+/* Ajusta los h2 dentro de los formularios para que se vean bien sin el recuadro */
+#bloodstrike-recharge-form h2,
+#freefire-recharge-form h2 {
+    color: var(--text-color);
+    text-shadow: none;
 }

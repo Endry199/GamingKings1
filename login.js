@@ -1,5 +1,5 @@
 // login.js
-import { supabase } from './supabaseClient.js'; // Asegúrate de que la ruta sea correcta
+import { supabase } from './supabaseClient.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
@@ -13,31 +13,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const email = emailInput.value;
         const password = passwordInput.value;
 
-        authMessage.classList.add('hidden'); // Ocultar mensaje anterior
-        authMessage.classList.remove('success', 'error'); // Limpiar clases
+        // Oculta mensajes anteriores antes de la nueva petición
+        authMessage.classList.add('hidden');
+        authMessage.classList.remove('success', 'error');
 
         try {
+            // Llama al método de inicio de sesión de Supabase
             const { data, error } = await supabase.auth.signInWithPassword({
                 email: email,
                 password: password,
             });
 
             if (error) {
+                // Si hay un error, lo lanza para que sea capturado por el bloque catch
                 throw error;
             }
 
             if (data.user) {
-                authMessage.textContent = '¡Inicio de sesión exitoso! Redirigiendo al dashboard...';
+                // Si el inicio de sesión es exitoso, muestra un mensaje y redirige
+                authMessage.textContent = '¡Inicio de sesión exitoso! Redirigiendo a la página principal...';
                 authMessage.classList.add('success');
                 authMessage.classList.remove('hidden');
 
-                // Redirigir al usuario a una página protegida (ej. dashboard.html)
-                // Crearemos esta página en el siguiente paso
                 setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 1500); // Pequeño retraso para que el usuario vea el mensaje
+                    window.location.href = 'index.html';
+                }, 1500);
             } else {
-                // Esto es poco probable si no hay un error, pero como fallback
+                // Manejo de un caso inesperado donde no hay error pero tampoco hay usuario
                 authMessage.textContent = 'Credenciales incorrectas o usuario no verificado.';
                 authMessage.classList.add('error');
                 authMessage.classList.remove('hidden');
@@ -46,11 +48,14 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error durante el inicio de sesión:', error.message);
             let errorMessage = 'Ocurrió un error inesperado al iniciar sesión.';
+
+            // Maneja errores específicos para mostrar mensajes más claros al usuario
             if (error.message.includes('Invalid login credentials')) {
                 errorMessage = 'Correo electrónico o contraseña incorrectos.';
             } else if (error.message.includes('Email not confirmed')) {
                 errorMessage = 'Tu correo electrónico no ha sido confirmado. Por favor, revisa tu bandeja de entrada.';
             }
+
             authMessage.textContent = errorMessage;
             authMessage.classList.add('error');
             authMessage.classList.remove('hidden');
