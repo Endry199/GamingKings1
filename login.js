@@ -1,6 +1,41 @@
 // login.js
 import { supabase } from './supabaseClient.js';
 
+// Manejador para el inicio de sesión con Google
+window.handleCredentialResponse = async (response) => {
+    const authMessage = document.getElementById('auth-message');
+    authMessage.classList.add('hidden');
+    authMessage.classList.remove('success', 'error');
+
+    try {
+        const { data, error } = await supabase.auth.signInWithIdToken({
+            provider: 'google',
+            token: response.credential,
+        });
+
+        if (error) {
+            throw error;
+        }
+
+        if (data.user) {
+            authMessage.textContent = '¡Inicio de sesión con Google exitoso! Redirigiendo...';
+            authMessage.classList.add('success');
+            authMessage.classList.remove('hidden');
+
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1500);
+        }
+
+    } catch (error) {
+        console.error('Error durante el inicio de sesión con Google:', error.message);
+        let errorMessage = 'Ocurrió un error al iniciar sesión con Google.';
+        authMessage.textContent = errorMessage;
+        authMessage.classList.add('error');
+        authMessage.classList.remove('hidden');
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
     const emailInput = document.getElementById('email');

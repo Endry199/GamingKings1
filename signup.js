@@ -100,21 +100,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Lógica para iniciar sesión con Google ---
-    const googleLoginBtn = document.getElementById('google-login-btn');
-    if (googleLoginBtn) {
-        googleLoginBtn.addEventListener('click', async () => {
-            const { data, error } = await supabase.auth.signInWithOAuth({
+    // --- NUEVA Lógica para el inicio de sesión con Google ---
+    // Esta función es llamada por el SDK de Google cuando el usuario se autentica
+    window.handleCredentialResponse = async (response) => {
+        console.log("ID Token recibido:", response.credential);
+
+        try {
+            const { data, error } = await supabase.auth.signInWithIdToken({
                 provider: 'google',
+                token: response.credential,
                 options: {
-                    redirectTo: window.location.origin + '/index.html'
+                    // Puedes redirigir a una página diferente si lo necesitas
+                    redirectTo: 'https://gamingkings.netlify.app/index.html'
                 }
             });
 
-            if (error) {
-                console.error('Error al iniciar sesión con Google:', error.message);
-                alert('No se pudo iniciar sesión con Google. Intenta de nuevo.');
-            }
-        });
-    }
+            if (error) throw error;
+
+            console.log('Usuario autenticado con Google:', data);
+            
+        } catch (error) {
+            console.error('Error al autenticar con Supabase:', error.message);
+            const messageDiv = document.getElementById('auth-message');
+            messageDiv.className = 'auth-message error';
+            messageDiv.textContent = `Error al iniciar sesión con Google: ${error.message}`;
+            messageDiv.classList.remove('hidden');
+        }
+    };
 });

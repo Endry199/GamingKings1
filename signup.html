@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
     <style>
         /* Estilos específicos para el contenedor de autenticación */
         .auth-container {
@@ -125,29 +128,8 @@
         .divider:not(:empty)::after {
             margin-left: .5em;
         }
-        .google-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 5px;
-            background-color: #4285f4;
-            color: #ffffff;
-            font-size: 1em;
-            font-weight: bold;
-            cursor: pointer;
-            text-decoration: none;
-            transition: background-color 0.3s ease;
-        }
-        .google-btn:hover {
-            background-color: #357ae8;
-        }
-        .google-icon {
-            margin-right: 10px;
-            width: 20px;
-        }
+        /* No necesitamos los estilos antiguos del botón de Google */
+        /* .google-btn y .google-icon */
     </style>
 </head>
 <body>
@@ -415,12 +397,26 @@
                 <input type="password" id="confirm-password" placeholder="Confirmar Contraseña" required>
                 <button type="submit">Registrarse</button>
             </form>
+            
             <div id="auth-message" class="auth-message hidden"></div>
             <div class="divider">o</div>
-            <a href="#" class="google-btn">
-                <img src="images/google-icon.png" alt="Google Icon" class="google-icon">
-                Registrarse con Google
-            </a>
+            
+            <div id="g_id_onload"
+                 data-client_id="321583559900-k18ptc5cjtld5ifu5deb8uha8cheagh4.apps.googleusercontent.com"
+                 data-context="signin"
+                 data-ux_mode="popup"
+                 data-callback="handleCredentialResponse"
+                 data-itp_support="true">
+            </div>
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-shape="rectangular"
+                 data-theme="outline"
+                 data-text="signin_with"
+                 data-size="large"
+                 data-locale="es-ES">
+            </div>
+            
             <div class="auth-links">
                 ¿Ya tienes una cuenta? <a href="login.html">Inicia Sesión</a>
             </div>

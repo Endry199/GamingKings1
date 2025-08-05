@@ -12,32 +12,35 @@
     <style>
         /* Estilos específicos para el contenedor de autenticación */
         .auth-container {
-            background-color: var(--card-bg); /* Asume que --card-bg está en style.css o en :root */
+            background-color: var(--card-bg);
             padding: 2.5rem;
-            border-radius: 0.75rem; /* rounded-xl */
-            box-shadow: 0 0 30px var(--secondary-pink), 0 0 15px var(--primary-purple); /* Asegura que estas variables estén definidas */
+            border-radius: 0.75rem;
+            box-shadow: 0 0 30px var(--secondary-pink), 0 0 15px var(--primary-purple);
             border: 2px solid var(--secondary-pink);
             width: 100%;
             max-width: 400px;
             text-align: center;
-            margin: 2rem auto; /* Centra el contenedor y le da margen vertical */
+            margin: 2rem auto;
         }
+
         .auth-container h1 {
             color: var(--primary-purple);
-            font-size: 2.25rem; /* text-3xl */
-            font-weight: 700; /* font-bold */
+            font-size: 2.25rem;
+            font-weight: 700;
             margin-bottom: 2rem;
         }
+
         .auth-container input[type="email"],
         .auth-container input[type="password"] {
             width: calc(100% - 20px);
             padding: 0.75rem;
             margin-bottom: 1rem;
             border-radius: 0.5rem;
-            border: 1px solid var(--border-color); /* Define --border-color */
-            background-color: var(--input-bg); /* Define --input-bg */
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
             color: var(--text-color);
         }
+
         .auth-container button {
             width: 100%;
             padding: 0.75rem;
@@ -49,58 +52,75 @@
             border: none;
             transition: background-color 0.3s ease, transform 0.2s ease;
         }
+
         .auth-container button:hover {
             background-color: var(--secondary-pink);
             transform: translateY(-2px);
         }
+
         .auth-message {
             margin-top: 1rem;
             padding: 0.5rem;
             border-radius: 0.25rem;
             font-weight: 500;
         }
+
         .auth-message.success {
             background-color: #d4edda;
             color: #155724;
         }
+
         .auth-message.error {
             background-color: #f8d7da;
             color: #721c24;
         }
+
         .auth-links {
             margin-top: 1.5rem;
             font-size: 0.9rem;
         }
+
         .auth-links a {
             color: var(--primary-purple);
             text-decoration: none;
             font-weight: 500;
         }
+
         .auth-links a:hover {
             text-decoration: underline;
             color: var(--secondary-pink);
         }
-        /* Aseguramos que el layout del body y main se define una vez, probablemente en style.css */
-        /* Si no tienes esto en style.css, MUY IMPORTANTE que lo añadas allí: */
-        /*
-        body {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            margin: 0;
-            background-color: var(--background-color);
-            color: var(--text-color);
-            font-family: 'Inter', sans-serif;
+
+        .google-signin-divider {
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            position: relative;
+            font-size: 0.9rem;
+            color: #aaa;
         }
-        main {
-            flex-grow: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            box-sizing: border-box;
+        
+        .google-signin-divider::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 45%;
+            height: 1px;
+            background-color: #555;
+            z-index: 1;
         }
-        */
+
+        .google-signin-divider::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            right: 0;
+            width: 45%;
+            height: 1px;
+            background-color: #555;
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
@@ -115,6 +135,7 @@
                 <input type="text" placeholder="Buscar juego...">
                 <i class="fas fa-search"></i>
             </div>
+        </div>
     </header>
 
     <main>
@@ -126,6 +147,22 @@
                 <button type="submit">Iniciar Sesión</button>
             </form>
             <div id="auth-message" class="auth-message hidden"></div>
+            <div class="google-signin-divider">o</div>
+            <div id="g_id_onload"
+                 data-client_id="321583559900-k18ptc5cjtld5ifu5deb8uha8cheagh4.apps.googleusercontent.com"
+                 data-context="signin"
+                 data-ux_mode="popup"
+                 data-callback="handleCredentialResponse"
+                 data-auto_prompt="false">
+            </div>
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-shape="rectangular"
+                 data-theme="filled_black"
+                 data-text="signin_with"
+                 data-size="large"
+                 data-logo_alignment="left">
+            </div>
             <div class="auth-links">
                 ¿No tienes una cuenta? <a href="signup.html">Regístrate</a><br>
                 <a href="forgot-password.html">¿Olvidaste tu contraseña?</a>
@@ -145,7 +182,7 @@
             </a>
         </div>
     </footer>
-
+    <script src="https://accounts.google.com/gsi/client" async></script>
     <script src="script.js"></script>
     <script type="module" src="login.js"></script>
 </body>
