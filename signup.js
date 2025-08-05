@@ -111,20 +111,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 provider: 'google',
                 token: response.credential,
                 options: {
-                    // La redirección después del inicio de sesión se gestiona aquí.
-                    // Supabase automáticamente guarda el correo y el nombre del usuario de Google.
+                    // Supabase maneja toda la redirección de forma automática con esta opción.
+                    // Asegúrate de que esta URL esté en la lista de URLs de redirección permitidas en tu dashboard de Supabase.
                     redirectTo: 'https://gamingkings.netlify.app/index.html'
                 }
             });
 
-            if (error) throw error;
+            if (error) {
+                throw error;
+            }
 
             console.log('Usuario autenticado con Google:', data);
-            
-            // Redirige al usuario a la página principal
-            // La redirección `redirectTo` de Supabase es la forma recomendada,
-            // pero esta línea asegura la redirección si por alguna razón falla.
-            window.location.href = 'index.html';
             
         } catch (error) {
             console.error('Error al autenticar con Supabase:', error.message);
