@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificación Exitosa - GamingKings</title>
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Variables de color y tipografía */
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --background-color: #1a1a2e;
+            --card-background: #162447;
+            --text-color: #e4e6eb;
+            --border-color: #2e3a59;
+            --button-text-color: #ffffff;
+            --accent-green: #28a745;
+            --accent-green-light: #d4edda;
+            --primary-purple: #8a2be2;
+            --secondary-pink: #ff69b4;
+            --heading-color: #ffffff;
+        }
+
+        /* Estilos Generales */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .auth-container {
+            background-color: var(--card-background);
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            max-width: 450px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .auth-logo {
+            width: 150px;
+            margin-bottom: 30px;
+        }
+
+        .message-container {
+            padding: 20px;
+            background-color: #162447;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .message-container h2 {
+            color: var(--heading-color);
+            margin-top: 0;
+            font-size: 1.8em;
+        }
+
+        .message-container p {
+            font-size: 1em;
+            line-height: 1.6;
+            color: var(--text-color);
+        }
+
+        .message-container.success h2 {
+            color: var(--accent-green);
+        }
+
+        .message-container.success .success-icon {
+            color: var(--accent-green);
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .btn-primary {
+            display: inline-block;
+            margin-top: 25px;
+            padding: 12px 25px;
+            background-color: var(--primary-color);
+            color: var(--button-text-color);
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body class="centered-body">
+    <main class="auth-main">
+        <div class="auth-container">
+            <img src="images/gamingkings_logo.png" alt="GamingKings Logo" class="auth-logo">
+            <div class="message-container success">
+                <i class="fas fa-check-circle success-icon"></i>
+                <h2>¡Felicidades! Correo verificado.</h2>
+                <p>Has confirmado tu dirección de correo electrónico exitosamente. Ya puedes iniciar sesión para empezar a comprar.</p>
+                <a href="login.html" class="btn-primary">Iniciar Sesión</a>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

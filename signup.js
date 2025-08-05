@@ -2,6 +2,7 @@ import { supabase } from './supabaseClient.js';
 
 document.addEventListener('DOMContentLoaded', () => {
 
+    // --- Lógica para el selector de código de país ---
     const countryCodeSelect = document.getElementById('country-code');
     
     if (countryCodeSelect) {
@@ -37,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSelectedOptionDisplay();
     }
     
+    // --- Lógica del formulario de registro con correo y contraseña ---
     const registerForm = document.getElementById('register-form');
     const authMessage = document.getElementById('auth-message');
 
@@ -68,7 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     password: password,
                     options: {
                         data: { name, last_name: lastName, country_code: countryCode, phone },
-                        emailRedirectTo: 'https://gamingkings.netlify.app/login.html'
+                        // Redirige al usuario a esta página después de verificar su correo
+                        emailRedirectTo: 'https://gamingkings.netlify.app/verification-success.html' 
                     }
                 });
 
@@ -76,10 +79,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw authError;
                 }
                 
-                authMessage.textContent = '¡Registro exitoso! Por favor, revisa tu correo electrónico para verificar tu cuenta.';
-                authMessage.classList.add('success');
-                authMessage.classList.remove('hidden');
-                registerForm.reset();
+                // Redirige inmediatamente a la página de verificación pendiente
+                window.location.href = 'verify-email.html';
 
             } catch (error) {
                 console.error('Error durante el registro:', error.message);
@@ -95,6 +96,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 authMessage.textContent = errorMessage;
                 authMessage.classList.add('error');
                 authMessage.classList.remove('hidden');
+            }
+        });
+    }
+
+    // --- Lógica para iniciar sesión con Google ---
+    const googleLoginBtn = document.getElementById('google-login-btn');
+    if (googleLoginBtn) {
+        googleLoginBtn.addEventListener('click', async () => {
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.origin + '/index.html'
+                }
+            });
+
+            if (error) {
+                console.error('Error al iniciar sesión con Google:', error.message);
+                alert('No se pudo iniciar sesión con Google. Intenta de nuevo.');
             }
         });
     }
