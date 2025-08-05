@@ -99,7 +99,7 @@
             font-size: 0.9rem;
             color: #aaa;
         }
-        
+
         .google-signin-divider::before {
             content: "";
             position: absolute;
@@ -120,6 +120,13 @@
             height: 1px;
             background-color: #555;
             z-index: 1;
+        }
+
+        /* Estilo para centrar el botón de Google usando Flexbox */
+        .g_id_signin {
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
     </style>
 </head>
@@ -183,7 +190,8 @@
         </div>
     </footer>
     <script src="https://accounts.google.com/gsi/client" async></script>
-    <script src="script.js"></script>
+    <script type="module" src="supabaseClient.js"></script>
+    <script type="module" src="auth-logic.js"></script>
     <script type="module" src="login.js"></script>
 </body>
 </html>
