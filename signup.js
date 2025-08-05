@@ -1,34 +1,45 @@
 // signup.js
 import { supabase } from './supabaseClient.js';
 
-// --- Lógica para el inicio de sesión con Google (mover al ámbito global) ---
-// Esta función debe estar fuera del evento DOMContentLoaded para que el script de Google pueda acceder a ella.
+// --- Lógica para el inicio de sesión con Google (en el ámbito global) ---
 window.handleCredentialResponse = async (response) => {
-    console.log("ID Token recibido:", response.credential);
+    const authMessage = document.getElementById('auth-message');
+    
+    // Ocultar mensajes previos y mostrar el de proceso
+    if (authMessage) {
+        authMessage.classList.add('hidden');
+        authMessage.classList.remove('success', 'error');
+        authMessage.textContent = 'Iniciando sesión con Google...';
+        authMessage.className = 'auth-message success';
+        authMessage.classList.remove('hidden');
+    }
 
     try {
-        const { data, error } = await supabase.auth.signInWithIdToken({
+        const { error } = await supabase.auth.signInWithIdToken({
             provider: 'google',
             token: response.credential,
-            options: {
-                // Supabase maneja toda la redirección de forma automática con esta opción.
-                redirectTo: 'https://gamingkings.netlify.app/index.html'
-            }
         });
 
         if (error) {
             throw error;
         }
 
-        console.log('Usuario autenticado con Google:', data);
+        console.log('¡Registro con Google exitoso!');
+        
+        // Redirección manual, ya que confirmaste que este método funciona
+        if (authMessage) {
+            authMessage.textContent = 'Redirigiendo a la página principal...';
+            authMessage.classList.add('success');
+            authMessage.classList.remove('hidden');
+        }
+        window.location.href = 'index.html';
         
     } catch (error) {
         console.error('Error al autenticar con Supabase:', error.message);
-        const messageDiv = document.getElementById('auth-message');
-        if (messageDiv) {
-            messageDiv.className = 'auth-message error';
-            messageDiv.textContent = `Error al iniciar sesión con Google: ${error.message}`;
-            messageDiv.classList.remove('hidden');
+        if (authMessage) {
+            authMessage.className = 'auth-message error';
+            authMessage.textContent = `Error al registrarse con Google: ${error.message}`;
+            authMessage.classList.remove('hidden');
         }
     }
 };
@@ -104,7 +115,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     password: password,
                     options: {
                         data: { name, last_name: lastName, country_code: countryCode, phone },
-                        // Redirige al usuario a esta página después de verificar su correo
                         emailRedirectTo: 'https://gamingkings.netlify.app/verification-success.html' 
                     }
                 });
@@ -113,7 +123,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw authError;
                 }
                 
-                // Redirige inmediatamente a la página de verificación pendiente
                 window.location.href = 'verify-email.html';
 
             } catch (error) {
