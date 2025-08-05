@@ -1,6 +1,39 @@
 // signup.js
 import { supabase } from './supabaseClient.js';
 
+// --- Lógica para el inicio de sesión con Google (mover al ámbito global) ---
+// Esta función debe estar fuera del evento DOMContentLoaded para que el script de Google pueda acceder a ella.
+window.handleCredentialResponse = async (response) => {
+    console.log("ID Token recibido:", response.credential);
+
+    try {
+        const { data, error } = await supabase.auth.signInWithIdToken({
+            provider: 'google',
+            token: response.credential,
+            options: {
+                // Supabase maneja toda la redirección de forma automática con esta opción.
+                redirectTo: 'https://gamingkings.netlify.app/index.html'
+            }
+        });
+
+        if (error) {
+            throw error;
+        }
+
+        console.log('Usuario autenticado con Google:', data);
+        
+    } catch (error) {
+        console.error('Error al autenticar con Supabase:', error.message);
+        const messageDiv = document.getElementById('auth-message');
+        if (messageDiv) {
+            messageDiv.className = 'auth-message error';
+            messageDiv.textContent = `Error al iniciar sesión con Google: ${error.message}`;
+            messageDiv.classList.remove('hidden');
+        }
+    }
+};
+
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- Lógica para el selector de código de país ---
@@ -100,35 +133,4 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
-    // --- Lógica para el inicio de sesión con Google ---
-    // Esta función es llamada por el SDK de Google cuando el usuario se autentica
-    window.handleCredentialResponse = async (response) => {
-        console.log("ID Token recibido:", response.credential);
-
-        try {
-            const { data, error } = await supabase.auth.signInWithIdToken({
-                provider: 'google',
-                token: response.credential,
-                options: {
-                    // Supabase maneja toda la redirección de forma automática con esta opción.
-                    // Asegúrate de que esta URL esté en la lista de URLs de redirección permitidas en tu dashboard de Supabase.
-                    redirectTo: 'https://gamingkings.netlify.app/index.html'
-                }
-            });
-
-            if (error) {
-                throw error;
-            }
-
-            console.log('Usuario autenticado con Google:', data);
-            
-        } catch (error) {
-            console.error('Error al autenticar con Supabase:', error.message);
-            const messageDiv = document.getElementById('auth-message');
-            messageDiv.className = 'auth-message error';
-            messageDiv.textContent = `Error al iniciar sesión con Google: ${error.message}`;
-            messageDiv.classList.remove('hidden');
-        }
-    };
 });
