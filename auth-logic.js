@@ -36,7 +36,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const user = session?.user || null;
         updateAuthUI(user);
 
-        if (event === 'SIGNED_OUT') {
+        // Lógica de redirección
+        const currentPage = window.location.pathname;
+
+        if (event === 'SIGNED_IN' && currentPage.includes('login.html')) {
+            // Si el usuario acaba de iniciar sesión y está en la página de login, redirige al index
+            window.location.href = 'index.html';
+        }
+
+        if (event === 'SIGNED_OUT' && !currentPage.includes('index.html')) {
+            // Si el usuario acaba de cerrar sesión y NO está en el index, redirige al index
             window.location.href = 'index.html';
         }
     });
