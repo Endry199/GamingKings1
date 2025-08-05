@@ -1,4 +1,3 @@
-// auth-logic.js
 import { supabase } from './supabaseClient.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -57,6 +56,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error) {
                 console.error('Error al cerrar sesión:', error.message);
                 alert('Hubo un error al cerrar sesión. Por favor, inténtalo de nuevo.');
+            } else {
+                // SOLUCIÓN PARA EL BOTÓN DE GOOGLE
+                // Desactiva la selección automática del usuario en el cliente de Google.
+                if (window.google && window.google.accounts.id) {
+                    window.google.accounts.id.disableAutoSelect();
+                }
+
+                // Redirigir al usuario a la página principal
+                window.location.href = 'index.html';
             }
         });
     }
