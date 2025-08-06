@@ -354,6 +354,25 @@
                     <label for="payment-receipt">Subir Comprobante de Pago:</label>
                     <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
                 </div>
+            `,
+            'kingcoins': `
+                <p><strong>Paso 1:</strong> Transfiere el monto exacto de KingCoins a nuestra billetera.</p>
+                <ul>
+                    <li>
+                        <div class="copy-container">
+                            <span class="address-label">Dirección de Billetera KingCoins:</span>
+                            <span class="wallet-address" id="kingcoins-address">KingKingsWallet456789</span>
+                            <button type="button" class="copy-button" data-copy-target="kingcoins-address">Copiar</button>
+                            <span class="copy-feedback" id="kingcoins-copy-feedback">¡Copiado!</span>
+                        </div>
+                    </li>
+                    <li><strong>Moneda:</strong> KGC</li>
+                </ul>
+                <div class="payment-fields-container">
+                    <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
+                    <label for="payment-receipt">Subir Comprobante de Pago:</label>
+                    <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
+                </div>
             `
         };
 
@@ -364,6 +383,10 @@
         const paymentMethodsUSD = [
             { id: 'binance', name: 'Binance', type: 'usd', icon: 'fab fa-bitcoin' },
             { id: 'zinli', name: 'Zinli', type: 'usd', icon: 'fas fa-wallet' }
+        ];
+        
+        const paymentMethodsKGC = [
+            { id: 'kingcoins', name: 'KingCoins', type: 'kgc', icon: 'fas fa-coins' }
         ];
         
         const paymentForm = document.getElementById('payment-form');
@@ -505,7 +528,15 @@
             paymentMethodsDiv.innerHTML = '';
             if (!transactionDetails) return;
             const currentCurrency = transactionDetails.currency;
-            const methods = currentCurrency === 'VES' ? paymentMethodsVES : paymentMethodsUSD;
+            let methods = [];
+
+            if (currentCurrency === 'VES') {
+                methods = paymentMethodsVES;
+            } else if (currentCurrency === 'USD') {
+                methods = paymentMethodsUSD;
+            } else if (currentCurrency === 'KGC') {
+                methods = paymentMethodsKGC;
+            }
 
             methods.forEach(method => {
                 const methodItem = document.createElement('div');
