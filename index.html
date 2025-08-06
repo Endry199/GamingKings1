@@ -244,6 +244,22 @@
     .user-menu-item:hover, .guest-menu-item:hover {
         background-color: #575757;
     }
+    
+    /* Agregado para arreglar el botón de usuario en móviles */
+    @media (max-width: 640px) {
+      .header-right {
+        justify-content: flex-end; /* Alinea los elementos a la derecha */
+      }
+      .guest-menu-container,
+      .user-menu-container {
+        position: static; /* Restablece la posición para evitar problemas de centrado */
+      }
+      .guest-menu-dropdown,
+      .user-menu-dropdown {
+        right: 0;
+        left: auto; /* Mantiene el menú desplegable alineado a la derecha */
+      }
+    }
 </style>
 </head>
 <body>
