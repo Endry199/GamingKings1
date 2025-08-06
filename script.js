@@ -28,17 +28,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const savedCurrency = localStorage.getItem('selectedCurrency') || 'VES';
-    let initialText = 'Bs. (VES)';
-    let initialImgSrc = 'images/flag_ve.png';
+    let initialText, initialImgSrc;
 
-    // Lógica modificada para el estado inicial de KGC
+    // Lógica corregida para el estado inicial de las monedas
     if (savedCurrency === 'USD') {
         initialText = '$ (USD)';
         initialImgSrc = 'images/flag_us.png';
     } else if (savedCurrency === 'KGC') {
         initialText = 'KingCoins (KGC)';
         initialImgSrc = 'images/gamingkings_logo.png';
+    } else { // Caso por defecto, que es 'VES'
+        initialText = 'Bs. (VES)';
+        initialImgSrc = 'images/flag_ve.png';
     }
+
     updateCurrencyDisplay(savedCurrency, initialText, initialImgSrc);
 
     if (selectedCurrencyDisplay) {
@@ -67,12 +70,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     /* LÓGICA PARA MOSTRAR SALDO DE KINGCOINS                    */
     /* ========================================================= */
 
-    // Función para obtener y mostrar el saldo del usuario
     async function fetchUserKingcoins() {
         const { data: { user } } = await supabase.auth.getUser();
 
         if (user && kingcoinsBalanceContainer && kingcoinsDisplay) {
-            // Muestra el contenedor del saldo si el usuario está logueado
             kingcoinsBalanceContainer.classList.remove('hidden');
 
             try {
@@ -82,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     .eq('user_id', user.id)
                     .single();
 
-                if (error && error.code !== 'PGRST116') { // PGRST116 significa que no hay filas (cartera no creada)
+                if (error && error.code !== 'PGRST116') {
                     throw error;
                 }
 
@@ -93,17 +94,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 kingcoinsDisplay.textContent = 'Error';
             }
         } else if (kingcoinsBalanceContainer) {
-            // Oculta el contenedor si no hay usuario logueado
             kingcoinsBalanceContainer.classList.add('hidden');
         }
     }
 
-    // Se llama a la función al cargar la página para verificar el estado inicial
     fetchUserKingcoins();
 
-    // Se añade un listener para actualizar el saldo cuando cambia el estado de autenticación
     supabase.auth.onAuthStateChange((event, session) => {
-        // Se ejecuta cada vez que el usuario inicia o cierra sesión
         fetchUserKingcoins();
     });
 
@@ -115,7 +112,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const gameGrid = document.getElementById('game-grid');
     const gameCards = gameGrid ? gameGrid.querySelectorAll('.game-card') : [];
 
-    // Lógica de búsqueda
     if (searchInput) {
         searchInput.addEventListener('input', () => {
             const searchTerm = searchInput.value.toLowerCase();
@@ -132,7 +128,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Lógica de clic en las tarjetas de juego
     gameCards.forEach(card => {
         card.addEventListener('click', async (event) => {
             event.preventDefault(); 
@@ -140,13 +135,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const { data: { session } } = await supabase.auth.getSession();
             
             if (session) {
-                // Si el usuario está logueado, lo redirige a la página del juego
                 const pageUrl = card.getAttribute('data-game-page');
                 if (pageUrl) {
                     window.location.href = pageUrl;
                 }
             } else {
-                // Si no, lo redirige a la página de login
                 window.location.href = 'login.html';
             }
         });
@@ -164,7 +157,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (slides.length > 0 && prevButton && nextButton && dotsContainer) {
         
-        // Crear puntos de navegación
         slides.forEach((_, index) => {
             const dot = document.createElement('span');
             dot.classList.add('carousel-dot');
@@ -203,7 +195,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         function startCarousel() {
-            intervalId = setInterval(nextSlide, 3000); // Cambia cada 3 segundos
+            intervalId = setInterval(nextSlide, 3000);
         }
 
         function stopCarousel() {
@@ -222,7 +214,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             startCarousel();
         });
 
-        // Iniciar el carrusel
         updateSlidePosition();
         startCarousel();
     }
@@ -235,17 +226,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closeButton = document.getElementById('close-notice');
 
     if (noticeOverlay && closeButton) {
-        // Muestra el aviso después de que la página se carga completamente
         setTimeout(() => {
             noticeOverlay.classList.remove('hidden');
-        }, 1000); // 1 segundo de retraso
+        }, 1000);
 
-        // Ocultar el aviso al hacer clic en el botón de cerrar
         closeButton.addEventListener('click', () => {
             noticeOverlay.classList.add('hidden');
         });
 
-        // Ocultar el aviso al hacer clic fuera del contenido del modal
         noticeOverlay.addEventListener('click', (e) => {
             if (e.target === noticeOverlay) {
                 noticeOverlay.classList.add('hidden');
