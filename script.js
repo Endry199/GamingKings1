@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
 
     /* ========================================================= */
     /* LÓGICA PARA EL SELECTOR DE MONEDA PERSONALIZADO           */
@@ -9,10 +9,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedCurrencyDisplay = document.getElementById('selected-currency');
     const currencyOptionsDiv = document.getElementById('currency-options');
     const currencyOptions = currencyOptionsDiv ? currencyOptionsDiv.querySelectorAll('.option') : [];
+    
+    // Se agregan las nuevas variables para el saldo de KingCoins
+    const kingcoinsBalanceContainer = document.querySelector('.kingcoins-balance');
+    const kingcoinsDisplay = document.getElementById('kingcoins-display');
 
     function updateCurrencyDisplay(value, text, imgSrc) {
         if (selectedCurrencyDisplay) {
-            selectedCurrencyDisplay.innerHTML = `<img src="${imgSrc}" alt="${text.split(' ')[2] ? text.split(' ')[2].replace(/[()]/g, '') : 'Flag'}"> <span>${text}</span> <i class="fas fa-chevron-down"></i>`;
+            // Lógica modificada para manejar la visualización de la nueva moneda KGC
+            if (value === 'KGC') {
+                selectedCurrencyDisplay.innerHTML = `<img src="${imgSrc}" alt="KingCoins Logo"> <span>${text}</span> <i class="fas fa-chevron-down"></i>`;
+            } else {
+                selectedCurrencyDisplay.innerHTML = `<img src="${imgSrc}" alt="${text.split(' ')[2] ? text.split(' ')[2].replace(/[()]/g, '') : 'Flag'}"> <span>${text}</span> <i class="fas fa-chevron-down"></i>`;
+            }
         }
         localStorage.setItem('selectedCurrency', value);
         window.dispatchEvent(new CustomEvent('currencyChanged', { detail: { currency: value } }));
@@ -22,9 +31,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let initialText = 'Bs. (VES)';
     let initialImgSrc = 'images/flag_ve.png';
 
+    // Lógica modificada para el estado inicial de KGC
     if (savedCurrency === 'USD') {
         initialText = '$ (USD)';
         initialImgSrc = 'images/flag_us.png';
+    } else if (savedCurrency === 'KGC') {
+        initialText = 'KingCoins (KGC)';
+        initialImgSrc = 'images/gamingkings_logo.png';
     }
     updateCurrencyDisplay(savedCurrency, initialText, initialImgSrc);
 
@@ -48,6 +61,50 @@ document.addEventListener('DOMContentLoaded', () => {
                 customCurrencySelector.classList.remove('show');
             }
         });
+    });
+
+    /* ========================================================= */
+    /* LÓGICA PARA MOSTRAR SALDO DE KINGCOINS                    */
+    /* ========================================================= */
+
+    // Función para obtener y mostrar el saldo del usuario
+    async function fetchUserKingcoins() {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user && kingcoinsBalanceContainer && kingcoinsDisplay) {
+            // Muestra el contenedor del saldo si el usuario está logueado
+            kingcoinsBalanceContainer.classList.remove('hidden');
+
+            try {
+                const { data, error } = await supabase
+                    .from('user_wallets')
+                    .select('balance')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (error && error.code !== 'PGRST116') { // PGRST116 significa que no hay filas (cartera no creada)
+                    throw error;
+                }
+
+                const balance = data ? parseFloat(data.balance).toFixed(2) : '0.00';
+                kingcoinsDisplay.textContent = `${balance} (KGC)`;
+            } catch (error) {
+                console.error('Error al cargar el saldo de KingCoins:', error.message);
+                kingcoinsDisplay.textContent = 'Error';
+            }
+        } else if (kingcoinsBalanceContainer) {
+            // Oculta el contenedor si no hay usuario logueado
+            kingcoinsBalanceContainer.classList.add('hidden');
+        }
+    }
+
+    // Se llama a la función al cargar la página para verificar el estado inicial
+    fetchUserKingcoins();
+
+    // Se añade un listener para actualizar el saldo cuando cambia el estado de autenticación
+    supabase.auth.onAuthStateChange((event, session) => {
+        // Se ejecuta cada vez que el usuario inicia o cierra sesión
+        fetchUserKingcoins();
     });
 
     /* ========================================================= */
