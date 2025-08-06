@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         initialText = '$ (USD)';
         initialImgSrc = 'images/flag_us.png';
     } else if (savedCurrency === 'KGC') {
-        initialText = 'KingCoins (KGC)';
+        initialText = '(KGC)';
         initialImgSrc = 'images/gamingkings_logo.png';
     } else { // Caso por defecto, que es 'VES'
         initialText = 'Bs. (VES)';
