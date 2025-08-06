@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 const balance = data ? parseFloat(data.balance).toFixed(2) : '0.00';
-                kingcoinsDisplay.textContent = `${balance} (KGC)`;
+                kingcoinsDisplay.textContent = `${balance}`;
             } catch (error) {
                 console.error('Error al cargar el saldo de KingCoins:', error.message);
                 kingcoinsDisplay.textContent = 'Error';
