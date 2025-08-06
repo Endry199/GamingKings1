@@ -195,7 +195,8 @@
         .kingcoins-balance {
             color: var(--accent-gold);
             font-weight: bold;
-            padding: 0 10px;
+            padding: 0 16px 12px;
+            display: block;
         }
     </style>
 </head>
@@ -261,7 +262,7 @@
                 <div id="kingcoins-payment-container" style="text-align: center; margin-top: 30px; display: none;">
                     <button type="button" class="btn-primary" id="pay-with-kgc-btn">Pagar con mi Wallet (KGC)</button>
                 </div>
-
+                
                 <div id="whatsapp-message-container" class="payment-confirmation-message" style="margin-top: 30px; margin-bottom: 20px; text-align: center; display: none;">
                     <p style="font-size: 1.1em; color: var(--text-color); margin-bottom: 15px;">
                         ¡Importante! Una vez realizado el pago con el método seleccionado, <strong>envía la captura de tu comprobante y tus datos de TikTok</strong> al siguiente número de WhatsApp para que tu recarga sea procesada rápidamente:
@@ -317,6 +318,7 @@
 
         let userProfileData = null;
         let transactionDetails = null;
+        let userSession = null;
 
         const paymentDetailsTemplates = {
             'pago-movil': `
@@ -444,17 +446,20 @@
 
         async function checkUserSession() {
             const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
+            userSession = session;
+            if (userSession) {
                 userMenuContainer.classList.remove('hidden');
                 guestMenuContainer.classList.add('hidden');
-                userDisplayName.textContent = session.user.email || 'Usuario';
                 
-                userProfileData = await fetchUserProfile(session.user.id);
-                if (userProfileData && userProfileData.name) {
+                userProfileData = await fetchUserProfile(userSession.user.id);
+                if (userProfileData) {
                     userDisplayName.textContent = `${userProfileData.name} ${userProfileData.last_name || ''}`;
-                }
-                if (userProfileData && userProfileData.kingcoins_balance !== undefined) {
-                    kingcoinsBalanceDisplay.textContent = `KGC: ${userProfileData.kingcoins_balance.toFixed(2)}`;
+                    if (userProfileData.kingcoins_balance !== undefined) {
+                        kingcoinsBalanceDisplay.textContent = `KGC: ${userProfileData.kingcoins_balance.toFixed(2)}`;
+                        kingcoinsBalanceDisplay.style.display = 'block';
+                    }
+                } else {
+                    userDisplayName.textContent = userSession.user.email || 'Usuario';
                 }
             } else {
                 userMenuContainer.classList.add('hidden');
@@ -526,25 +531,35 @@
             paymentMethodsDiv.innerHTML = '';
             if (!transactionDetails) return;
             const currentCurrency = transactionDetails.currency;
-            let methods = [];
+            
+            // Ocultar todos los métodos de pago por defecto
+            paymentMethodStep.style.display = 'none';
+            paymentDetailsStep.style.display = 'none';
+            kingcoinsPaymentContainer.style.display = 'none';
+            finalizeBtn.style.display = 'none';
 
+            if (currentCurrency === 'KGC') {
+                if (userSession) {
+                    kingcoinsPaymentContainer.style.display = 'block';
+                } else {
+                    kingcoinsPaymentContainer.innerHTML = '<p>Debes <a href="login.html">iniciar sesión</a> para pagar con KingCoins.</p>';
+                    kingcoinsPaymentContainer.style.display = 'block';
+                }
+                return;
+            }
+            
+            // Si no es KGC, mostrar los métodos de pago tradicionales
+            paymentMethodStep.style.display = 'block';
+            paymentDetailsStep.style.display = 'block';
+            finalizeBtn.style.display = 'block';
+
+            let methods = [];
             if (currentCurrency === 'VES') {
                 methods = paymentMethodsVES;
             } else if (currentCurrency === 'USD') {
                 methods = paymentMethodsUSD;
-            } else if (currentCurrency === 'KGC') {
-                // Para KingCoins, ocultamos los pasos de selección de método
-                paymentMethodStep.style.display = 'none';
-                paymentDetailsStep.style.display = 'none';
-                kingcoinsPaymentContainer.style.display = 'block';
-                return;
             }
-            
-            // Para otras monedas, mostramos los pasos normales
-            paymentMethodStep.style.display = 'block';
-            paymentDetailsStep.style.display = 'block';
-            kingcoinsPaymentContainer.style.display = 'none';
-            
+
             methods.forEach(method => {
                 const methodItem = document.createElement('div');
                 methodItem.classList.add('payment-method-option');
@@ -650,8 +665,7 @@
         }
 
         async function submitPaymentRequest(paymentMethod) {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
+            if (!userSession) {
                 alert('Debes iniciar sesión para finalizar el pago.');
                 window.location.href = 'login.html';
                 return;
@@ -660,8 +674,8 @@
             let formData = new FormData();
             formData.append('paymentMethod', paymentMethod);
 
-            if (session.user.email) {
-                formData.append('userEmail', session.user.email);
+            if (userSession.user.email) {
+                formData.append('userEmail', userSession.user.email);
             }
             if (userProfileData && userProfileData.country_code && userProfileData.phone) {
                 const fullPhoneNumber = `${userProfileData.country_code}${userProfileData.phone}`;
@@ -719,8 +733,14 @@
         }
         
         async function handleKGCPayment() {
-            if (!userProfileData) {
+            if (!userSession) {
                 alert('Debes iniciar sesión para usar KingCoins.');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            if (!userProfileData || userProfileData.kingcoins_balance === undefined) {
+                alert('No se pudo obtener el saldo de tu billetera. Por favor, intenta recargar la página.');
                 return;
             }
 
@@ -730,7 +750,6 @@
                 return;
             }
 
-            // Si el saldo es suficiente, proceder con el envío de la solicitud
             submitPaymentRequest('kingcoins');
         }
 
@@ -763,11 +782,8 @@
 
                         if (transactionDetails.game === "TikTok") {
                             whatsappMessageContainer.style.display = 'block';
-                            finalizeBtn.style.display = 'none';
-                            payWithKGCBtn.style.display = 'none'; // Ocultar el de KingCoins también si es TikTok
                         } else {
                             whatsappMessageContainer.style.display = 'none';
-                            // La visibilidad de los botones se maneja en updatePaymentMethods
                         }
                         
                         handleFormSubmission();
