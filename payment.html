@@ -193,10 +193,42 @@
             background-color: #575757;
         }
         .kingcoins-balance {
-            color: var(--accent-gold);
-            font-weight: bold;
-            padding: 0 16px 12px;
-            display: block;
+            color: #E0E0E0; /* Color de texto */
+            font-weight: 600;
+            padding: 10px 15px;
+            background-color: #2C2C2E; /* Fondo oscuro */
+            border-radius: 20px; /* Borde ovalado */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); /* Sombra suave */
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .kingcoins-balance .fa-crown {
+            color: var(--accent-gold); /* Color de la corona, como el morado principal */
+        }
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px;
+                justify-content: center;
+            }
+            .header-right {
+                flex-direction: column;
+                width: 100%;
+                max-width: 350px;
+                margin: 0 auto;
+                gap: 12px;
+            }
+            .search-bar, .custom-currency-selector, .user-menu-container, .guest-menu-container {
+                width: 100%;
+                max-width: none;
+            }
+            .search-bar input {
+                width: 100%;
+                padding: 10px 15px 10px 40px;
+                box-sizing: border-box;
+            }
         }
     </style>
 </head>
@@ -208,6 +240,10 @@
             </a>
         </div>
         <div class="header-right">
+            <div class="kingcoins-balance hidden">
+                <i class="fas fa-crown"></i>
+                <span id="kingcoins-balance-display">Cargando...</span>
+            </div>
             <div class="search-bar">
                 <input type="text" placeholder="Buscar juego..."><i class="fas fa-search"></i>
             </div>
@@ -215,7 +251,6 @@
                 <button class="user-menu-button" aria-expanded="false" aria-label="Menú de usuario"><i class="fas fa-user-circle"></i></button>
                 <div class="user-menu-dropdown hidden">
                     <a href="#" class="user-menu-item" id="user-display-name"></a>
-                    <span class="user-menu-item kingcoins-balance" id="kingcoins-balance-display"></span>
                     <a href="dashboard.html" class="user-menu-item">Dashboard</a>
                     <a href="orders.html" class="user-menu-item">Pedidos</a>
                     <a href="settings.html" class="user-menu-item">Configuración</a>
@@ -262,7 +297,7 @@
                 <div id="kingcoins-payment-container" style="text-align: center; margin-top: 30px; display: none;">
                     <button type="button" class="btn-primary" id="pay-with-kgc-btn">Pagar con mi Wallet (KGC)</button>
                 </div>
-                
+
                 <div id="whatsapp-message-container" class="payment-confirmation-message" style="margin-top: 30px; margin-bottom: 20px; text-align: center; display: none;">
                     <p style="font-size: 1.1em; color: var(--text-color); margin-bottom: 15px;">
                         ¡Importante! Una vez realizado el pago con el método seleccionado, <strong>envía la captura de tu comprobante y tus datos de TikTok</strong> al siguiente número de WhatsApp para que tu recarga sea procesada rápidamente:
@@ -310,6 +345,7 @@
         const guestMenuContainer = document.querySelector('.guest-menu-container');
         const userDisplayName = document.getElementById('user-display-name');
         const kingcoinsBalanceDisplay = document.getElementById('kingcoins-balance-display');
+        const kingcoinsBalanceHeader = document.querySelector('.kingcoins-balance');
         const logoutButton = document.getElementById('logout-button');
         const userMenuButton = document.querySelector('.user-menu-button');
         const userMenuDropdown = document.querySelector('.user-menu-dropdown');
@@ -455,8 +491,8 @@
                 if (userProfileData) {
                     userDisplayName.textContent = `${userProfileData.name} ${userProfileData.last_name || ''}`;
                     if (userProfileData.kingcoins_balance !== undefined) {
-                        kingcoinsBalanceDisplay.textContent = `KGC: ${userProfileData.kingcoins_balance.toFixed(2)}`;
-                        kingcoinsBalanceDisplay.style.display = 'block';
+                        kingcoinsBalanceDisplay.textContent = `${userProfileData.kingcoins_balance.toFixed(2)}`;
+                        kingcoinsBalanceHeader.classList.remove('hidden');
                     }
                 } else {
                     userDisplayName.textContent = userSession.user.email || 'Usuario';
@@ -464,6 +500,7 @@
             } else {
                 userMenuContainer.classList.add('hidden');
                 guestMenuContainer.classList.remove('hidden');
+                kingcoinsBalanceHeader.classList.add('hidden');
             }
             return userProfileData;
         }
@@ -532,7 +569,6 @@
             if (!transactionDetails) return;
             const currentCurrency = transactionDetails.currency;
             
-            // Ocultar todos los métodos de pago por defecto
             paymentMethodStep.style.display = 'none';
             paymentDetailsStep.style.display = 'none';
             kingcoinsPaymentContainer.style.display = 'none';
@@ -548,7 +584,6 @@
                 return;
             }
             
-            // Si no es KGC, mostrar los métodos de pago tradicionales
             paymentMethodStep.style.display = 'block';
             paymentDetailsStep.style.display = 'block';
             finalizeBtn.style.display = 'block';
