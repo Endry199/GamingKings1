@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function updateSlidePosition() {
             slides.forEach((slide, i) => {
-                slide.style.transform = `translateX(-${currentIndex * 100}%)`;
+                slide.classList.toggle('active', i === currentIndex);
             });
             dots.forEach((dot, i) => {
                 dot.classList.toggle('active', i === currentIndex);

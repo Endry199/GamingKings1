@@ -33,222 +33,218 @@
             }
         }
     </script>
-    <style>
-        /* Estilos para el overlay del aviso */
-        .notice-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.8); /* Fondo más oscuro semitransparente */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999; /* Z-INDEX CRÍTICO: Asegura que esté por encima de todo el contenido, incluyendo el header. */
-        }
+<style>
+    /* Estilos para el overlay del aviso */
+    .notice-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+    .notice-content {
+        max-width: 90%;
+        width: 500px;
+        background-color: var(--card-bg);
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 0 30px var(--secondary-pink), 0 0 15px var(--primary-purple);
+        border: 2px solid var(--secondary-pink);
+        position: relative;
+        text-align: center;
+        padding-top: 2.5rem;
+        color: var(--text-color);
+    }
+    .close-button {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        line-height: 1;
+        cursor: pointer;
+        color: var(--primary-purple);
+        transition: color 0.2s ease-in-out;
+        z-index: 10000;
+    }
+    .close-button:hover {
+        color: var(--secondary-pink);
+    }
+    .notice-content h2 {
+        color: var(--primary-purple);
+        font-size: 2em;
+        margin-bottom: 1rem;
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+    }
+    .notice-content p {
+        color: var(--text-color);
+        margin-bottom: 1rem;
+    }
+    .notice-content .text-purple-400 {
+        color: var(--secondary-pink);
+        font-weight: 700;
+        font-size: 1.25em;
+    }
+
+    /* Responsive adjustment for the notice content on very small screens */
+    @media (max-width: 480px) {
         .notice-content {
-            max-width: 90%; /* Ancho máximo para móviles */
-            width: 500px; /* Ancho preferido para escritorio */
-            background-color: var(--card-bg); /* Usar variable de color de la paleta */
             padding: 1.5rem;
-            border-radius: 0.75rem; /* rounded-xl */
-            box-shadow: 0 0 30px var(--secondary-pink), 0 0 15px var(--primary-purple); /* Borde luminoso rosa y morado */
-            border: 2px solid var(--secondary-pink); /* Borde físico rosa */
-            position: relative;
-            text-align: center;
-            padding-top: 2.5rem; /* AJUSTADO: Aumenta el padding superior para asegurar espacio para el botón de cerrar */
-            color: var(--text-color); /* Color de texto base para el contenido del aviso */
+            padding-top: 2.5rem;
         }
         .close-button {
-            position: absolute;
-            top: 1rem; /* AJUSTADO: Más margen desde la parte superior */
-            right: 1rem; /* AJUSTADO: Más margen desde la derecha */
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            line-height: 1;
-            cursor: pointer;
-            color: var(--primary-purple); /* Color del botón de cerrar */
-            transition: color 0.2s ease-in-out;
-            z-index: 10000; /* Z-INDEX CRÍTICO: Asegura que la 'X' esté por encima del contenido del aviso y del overlay */
+            top: 1rem;
+            right: 1rem;
         }
-        .close-button:hover {
-            color: var(--secondary-pink); /* Color de hover del botón de cerrar */
-        }
-        .notice-content h2 { /* Estilo para el título del aviso */
-            color: var(--primary-purple); /* Color del título */
-            font-size: 2em; /* Tamaño de fuente para que sea más coherente */
-            margin-bottom: 1rem;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
-        }
-        .notice-content p { /* Estilo para los párrafos del aviso */
-            color: var(--text-color); /* Color del texto */
-            margin-bottom: 1rem;
-        }
-        .notice-content .text-purple-400 { /* Estilo específico para la línea del horario */
-            color: var(--secondary-pink); /* Usar rosa vibrante para el horario */
-            font-weight: 700;
-            font-size: 1.25em; /* Asegurar que el tamaño sea visible */
-        }
+    }
 
-        /* Responsive adjustment for the notice content on very small screens */
-        @media (max-width: 480px) {
-            .notice-content {
-                padding: 1.5rem; /* Restablece padding si 2.5rem es demasiado en pantallas muy pequeñas */
-                padding-top: 2.5rem; /* Mantener padding-top para la X */
-            }
-            .close-button {
-                top: 1rem; /* Mantener el ajuste para la X */
-                right: 1rem;
-            }
-        }
+    /* Estilos para el Carrusel */
+    .carousel-container {
+        position: relative;
+        overflow: hidden;
+        width: 100vw;
+        margin-left: calc(50% - 50vw);
+        height: 500px;
+        margin-bottom: 20px;
+        border-radius: 0;
+        box-shadow: 0 40px 60px rgba(0, 0, 0, 0.8);
+        border: none;
+    }
+    .carousel-slide {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        transition: opacity 0.5s ease-in-out;
+        opacity: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #333;
+    }
+    .carousel-slide.active {
+        opacity: 1;
+    }
+    .carousel-slide img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+    .carousel-prev, .carousel-next {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        border: none;
+        padding: 15px 10px;
+        cursor: pointer;
+        z-index: 10;
+        font-size: 1.5rem;
+        border-radius: 5px;
+        opacity: 0.7;
+        transition: opacity 0.3s ease;
+    }
+    .carousel-prev:hover, .carousel-next:hover {
+        opacity: 1;
+    }
+    .carousel-prev {
+        left: 10px;
+    }
+    .carousel-next {
+        right: 10px;
+    }
+    .carousel-dots {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        z-index: 10;
+    }
+    .carousel-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.5);
+        margin: 0 6px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    .carousel-dot.active {
+        background-color: white;
+    }
 
-        /* Estilos para el Carrusel */
+    /* Responsive para el carrusel */
+    @media (max-width: 768px) {
         .carousel-container {
-            position: relative;
-            overflow: hidden;
-            width: 100vw; /* Ocupa el 100% del ancho del viewport */
-            margin-left: calc(50% - 50vw); /* Centra el carrusel y lo pega a los bordes */
-            height: 500px; /* Altura del carrusel en escritorio */
-            margin-bottom: 20px; /* Margen inferior */
-            border-radius: 0; /* Asegura que no tenga bordes redondeados */
-            box-shadow: 0 40px 60px rgba(0, 0, 0, 0.8); /* Sombra que emana desde abajo y se fusiona */
-            border: none; /* Asegura que no haya ningún borde */
+            height: 250px;
         }
-
-        .carousel-slide {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            transition: transform 0.5s ease-in-out;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #333; /* Fondo de respaldo si la imagen no carga */
-        }
-
-        .carousel-slide img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover; /* Asegura que la imagen cubra el área sin distorsionarse */
-            display: block;
-        }
-
         .carousel-prev, .carousel-next {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(0, 0, 0, 0.5);
-            color: white;
-            border: none;
-            padding: 15px 10px; /* Aumentar padding para botones más visibles */
-            cursor: pointer;
-            z-index: 10;
-            font-size: 1.5rem; /* Tamaño de flecha */
-            border-radius: 5px;
-            opacity: 0.7;
-            transition: opacity 0.3s ease;
+            padding: 10px 8px;
+            font-size: 1.2rem;
         }
-
-        .carousel-prev:hover, .carousel-next:hover {
-            opacity: 1;
-        }
-
-        .carousel-prev {
-            left: 10px;
-        }
-
-        .carousel-next {
-            right: 10px;
-        }
-
-        .carousel-dots {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            z-index: 10;
-        }
-
         .carousel-dot {
-            width: 12px; /* Tamaño de los puntos */
-            height: 12px;
-            border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.5); /* Puntos semitransparenteS */
-            margin: 0 6px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
+            width: 10px;
+            height: 10px;
         }
+    }
+    @media (max-width: 480px) {
+        .carousel-container {
+            height: 150px;
+        }
+    }
 
-        .carousel-dot.active {
-            background-color: white; /* Punto activo blanco */
-        }
-
-        /* Responsive para el carrusel */
-        @media (max-width: 768px) {
-            .carousel-container {
-                height: 250px; /* Altura ajustada para tablets (más panorámica) */
-            }
-            .carousel-prev, .carousel-next {
-                padding: 10px 8px;
-                font-size: 1.2rem;
-            }
-            .carousel-dot {
-                width: 10px;
-                height: 10px;
-            }
-        }
-        @media (max-width: 480px) {
-            .carousel-container {
-                height: 150px; /* Altura significativamente reducida para móviles (mucho más panorámica) */
-            }
-        }
-
-        /* --- CAMBIOS AÑADIDOS PARA EL MENÚ DE USUARIO --- */
-        .hidden {
-            display: none !important;
-        }
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        .user-menu-container, .guest-menu-container {
-            position: relative;
-        }
-        .user-menu-button, .guest-menu-button {
-            background-color: transparent;
-            border: none;
-            cursor: pointer;
-            font-size: 24px;
-            color: #fff;
-            padding: 10px;
-        }
-        .user-menu-dropdown, .guest-menu-dropdown {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background-color: #333;
-            min-width: 160px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 100;
-            border-radius: 5px;
-            padding: 10px 0;
-        }
-        .user-menu-item, .guest-menu-item {
-            color: white;
-            padding: 12px 16px;
-            text-decoration: none;
-            display: block;
-            text-align: left;
-        }
-        .user-menu-item:hover, .guest-menu-item:hover {
-            background-color: #575757;
-        }
+    /* --- CAMBIOS AÑADIDOS PARA EL MENÚ DE USUARIO --- */
+    .hidden {
+        display: none !important;
+    }
+    .header-right {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    .user-menu-container, .guest-menu-container {
+        position: relative;
+    }
+    .user-menu-button, .guest-menu-button {
+        background-color: transparent;
+        border: none;
+        cursor: pointer;
+        font-size: 24px;
+        color: #fff;
+        padding: 10px;
+    }
+    .user-menu-dropdown, .guest-menu-dropdown {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background-color: #333;
+        min-width: 160px;
+        box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+        z-index: 100;
+        border-radius: 5px;
+        padding: 10px 0;
+    }
+    .user-menu-item, .guest-menu-item {
+        color: white;
+        padding: 12px 16px;
+        text-decoration: none;
+        display: block;
+        text-align: left;
+    }
+    .user-menu-item:hover, .guest-menu-item:hover {
+        background-color: #575757;
+    }
+</style>
 
         /* --- FIN DE CAMBIOS PARA EL MENÚ DE USUARIO --- */
     </style>
