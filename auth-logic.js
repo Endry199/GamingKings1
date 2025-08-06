@@ -14,11 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (guestMenuContainer) {
                 guestMenuContainer.classList.add('hidden');
-                userDisplayName.textContent = session.user.email || 'Usuario';
             }
             // Muestra el email del usuario
-            if (userProfileData && userProfileData.name) {
-              userDisplayName.textContent = `${userProfileData.name} ${userProfileData.last_name || ''}`;
+            if (userDisplayName && user.email) {
+                userDisplayName.textContent = user.email;
             }
         } else {
             // Usuario no logueado: Muestra el menú de invitado y oculta el de usuario
