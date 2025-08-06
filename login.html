@@ -30,98 +30,6 @@
             margin-bottom: 2rem;
         }
 
-        .auth-container input[type="email"],
-        .auth-container input[type="password"] {
-            width: calc(100% - 20px);
-            padding: 0.75rem;
-            margin-bottom: 1rem;
-            border-radius: 0.5rem;
-            border: 1px solid var(--border-color);
-            background-color: var(--input-bg);
-            color: var(--text-color);
-        }
-
-        .auth-container button {
-            width: 100%;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            background-color: var(--primary-purple);
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-        }
-
-        .auth-container button:hover {
-            background-color: var(--secondary-pink);
-            transform: translateY(-2px);
-        }
-
-        .auth-message {
-            margin-top: 1rem;
-            padding: 0.5rem;
-            border-radius: 0.25rem;
-            font-weight: 500;
-        }
-
-        .auth-message.success {
-            background-color: #d4edda;
-            color: #155724;
-        }
-
-        .auth-message.error {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-
-        .auth-links {
-            margin-top: 1.5rem;
-            font-size: 0.9rem;
-        }
-
-        .auth-links a {
-            color: var(--primary-purple);
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .auth-links a:hover {
-            text-decoration: underline;
-            color: var(--secondary-pink);
-        }
-
-        .google-signin-divider {
-            margin-top: 1.5rem;
-            margin-bottom: 1.5rem;
-            text-align: center;
-            position: relative;
-            font-size: 0.9rem;
-            color: #aaa;
-        }
-
-        .google-signin-divider::before {
-            content: "";
-            position: absolute;
-            top: 50%;
-            left: 0;
-            width: 45%;
-            height: 1px;
-            background-color: #555;
-            z-index: 1;
-        }
-
-        .google-signin-divider::after {
-            content: "";
-            position: absolute;
-            top: 50%;
-            right: 0;
-            width: 45%;
-            height: 1px;
-            background-color: #555;
-            z-index: 1;
-        }
-
         /* Estilo para centrar el botón de Google usando Flexbox */
         .g_id_signin {
             display: flex;
@@ -148,13 +56,7 @@
     <main>
         <div class="auth-container">
             <h1>Iniciar Sesión</h1>
-            <form id="login-form">
-                <input type="email" id="email" placeholder="Correo Electrónico" required>
-                <input type="password" id="password" placeholder="Contraseña" required>
-                <button type="submit">Iniciar Sesión</button>
-            </form>
             <div id="auth-message" class="auth-message hidden"></div>
-            <div class="google-signin-divider">o</div>
             <div id="g_id_onload"
                  data-client_id="321583559900-k18ptc5cjtld5ifu5deb8uha8cheagh4.apps.googleusercontent.com"
                  data-context="signin"
@@ -169,10 +71,6 @@
                  data-text="signin_with"
                  data-size="large"
                  data-logo_alignment="left">
-            </div>
-            <div class="auth-links">
-                ¿No tienes una cuenta? <a href="signup.html">Regístrate</a><br>
-                <a href="forgot-password.html">¿Olvidaste tu contraseña?</a>
             </div>
         </div>
     </main>
