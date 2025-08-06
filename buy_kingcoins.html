@@ -225,113 +225,113 @@
     <script type="module" src="auth-logic.js"></script>
     <script type="module" src="menu-logic.js"></script>
     
-<script type="module">
-    const kingscoinsPackages = [
-        { id: 1, name: '5 <i class="fas fa-crown"></i>', priceUSD: 1.00, priceVES: 168.50 },
-        { id: 2, name: '10 <i class="fas fa-crown"></i>', priceUSD: 3.00, priceVES: 507.49 },
-        { id: 3, name: '100 <i class="fas fa-crown"></i>', priceUSD: 5.00, priceVES: 845.00 },
-        { id: 4, name: '500 <i class="fas fa-crown"></i>', priceUSD: 10.00, priceVES: 1689.96 },
-        { id: 5, name: '1000 <i class="fas fa-crown"></i>', priceUSD: 1.00, priceVES: 168.50 },
-        { id: 6, name: '3000 <i class="fas fa-crown"></i>', priceUSD: 3.00, priceVES: 507.49 },
-        { id: 7, name: '5000 <i class="fas fa-crown"></i>', priceUSD: 5.00, priceVES: 845.00 },
-        { id: 8, name: '10000 <i class="fas fa-crown"></i>', priceUSD: 10.00, priceVES: 1689.96 }
-    ];
-    let selectedPackage = null;
-    let currentCurrency = localStorage.getItem('selectedCurrency') || 'VES';
-    const currencyDisplaySpan = document.getElementById('currency-display');
-    const packageListDiv = document.getElementById('package-list');
-    const confirmBtn = document.getElementById('confirm-recharge-btn');
-    const customCurrencySelector = document.getElementById('custom-currency-selector');
-    const currencyOptions = document.getElementById('currency-options');
-    const selectedCurrencyDisplay = document.querySelector('#selected-currency span');
-    const selectedCurrencyIcon = document.querySelector('#selected-currency img');
-    
-    function formatPrice(price, currency) {
-        return currency === 'VES' ? `Bs. ${price.toFixed(2)}` : `$${price.toFixed(2)}`;
-    }
-    
-    function updateCurrencyDisplay(currency) {
-        selectedCurrencyDisplay.textContent = currency === 'VES' ? 'Bs. (VES)' : '$ (USD)';
-        selectedCurrencyIcon.src = currency === 'VES' ? 'images/flag_ve.png' : 'images/flag_us.png';
-    }
-    
-    function updatePackages(currency) {
-        currencyDisplaySpan.textContent = currency;
-        packageListDiv.innerHTML = '';
-        kingscoinsPackages.forEach(pkg => {
-            const displayPrice = currency === 'VES' ? pkg.priceVES : pkg.priceUSD;
-            const packageItem = document.createElement('div');
-            packageItem.classList.add('package-item');
-            packageItem.dataset.id = pkg.id;
-            packageItem.dataset.priceUsd = pkg.priceUSD;
-            packageItem.dataset.priceVes = pkg.priceVES;
-            packageItem.innerHTML = `
-                <span>${pkg.name}</span>
-                <span class="price">${formatPrice(displayPrice, currency)}</span>
-            `;
-            packageItem.addEventListener('click', () => {
-                if (selectedPackage) {
-                    selectedPackage.classList.remove('selected');
-                }
-                packageItem.classList.add('selected');
-                selectedPackage = packageItem;
-                checkFormValidity();
+    <script type="module">
+        const kingscoinsPackages = [
+            { id: 1, name: '5 <i class="fas fa-crown"></i>', priceUSD: 1.00, priceVES: 168.50 },
+            { id: 2, name: '10 <i class="fas fa-crown"></i>', priceUSD: 3.00, priceVES: 507.49 },
+            { id: 3, name: '100 <i class="fas fa-crown"></i>', priceUSD: 5.00, priceVES: 845.00 },
+            { id: 4, name: '500 <i class="fas fa-crown"></i>', priceUSD: 10.00, priceVES: 1689.96 },
+            { id: 5, name: '1000 <i class="fas fa-crown"></i>', priceUSD: 1.00, priceVES: 168.50 },
+            { id: 6, name: '3000 <i class="fas fa-crown"></i>', priceUSD: 3.00, priceVES: 507.49 },
+            { id: 7, name: '5000 <i class="fas fa-crown"></i>', priceUSD: 5.00, priceVES: 845.00 },
+            { id: 8, name: '10000 <i class="fas fa-crown"></i>', priceUSD: 10.00, priceVES: 1689.96 }
+        ];
+        let selectedPackage = null;
+        let currentCurrency = localStorage.getItem('selectedCurrency') || 'VES';
+        const currencyDisplaySpan = document.getElementById('currency-display');
+        const packageListDiv = document.getElementById('package-list');
+        const confirmBtn = document.getElementById('confirm-recharge-btn');
+        const customCurrencySelector = document.getElementById('custom-currency-selector');
+        const currencyOptions = document.getElementById('currency-options');
+        const selectedCurrencyDisplay = document.querySelector('#selected-currency span');
+        const selectedCurrencyIcon = document.querySelector('#selected-currency img');
+        
+        function formatPrice(price, currency) {
+            return currency === 'VES' ? `Bs. ${price.toFixed(2)}` : `$${price.toFixed(2)}`;
+        }
+        
+        function updateCurrencyDisplay(currency) {
+            selectedCurrencyDisplay.textContent = currency === 'VES' ? 'Bs. (VES)' : '$ (USD)';
+            selectedCurrencyIcon.src = currency === 'VES' ? 'images/flag_ve.png' : 'images/flag_us.png';
+        }
+        
+        function updatePackages(currency) {
+            currencyDisplaySpan.textContent = currency;
+            packageListDiv.innerHTML = '';
+            kingscoinsPackages.forEach(pkg => {
+                const displayPrice = currency === 'VES' ? pkg.priceVES : pkg.priceUSD;
+                const packageItem = document.createElement('div');
+                packageItem.classList.add('package-item');
+                packageItem.dataset.id = pkg.id;
+                packageItem.dataset.priceUsd = pkg.priceUSD;
+                packageItem.dataset.priceVes = pkg.priceVES;
+                packageItem.innerHTML = `
+                    <span>${pkg.name}</span>
+                    <span class="price">${formatPrice(displayPrice, currency)}</span>
+                `;
+                packageItem.addEventListener('click', () => {
+                    if (selectedPackage) {
+                        selectedPackage.classList.remove('selected');
+                    }
+                    packageItem.classList.add('selected');
+                    selectedPackage = packageItem;
+                    checkFormValidity();
+                });
+                packageListDiv.appendChild(packageItem);
             });
-            packageListDiv.appendChild(packageItem);
+            checkFormValidity();
+        }
+        
+        function checkFormValidity() {
+            confirmBtn.disabled = !selectedPackage;
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            updateCurrencyDisplay(currentCurrency);
+            updatePackages(currentCurrency);
         });
-        checkFormValidity();
-    }
-    
-    // Función para habilitar/deshabilitar el botón de pago.
-    // Solo necesita verificar si un paquete ha sido seleccionado.
-    function checkFormValidity() {
-        confirmBtn.disabled = !selectedPackage;
-    }
-    
-    document.addEventListener('DOMContentLoaded', async () => {
-        updateCurrencyDisplay(currentCurrency);
-        updatePackages(currentCurrency);
-    });
-    
-    customCurrencySelector.addEventListener('click', () => {
-        customCurrencySelector.classList.toggle('show');
-    });
-    
-    currencyOptions.addEventListener('click', (e) => {
-        if (e.target.closest('.option')) {
-            const newCurrency = e.target.closest('.option').dataset.value;
-            if (newCurrency !== currentCurrency) {
-                currentCurrency = newCurrency;
-                localStorage.setItem('selectedCurrency', currentCurrency);
-                updateCurrencyDisplay(currentCurrency);
-                updatePackages(currentCurrency);
+        
+        customCurrencySelector.addEventListener('click', () => {
+            customCurrencySelector.classList.toggle('show');
+        });
+        
+        currencyOptions.addEventListener('click', (e) => {
+            if (e.target.closest('.option')) {
+                const newCurrency = e.target.closest('.option').dataset.value;
+                if (newCurrency !== currentCurrency) {
+                    currentCurrency = newCurrency;
+                    localStorage.setItem('selectedCurrency', currentCurrency);
+                    updateCurrencyDisplay(currentCurrency);
+                    updatePackages(currentCurrency);
+                }
+                customCurrencySelector.classList.remove('show');
             }
-            customCurrencySelector.classList.remove('show');
-        }
-    });
-    
-    window.addEventListener('click', (e) => {
-        if (!customCurrencySelector.contains(e.target)) {
-            customCurrencySelector.classList.remove('show');
-        }
-    });
-    
-    // Eliminamos los event listeners para 'userLoggedIn' y 'userLoggedOut'
-    // ya que la lógica de validación se ha movido
-    
-    document.getElementById('kingscoins-recharge-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-    
-        // Antes de continuar, verificamos si el usuario está logueado.
-        const { data: { user } } = await supabase.auth.getUser();
-    
-        if (!user) {
-            alert('Por favor, inicia sesión para continuar con la compra.');
-            window.location.href = 'login.html';
-            return;
-        }
-    
-        if (selectedPackage) {
+        });
+        
+        window.addEventListener('click', (e) => {
+            if (!customCurrencySelector.contains(e.target)) {
+                customCurrencySelector.classList.remove('show');
+            }
+        });
+
+        document.getElementById('kingscoins-recharge-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Verifica que un paquete esté seleccionado
+            if (!selectedPackage) {
+                alert('Por favor, selecciona un paquete de KingsCoins antes de continuar.');
+                return;
+            }
+
+            // Verifica la sesión del usuario
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                alert('Por favor, inicia sesión para continuar con la compra.');
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            // Si el paquete está seleccionado y el usuario está logueado, procede
             const packageName = selectedPackage.querySelector('span:first-child').innerHTML;
             const basePriceUSD = parseFloat(selectedPackage.dataset.priceUsd);
             const basePriceVES = parseFloat(selectedPackage.dataset.priceVes);
@@ -345,21 +345,16 @@
             
             const transactionDetails = {
                 game: "KingsCoins",
-                // Usamos el id del usuario logueado
                 playerId: user.id, 
                 package: packageName,
                 priceUSD: basePriceUSD.toFixed(2),
                 finalPrice: finalPrice.toFixed(2),
                 currency: currentCurrency
             };
-    
+
             localStorage.setItem('transactionDetails', JSON.stringify(transactionDetails));
             window.location.href = 'payment.html';
-        } else {
-            console.error('Por favor, selecciona un paquete de KingsCoins.');
-            alert('Por favor, selecciona un paquete de KingsCoins antes de continuar.');
-        }
-    });
-</script>
+        });
+    </script>
 </body>
 </html>
