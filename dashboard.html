@@ -210,6 +210,34 @@
             background-color: var(--secondary-pink);
             transform: translateY(-2px);
         }
+
+        /* ========================================= */
+        /* ESTILOS AÑADIDOS PARA VISTA MÓVIL */
+        /* ========================================= */
+        @media (max-width: 768px) {
+            .header-right {
+                /* Para asegurar que los elementos estén justificados a la derecha */
+                justify-content: flex-end; 
+            }
+
+            .user-menu-container, .guest-menu-container {
+                position: static;
+                align-self: flex-start;
+                margin-left: 15px;
+            }
+
+            .user-menu-dropdown, .guest-menu-dropdown {
+                left: 50%;
+                right: auto;
+                transform: translateX(-50%);
+                width: 90vw;
+                max-width: 300px;
+            }
+        }
+        /* ========================================= */
+        /* FIN DE ESTILOS AÑADIDOS */
+        /* ========================================= */
+
     </style>
 </head>
 <body>
@@ -232,54 +260,55 @@
     </div>
     
     <header>
-    <div class="header-left">
-        <a href="index.html" class="logo-link">
-            <img src="images/gamingkings_logo.png" alt="GamingKings Logo" class="logo-img">
-        </a>
-                <div class="user-menu-container hidden">
-            <button class="user-menu-button" aria-expanded="false">
-                <i class="fas fa-user-circle"></i>
-            </button>
-            <div class="user-menu-dropdown hidden">
-                <a href="#" class="user-menu-item" id="user-display-name"></a>
-                <a href="dashboard.html" class="user-menu-item">Dashboard</a>
-                <a href="orders.html" class="user-menu-item">Pedidos</a>
-                <a href="settings.html" class="user-menu-item">Configuración</a>
-                <a href="#" class="user-menu-item" id="logout-button">Cerrar Sesión</a>
-            </div>
-        </div>
+        <div class="header-left">
+            <a href="index.html" class="logo-link">
+                <img src="images/gamingkings_logo.png" alt="GamingKings Logo" class="logo-img">
+            </a>
+        </div>
+        <div class="header-right">
+            <div class="search-bar">
+                <input type="text" placeholder="Buscar juego...">
+                <i class="fas fa-search"></i>
+            </div>
+            
+            <div class="custom-currency-selector" id="custom-currency-selector">
+                <div class="selected-currency" id="selected-currency">
+                    <img src="images/flag_ve.png" alt="Venezuela Flag"> <span>Bs. (VES)</span> <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="currency-options" id="currency-options">
+                    <div class="option" data-value="VES">
+                        <img src="images/flag_ve.png" alt="Venezuela Flag"> <span>Bs. (VES)</span>
+                    </div>
+                    <div class="option" data-value="USD">
+                        <img src="images/flag_us.png" alt="USA Flag"> <span>$ (USD)</span>
+                    </div>
+                </div>
+            </div>
 
-        <div class="guest-menu-container">
-            <button class="guest-menu-button">
-                <i class="fas fa-user-circle"></i>
-            </button>
-            <div class="guest-menu-dropdown hidden">
-                <a href="login.html" class="guest-menu-item">Iniciar Sesión</a>
-                <a href="signup.html" class="guest-menu-item">Registrarse</a>
-            </div>
-        </div>
-    </div>
-    <div class="header-right">
-        <div class="search-bar">
-            <input type="text" placeholder="Buscar juego...">
-            <i class="fas fa-search"></i>
-        </div>
-        
-        <div class="custom-currency-selector" id="custom-currency-selector">
-            <div class="selected-currency" id="selected-currency">
-                <img src="images/flag_ve.png" alt="Venezuela Flag"> <span>Bs. (VES)</span> <i class="fas fa-chevron-down"></i>
-            </div>
-            <div class="currency-options" id="currency-options">
-                <div class="option" data-value="VES">
-                    <img src="images/flag_ve.png" alt="Venezuela Flag"> <span>Bs. (VES)</span>
-                </div>
-                <div class="option" data-value="USD">
-                    <img src="images/flag_us.png" alt="USA Flag"> <span>$ (USD)</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</header>
+            <div class="user-menu-container hidden">
+                <button class="user-menu-button" aria-expanded="false">
+                    <i class="fas fa-user-circle"></i>
+                </button>
+                <div class="user-menu-dropdown hidden">
+                    <a href="#" class="user-menu-item" id="user-display-name"></a>
+                    <a href="dashboard.html" class="user-menu-item">Dashboard</a>
+                    <a href="orders.html" class="user-menu-item">Pedidos</a>
+                    <a href="settings.html" class="user-menu-item">Configuración</a>
+                    <a href="#" class="user-menu-item" id="logout-button">Cerrar Sesión</a>
+                </div>
+            </div>
+
+            <div class="guest-menu-container">
+                <button class="guest-menu-button">
+                    <i class="fas fa-user-circle"></i>
+                </button>
+                <div class="guest-menu-dropdown hidden">
+                    <a href="login.html" class="guest-menu-item">Iniciar Sesión</a>
+                    <a href="signup.html" class="guest-menu-item">Registrarse</a>
+                </div>
+            </div>
+        </div>
+    </header>
 
     <main>
         <div class="dashboard-container">
