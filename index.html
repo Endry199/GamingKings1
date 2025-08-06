@@ -244,19 +244,53 @@
     .user-menu-item:hover, .guest-menu-item:hover {
         background-color: #575757;
     }
+
+    /* Estilos del saldo de KingCoins, agregados para que coincida con la página de recargas */
+    .kingcoins-balance {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #E0E0E0; /* Color de texto */
+        font-weight: 600;
+        padding: 10px 15px;
+        background-color: #2C2C2E; /* Fondo oscuro */
+        border-radius: 20px; /* Borde ovalado */
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); /* Sombra suave */
+    }
+    .kingcoins-balance .fa-crown {
+        color: #8A2BE2; /* Color de la corona, como el morado principal */
+    }
     
     /* Agregado para arreglar el botón de usuario en móviles */
-@media (max-width: 768px) {
-    header { flex-direction: column; gap: 15px; padding: 15px; justify-content: center; } 
-    .header-right { flex-direction: column; width: 100%; max-width: 350px; margin: 0 auto; gap: 12px; } 
-    .search-bar, .custom-currency-selector, .user-menu-container, .guest-menu-container { width: 100%; max-width: none; } 
-    .search-bar input { width: 100%; padding: 10px 15px 10px 40px; box-sizing: border-box; } 
-/* ... el resto de tus reglas para 768px... */
-}
-@media (max-width: 480px) {
-    .header-left .logo-img { max-height: 60px; } 
-    /* ...el resto de tus reglas para 480px... */
-}
+    @media (max-width: 768px) {
+        header { 
+            flex-direction: column; 
+            gap: 15px; 
+            padding: 15px; 
+            justify-content: center; 
+        } 
+        .header-right { 
+            flex-direction: column; 
+            width: 100%; 
+            max-width: 350px; 
+            margin: 0 auto; 
+            gap: 12px; 
+        } 
+        .search-bar, .custom-currency-selector, .user-menu-container, .guest-menu-container { 
+            width: 100%; 
+            max-width: none; 
+        } 
+        .search-bar input { 
+            width: 100%; 
+            padding: 10px 15px 10px 40px; 
+            box-sizing: border-box; 
+        } 
+    }
+    @media (max-width: 480px) {
+        .header-left .logo-img { 
+            max-height: 60px; 
+        } 
+    }
 </style>
 </head>
 <body>
@@ -285,9 +319,9 @@
         </a>
     </div>
     <div class="header-right">
-           
-        <div class="kingcoins-balance flex items-center gap-2 text-white hidden">
-            <i class="fas fa-crown text-pink-500"></i>
+            
+        <div class="kingcoins-balance hidden">
+            <i class="fas fa-crown"></i>
             <span id="kingcoins-display">Cargando...</span>
         </div>
 
