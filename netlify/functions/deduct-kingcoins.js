@@ -17,10 +17,8 @@ exports.handler = async function(event, context) {
     try {
         const form = new Formidable({ multiples: true });
         
-        // Decodificar el cuerpo del evento si está codificado en Base64
         const bodyBuffer = event.isBase64Encoded ? Buffer.from(event.body, 'base64') : Buffer.from(event.body || '');
 
-        // Crear un stream a partir del buffer para que Formidable pueda procesarlo
         const reqStream = new Readable();
         reqStream.push(bodyBuffer);
         reqStream.push(null);
@@ -34,7 +32,6 @@ exports.handler = async function(event, context) {
             });
         });
         
-        // Formatear los campos de formidable a un objeto simple
         fieldsData = Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]));
 
     } catch (parseError) {
@@ -55,10 +52,28 @@ exports.handler = async function(event, context) {
     }
     
     try {
+        // PASO 1: Buscar el id del usuario en la tabla 'profiles' usando el email
+        const { data: userData, error: userError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', email)
+            .single();
+
+        if (userError || !userData) {
+            console.error("Error al buscar el usuario:", userError || "No se encontró el usuario.");
+            return {
+                statusCode: 404,
+                body: JSON.stringify({ message: "No se encontró un usuario con ese correo electrónico." })
+            };
+        }
+        
+        const userId = userData.id;
+
+        // PASO 2: Buscar la billetera en la tabla 'user_wallets' usando el user_id
         const { data: walletData, error: walletError } = await supabase
             .from('user_wallets')
             .select('balance')
-            .eq('email', email)
+            .eq('user_id', userId) // ¡CORREGIDO! Usar 'user_id' como nos has indicado
             .single();
 
         if (walletError || !walletData) {
@@ -83,7 +98,7 @@ exports.handler = async function(event, context) {
         const { error: updateError } = await supabase
             .from('user_wallets')
             .update({ balance: newBalance })
-            .eq('email', email);
+            .eq('user_id', userId); // ¡CORREGIDO! Usar 'user_id' para la actualización también
 
         if (updateError) {
             console.error("Error al actualizar el saldo:", updateError);
