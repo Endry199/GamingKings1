@@ -108,7 +108,6 @@ exports.handler = async function(event, context) {
     try {
         id_transaccion_generado = `GMK-${Date.now()}`;
 
-        // MODIFICACIÓN CLAVE: NO subir el comprobante si el método de pago es KingCoins
         if (paymentReceiptFile && paymentReceiptFile.filepath && game !== "TikTok" && paymentMethod.toLowerCase() !== 'kingcoins') {
             console.log(`Intentando subir archivo: ${paymentReceiptFile.originalFilename} (${paymentReceiptFile.mimetype})`);
             const fileBuffer = fs.readFileSync(paymentReceiptFile.filepath);
@@ -176,7 +175,7 @@ exports.handler = async function(event, context) {
             body: JSON.stringify({ message: "Error al guardar la transacción en la base de datos." })
         };
     }
-
+    // Lógica para enviar mensajes de WhatsApp (no relacionada con Telegram)
     let messageText = `✨ *NUEVA RECARGA PENDIENTE* ✨\n\n`;
     messageText += `*ID de Transacción:* \`${escapeMarkdownV2(id_transaccion_generado || 'N/A')}\`\n`;
     messageText += `*Estado:* \`PENDIENTE\`\n\n`;
@@ -231,6 +230,11 @@ exports.handler = async function(event, context) {
     const replyMarkup = {
         inline_keyboard: inlineKeyboard
     };
+    
+    // 💡 AÑADIDO: Logs para depuración del mensaje de Telegram
+    console.log("DEBUG: Mensaje de Telegram a enviar:", messageText);
+    console.log("DEBUG: Reply Markup a enviar:", JSON.stringify(replyMarkup));
+
 
     const telegramApiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
     let telegramMessageResponse;
