@@ -538,6 +538,7 @@
         }
     }
 
+    // --- FUNCIÓN MODIFICADA ---
     function updateTransactionSummary() {
         if (!transactionDetails) {
             transactionSummaryDiv.innerHTML = '<p>No se encontraron detalles de la transacción.</p>';
@@ -558,9 +559,20 @@
 
         const playerIdHtml = transactionDetails.playerId ? `<p><strong>ID de Jugador:</strong> ${transactionDetails.playerId}</p>` : '';
         
-        let greeting = 'Por favor, realiza el pago por el monto exacto y selecciona tu método a continuación.';
+        // Lógica para cambiar el mensaje de saludo
+        let greeting = '';
+        if (displayCurrency === 'KGC') {
+            greeting = 'Por favor, confirma tu pago con KingCoins a continuación.';
+        } else {
+            greeting = 'Por favor, realiza el pago por el monto exacto y selecciona tu método a continuación.';
+        }
+
         if (userProfileData && userProfileData.name) {
-            greeting = `Hola ${userProfileData.name} ${userProfileData.last_name || ''}, por favor, realiza el pago por el monto exacto y selecciona tu método a continuación.`;
+            if (displayCurrency === 'KGC') {
+                greeting = `Hola ${userProfileData.name} ${userProfileData.last_name || ''}, por favor, confirma tu pago con KingCoins a continuación.`;
+            } else {
+                greeting = `Hola ${userProfileData.name} ${userProfileData.last_name || ''}, por favor, realiza el pago por el monto exacto y selecciona tu método a continuación.`;
+            }
         }
 
         transactionSummaryDiv.innerHTML = `
@@ -571,6 +583,7 @@
             <p>${greeting}</p>
         `;
     }
+    // --- FIN FUNCIÓN MODIFICADA ---
 
     function updatePaymentMethods() {
         const paymentMethodsDiv = document.getElementById('payment-methods');
@@ -729,7 +742,6 @@
         await submitKingcoinsRequest();
     }
     
-    // Función MODIFICADA para llamar a process-payment.js
     async function submitKingcoinsRequest() {
         const buttonToDisable = payWithKGCBtn;
         const originalButtonText = buttonToDisable.textContent;
