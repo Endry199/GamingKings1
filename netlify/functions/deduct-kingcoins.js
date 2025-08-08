@@ -1,26 +1,60 @@
 // netlify/functions/deduct-kingcoins.js
+const { Formidable } = require('formidable');
 const { createClient } = require('@supabase/supabase-js');
+const { Readable } = require('stream');
 
 exports.handler = async function(event, context) {
     if (event.httpMethod !== "POST") {
         return { statusCode: 405, body: "Method Not Allowed" };
     }
 
+    let fieldsData;
+
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
     try {
-        const { email, finalPrice } = JSON.parse(event.body);
+        const form = new Formidable({ multiples: true });
+        
+        // Decodificar el cuerpo del evento si está codificado en Base64
+        const bodyBuffer = event.isBase64Encoded ? Buffer.from(event.body, 'base64') : Buffer.from(event.body || '');
 
-        if (!email || !finalPrice) {
-            return {
-                statusCode: 400,
-                body: JSON.stringify({ message: "Faltan parámetros requeridos (email o finalPrice)." })
-            };
-        }
+        // Crear un stream a partir del buffer para que Formidable pueda procesarlo
+        const reqStream = new Readable();
+        reqStream.push(bodyBuffer);
+        reqStream.push(null);
+        reqStream.headers = event.headers;
+        reqStream.method = event.httpMethod;
 
-        const supabaseUrl = process.env.SUPABASE_URL;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        const { fields } = await new Promise((resolve, reject) => {
+            form.parse(reqStream, (err, fields) => {
+                if (err) return reject(err);
+                resolve({ fields });
+            });
+        });
+        
+        // Formatear los campos de formidable a un objeto simple
+        fieldsData = Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]));
 
-        // 1. Obtener el saldo del usuario
+    } catch (parseError) {
+        console.error("Error al procesar los datos de la solicitud:", parseError);
+        return {
+            statusCode: 400,
+            body: JSON.stringify({ message: `Error al procesar los datos: ${parseError.message}` })
+        };
+    }
+    
+    const { email, finalPrice } = fieldsData;
+
+    if (!email || !finalPrice) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({ message: "Faltan parámetros requeridos (email o finalPrice)." })
+        };
+    }
+    
+    try {
         const { data: walletData, error: walletError } = await supabase
             .from('user_wallets')
             .select('balance')
@@ -28,7 +62,7 @@ exports.handler = async function(event, context) {
             .single();
 
         if (walletError || !walletData) {
-            console.error("Error al buscar la billetera del usuario:", walletError || "No se encontró la billetera.");
+            console.error("Error al buscar la billetera:", walletError || "No se encontró la billetera.");
             return {
                 statusCode: 404,
                 body: JSON.stringify({ message: "No se encontró una billetera KGC asociada a tu cuenta." })
@@ -38,16 +72,13 @@ exports.handler = async function(event, context) {
         const currentBalance = parseFloat(walletData.balance);
         const price = parseFloat(finalPrice);
 
-        // 2. Verificar saldo suficiente
         if (currentBalance < price) {
-            console.error(`Error: Saldo insuficiente. Saldo actual: ${currentBalance}, Precio: ${price}`);
             return {
                 statusCode: 400,
                 body: JSON.stringify({ message: `Saldo insuficiente para completar la compra.` })
             };
         }
 
-        // 3. Restar el saldo
         const newBalance = currentBalance - price;
         const { error: updateError } = await supabase
             .from('user_wallets')
@@ -55,14 +86,12 @@ exports.handler = async function(event, context) {
             .eq('email', email);
 
         if (updateError) {
-            console.error("Error al actualizar el saldo de la billetera:", updateError);
+            console.error("Error al actualizar el saldo:", updateError);
             return {
                 statusCode: 500,
                 body: JSON.stringify({ message: "Error interno al procesar el pago." })
             };
         }
-
-        console.log(`Saldo KGC deducido exitosamente. Nuevo saldo para ${email}: ${newBalance}`);
 
         return {
             statusCode: 200,
