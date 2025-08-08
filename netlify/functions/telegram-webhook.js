@@ -1,4 +1,3 @@
-// netlify/functions/telegram-webhook.js
 const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js'); 
 
@@ -7,9 +6,6 @@ function escapeMarkdownV2(text) {
     if (typeof text !== 'string') {
         text = String(text);
     }
-    // Aseguramos que los caracteres reservados de MarkdownV2 estén escapados
-    // NOTA: El guion '-' es reservado en MarkdownV2 para listas o tachado.
-    // Lo escapamos para que aparezca como un guion literal.
     const specialChars = /[_*\[\]()~`>#+\-={}.!]/g; 
     return text.replace(specialChars, '\\$&');
 }
@@ -25,13 +21,8 @@ exports.handler = async function(event, context) {
     const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR; 
     const NETLIFY_SITE_URL = process.env.URL || 'https://gamingkings.netlify.app'; 
 
-
     if (!TELEGRAM_BOT_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_KEY || !NETLIFY_SITE_URL) { 
         console.error("Faltan variables de entorno requeridas para el webhook de Telegram.");
-        console.error(`Missing TELEGRAM_BOT_TOKEN: ${!TELEGRAM_BOT_TOKEN}`);
-        console.error(`Missing SUPABASE_URL: ${!SUPABASE_URL}`);
-        console.error(`Missing SUPABASE_SERVICE_KEY: ${!SUPABASE_SERVICE_KEY}`);
-        console.error(`Missing NETLIFY_SITE_URL: ${!NETLIFY_SITE_URL}`);
         return { statusCode: 500, body: "Error de configuración del servidor." };
     }
 
@@ -91,7 +82,7 @@ exports.handler = async function(event, context) {
                     const newTextIfAlreadyDone = currentMessageText.includes('REALIZADA') ? currentMessageText : currentMessageText.replace('Estado: `PENDIENTE`', 'Estado: `REALIZADA` ✅');
                     
                     try {
-                         await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
+                        await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
                             chat_id: chatId,
                             message_id: messageId,
                             text: escapeMarkdownV2(newTextIfAlreadyDone), 
@@ -101,13 +92,13 @@ exports.handler = async function(event, context) {
                             }
                         });
                     } catch (editErrorIfAlreadyDone) {
-                         console.error(`ERROR (Already Done): Fallo al editar mensaje de Telegram para ${transactionId}:`, editErrorIfAlreadyDone.response ? editErrorIfAlreadyDone.response.data : editErrorIfAlreadyDone.message);
-                         if (editErrorIfAlreadyDone.response && editErrorIfAlreadyDone.response.status === 400 && 
-                           (editErrorIfAlreadyDone.response.data.description && editErrorIfAlreadyDone.response.data.description.includes('message is not modified'))) {
-                             console.log(`DEBUG: Mensaje ${messageId} para ${transactionId} no modificado (ya tenía el estado 'REALIZADA').`);
-                         } else {
-                             console.error(`ERROR: Fallo al re-editar mensaje para transacción ${transactionId} que ya estaba realizada.`);
-                         }
+                        console.error(`ERROR (Already Done): Fallo al editar mensaje de Telegram para ${transactionId}:`, editErrorIfAlreadyDone.response ? editErrorIfAlreadyDone.response.data : editErrorIfAlreadyDone.message);
+                        if (editErrorIfAlreadyDone.response && editErrorIfAlreadyDone.response.status === 400 && 
+                            (editErrorIfAlreadyDone.response.data.description && editErrorIfAlreadyDone.response.data.description.includes('message is not modified'))) {
+                            console.log(`DEBUG: Mensaje ${messageId} para ${transactionId} no modificado (ya tenía el estado 'REALIZADA').`);
+                        } else {
+                            console.error(`ERROR: Fallo al re-editar mensaje para transacción ${transactionId} que ya estaba realizada.`);
+                        }
                     }
 
                     return { statusCode: 200, body: "Already completed" };
@@ -172,33 +163,8 @@ Aquí tienes los detalles de tu recarga:
                 newCaption = newCaption.replace('Estado: `PENDIENTE`', 'Estado: `REALIZADA` ✅');
                 newCaption += `\n\nRecarga marcada por: *${escapeMarkdownV2(userName)}* (${escapeMarkdownV2(formattedTime)} ${escapeMarkdownV2(formattedDate)})`;
 
-                // --- Se elimina la lógica para generar y añadir el botón de WhatsApp (Factura) aquí ---
-                // let whatsappLinkCompletedCustomer = null;
-                // if (transaction.whatsapp_number && transaction.whatsapp_number.trim() !== '') {
-                //     const customerWhatsappNumberFormatted = transaction.whatsapp_number.startsWith('+') ? transaction.whatsapp_number : `+${transaction.whatsapp_number}`;
-                //     const invoiceLink = `${NETLIFY_SITE_URL}/.netlify/functions/get-invoice?id=${encodeURIComponent(transaction.id_transaccion)}`;
-                //     const shortWhatsappMessage = `
-                // 🎉 ¡Hola! 👋
-                // ¡Tu recarga con la ID de transaccion: \`${escapeMarkdownV2(transaction.id_transaccion)}\` ha sido *COMPLETADA* por GamingKings!
-                // Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
-                // ¡Gracias por tu compra! ✨
-                //     `.trim();
-                //     whatsappLinkCompletedCustomer = `https://wa.me/${customerWhatsappNumberFormatted}?text=${encodeURIComponent(shortWhatsappMessage)}`;
-                //     console.log(`Enlace de WhatsApp 'Factura Completada' generado para cliente ${transaction.whatsapp_number}.`);
-                // } else {
-                //     console.log(`No hay número de WhatsApp para el cliente de la transacción ${transactionId}. No se generará el enlace de WhatsApp de factura.`);
-                // }
-
-                // Definir los nuevos botones para el mensaje editado
                 let updatedInlineKeyboard = [];
                 updatedInlineKeyboard.push([{ text: "✅ Recarga Realizada", callback_data: `completed_status_${transactionId}` }]); 
-
-                // --- Se eliminan los botones relacionados con la factura aquí ---
-                // if (whatsappLinkCompletedCustomer) {
-                //     updatedInlineKeyboard.push([{ text: "📲 WhatsApp Cliente (Factura)", url: whatsappLinkCompletedCustomer }]);
-                // } else {
-                //     updatedInlineKeyboard.push([{ text: "⚠️ Cliente sin WhatsApp para factura", callback_data: `no_whatsapp_factura_${transactionId}` }]);
-                // }
 
                 const updatedReplyMarkup = {
                     inline_keyboard: updatedInlineKeyboard
@@ -214,14 +180,14 @@ Aquí tienes los detalles de tu recarga:
                         reply_markup: updatedReplyMarkup,
                         disable_web_page_preview: true
                     });
-                    console.log(`DEBUG: Mensaje de Telegram para ${transactionId} editado con éxito, incluyendo botón de factura.`);
+                    console.log(`DEBUG: Mensaje de Telegram para ${transactionId} editado con éxito.`);
                 } catch (telegramEditError) {
                     console.error(`ERROR: Fallo al editar mensaje de Telegram para ${transactionId}:`, telegramEditError.response ? telegramEditError.response.data : telegramEditError.message);
                     if (telegramEditError.response && telegramEditError.response.status === 400 && 
                        (telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message is not modified'))) {
                         console.log(`DEBUG: Mensaje ${messageId} para ${transactionId} no modificado o ya editado. Ignorando este error ya que la DB fue actualizada.`);
                     } else if (telegramEditError.response && telegramEditError.response.status === 400 &&
-                                telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message to edit not found')) {
+                                 telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message to edit not found')) {
                         console.log(`DEBUG: Mensaje ${messageId} para ${transactionId} no encontrado, probablemente eliminado. Ignorando este error.`);
                     } else {
                         await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
@@ -241,7 +207,6 @@ Aquí tienes los detalles de tu recarga:
                     return { statusCode: 200, body: "Error fetching transaction for KingCoins release" };
                 }
 
-                // Asegurarse de que no se confirme dos veces
                 if (transaction.status === 'realizada') {
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
                         callback_query_id: callbackQuery.id,
@@ -249,38 +214,12 @@ Aquí tienes los detalles de tu recarga:
                         show_alert: true
                     });
                     
-                    // Preparar el texto para la edición del mensaje si ya está liberado
                     let newCaption = callbackQuery.message.text;
                     newCaption = newCaption.replace('Estado: `PENDIENTE`', 'Estado: `LIBERADO` ✅');
                     newCaption += `\n\nKingCoins liberados por: *${escapeMarkdownV2(userName)}*`; 
 
                     let updatedInlineKeyboard = [];
                     updatedInlineKeyboard.push([{ text: "✅ KingCoins Liberados", callback_data: `completed_status_${transactionId}` }]); 
-
-                    // --- Se elimina la lógica para generar y añadir el botón de WhatsApp (Factura) aquí ---
-                    // let whatsappLinkCompletedCustomer = null;
-                    // if (transaction.whatsapp_number && transaction.whatsapp_number.trim() !== '') {
-                    //     const customerWhatsappNumberFormatted = transaction.whatsapp_number.startsWith('+') ? transaction.whatsapp_number : `+${transaction.whatsapp_number}`;
-                    //     const invoiceLink = `${NETLIFY_SITE_URL}/.netlify/functions/get-invoice?id=${encodeURIComponent(transaction.id_transaccion)}`;
-                    //     const cleanedPackageName = transaction.package_name.includes('<i class="fas fa-crown"></i>') 
-                    //         ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins') 
-                    //         : transaction.package_name;
-
-                    //     const shortWhatsappMessage = `
-                    // 🎉 ¡Hola! 👋
-                    // ¡Tu compra de KingCoins (Transaccion: \`${escapeMarkdownV2(transaction.id_transaccion)}\`) ha sido *COMPLETADA* por GamingKings!
-                    // Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
-                    // ¡Gracias por tu compra! ✨
-                    //     `.trim();
-                    //     whatsappLinkCompletedCustomer = `https://wa.me/${customerWhatsappNumberFormatted}?text=${encodeURIComponent(shortWhatsappMessage)}`;
-                    // }
-
-                    // --- Se eliminan los botones relacionados con la factura aquí ---
-                    // if (whatsappLinkCompletedCustomer) {
-                    //     updatedInlineKeyboard.push([{ text: "📲 WhatsApp Cliente (Factura)", url: whatsappLinkCompletedCustomer }]);
-                    // } else {
-                    //     updatedInlineKeyboard.push([{ text: "⚠️ Cliente sin WhatsApp para factura", callback_data: `no_whatsapp_factura_${transactionId}` }]);
-                    // }
 
                     const updatedReplyMarkup = {
                         inline_keyboard: updatedInlineKeyboard
@@ -299,12 +238,12 @@ Aquí tienes los detalles de tu recarga:
                         console.log(`DEBUG: Mensaje de Telegram para KingCoins ${transactionId} editado con éxito (ya estaba liberado).`);
                     } catch (telegramEditError) {
                         console.error(`ERROR (Already Liberated): Fallo al editar mensaje de Telegram para KingCoins ${transactionId}:`, telegramEditError.response ? telegramEditError.response.data : telegramEditError.message);
-                         if (telegramEditError.response && telegramEditError.response.status === 400 && 
+                        if (telegramEditError.response && telegramEditError.response.status === 400 && 
                            (telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message is not modified'))) {
-                             console.log(`DEBUG: Mensaje ${messageId} para KingCoins ${transactionId} no modificado (ya tenía el estado 'LIBERADO').`);
-                         } else {
-                             console.error(`ERROR: Fallo al re-editar mensaje para transacción KingCoins ${transactionId} que ya estaba liberada.`);
-                         }
+                            console.log(`DEBUG: Mensaje ${messageId} para KingCoins ${transactionId} no modificado (ya tenía el estado 'LIBERADO').`);
+                        } else {
+                            console.error(`ERROR: Fallo al re-editar mensaje para transacción KingCoins ${transactionId} que ya estaba liberada.`);
+                        }
                     }
                     return { statusCode: 200, body: "KingCoins already confirmed" };
                 }
@@ -363,7 +302,7 @@ Aquí tienes los detalles de tu recarga:
                             const { error: updateWalletError } = await supabase
                                 .from('user_wallets') 
                                 .update({ balance: newBalance }) 
-                                .eq('user_id', transaction.player_id); 
+                                .eq('user_id', transaction.player_id);
 
                             if (updateWalletError) {
                                 console.error("Error al actualizar wallet de usuario:", updateWalletError.message);
@@ -425,31 +364,9 @@ Aquí tienes los detalles de tu transacción:
                 newCaption += `\n\nKingCoins liberados por: *${escapeMarkdownV2(userName)}* (${escapeMarkdownV2(formattedTime)} ${escapeMarkdownV2(formattedDate)})`;
                 newCaption += kingcoinsCreditedMessage; 
 
-                // Definir los nuevos botones para el mensaje editado de KingCoins
                 let updatedInlineKeyboard = [];
                 updatedInlineKeyboard.push([{ text: "✅ KingCoins Liberados", callback_data: `completed_status_${transactionId}` }]); 
                 
-                // --- Se elimina la lógica para generar y añadir el botón de WhatsApp (Factura) aquí ---
-                // let whatsappLinkCompletedCustomer = null;
-                // if (transaction.whatsapp_number && transaction.whatsapp_number.trim() !== '') {
-                //     const customerWhatsappNumberFormatted = transaction.whatsapp_number.startsWith('+') ? transaction.whatsapp_number : `+${transaction.whatsapp_number}`;
-                //     const invoiceLink = `${NETLIFY_SITE_URL}/.netlify/functions/get-invoice?id=${encodeURIComponent(transaction.id_transaccion)}`;
-                //     const shortWhatsappMessage = `
-                // 🎉 ¡Hola! 👋
-                // ¡Tu compra de KingCoins (Transaccion: \`${escapeMarkdownV2(transaction.id_transaccion)}\`) ha sido *COMPLETADA* por GamingKings!
-                // Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
-                // ¡Gracias por tu compra! ✨
-                //     `.trim();
-                //     whatsappLinkCompletedCustomer = `https://wa.me/${customerWhatsappNumberFormatted}?text=${encodeURIComponent(shortWhatsappMessage)}`;
-                // }
-
-                // --- Se eliminan los botones relacionados con la factura aquí ---
-                // if (whatsappLinkCompletedCustomer) {
-                //     updatedInlineKeyboard.push([{ text: "📲 WhatsApp Cliente (Factura)", url: whatsappLinkCompletedCustomer }]);
-                // } else {
-                //     updatedInlineKeyboard.push([{ text: "⚠️ Cliente sin WhatsApp para factura", callback_data: `no_whatsapp_factura_${transactionId}` }]);
-                // }
-
                 const updatedReplyMarkup = {
                     inline_keyboard: updatedInlineKeyboard
                 };
@@ -473,7 +390,7 @@ Aquí tienes los detalles de tu transacción:
                        (telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message is not modified'))) {
                         console.log(`DEBUG: Mensaje ${messageId} para KingCoins ${transactionId} no modificado o ya editado. Ignorando.`);
                     } else if (telegramEditError.response && telegramEditError.response.status === 400 &&
-                                telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message to edit not found')) {
+                                 telegramEditError.response.data.description && telegramEditError.response.data.description.includes('message to edit not found')) {
                         console.log(`DEBUG: Mensaje ${messageId} para KingCoins ${transactionId} no encontrado, probablemente eliminado. Ignorando.`);
                     } else {
                         await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
@@ -482,60 +399,6 @@ Aquí tienes los detalles de tu transacción:
                             parse_mode: 'MarkdownV2'
                         });
                     }
-                }
-            }
-            // --- Handler para 'send_invoice_kingcoins' ---
-            // Este handler se mantiene, pero ningún botón debería activarlo ahora.
-            else if (data.startsWith('send_invoice_kingcoins:')) {
-                const transactionId = data.split(':')[1];
-                const transaction = await getTransaction(transactionId);
-
-                if (!transaction) {
-                    return { statusCode: 200, body: "Error fetching transaction for KingCoins invoice" };
-                }
-                
-                await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-                    callback_query_id: callbackQuery.id,
-                    text: `Generando enlace de factura para ${escapeMarkdownV2(transactionId)}...`,
-                    show_alert: false
-                });
-
-                let whatsappLinkInvoiceCustomer = null;
-                if (transaction.whatsapp_number && transaction.whatsapp_number.trim() !== '') {
-                    const customerWhatsappNumberFormatted = transaction.whatsapp_number.startsWith('+') ? transaction.whatsapp_number : `+${transaction.whatsapp_number}`;
-                    
-                    const invoiceLink = `${NETLIFY_SITE_URL}/.netlify/functions/get-invoice?id=${encodeURIComponent(transaction.id_transaccion)}`;
-                    
-                    const cleanedPackageName = transaction.package_name.includes('<i class="fas fa-crown"></i>') 
-                        ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins') 
-                        : transaction.package_name;
-
-                    const whatsappMessageInvoice = `
-🎉 ¡Hola! 👋
-
-Aquí tienes tu factura para la compra de ${escapeMarkdownV2(cleanedPackageName)} (Transacción #${escapeMarkdownV2(transaction.id_transaccion)}) de GamingKings.
-
-Puedes verla aquí: ${escapeMarkdownV2(invoiceLink)}
-
-¡Gracias por tu compra! ✨
-                    `.trim();
-
-                    whatsappLinkInvoiceCustomer = `https://wa.me/${customerWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageInvoice)}`;
-                    
-                    await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                        chat_id: chatId,
-                        text: escapeMarkdownV2(`👉 *Enlace de Factura para cliente de la transacción \`${transactionId}\`:* [Enviar por WhatsApp](${escapeMarkdownV2(whatsappLinkInvoiceCustomer)})`),
-                        parse_mode: 'MarkdownV2',
-                        disable_web_page_preview: true
-                    });
-                    console.log(`Enlace de WhatsApp 'Factura' generado para cliente ${transaction.whatsapp_number}.`);
-                } else {
-                    await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                        chat_id: chatId,
-                        text: escapeMarkdownV2(`⚠️ La transacción \`${transactionId}\` no tiene un número de WhatsApp asociado para enviar la factura.`),
-                        parse_mode: 'MarkdownV2'
-                    });
-                    console.log(`No hay número de WhatsApp para el cliente de la transacción ${transactionId}. No se generará el enlace de WhatsApp de factura.`);
                 }
             }
             // --- Handler para 'send_whatsapp_' (existente para recargador) ---
@@ -587,13 +450,13 @@ Puedes verla aquí: ${escapeMarkdownV2(invoiceLink)}
         return { statusCode: 200, body: "Webhook processed" };
     } catch (error) {
         console.error("Error en el webhook de Telegram:", error.response ? error.response.data : error.message);
-        const body = JSON.parse(event.body || '{}'); // Parse body safely
+        const body = JSON.parse(event.body || '{}');
         if (body && body.message && body.message.chat && body.message.chat.id) {
-             await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                 chat_id: body.message.chat.id,
-                 text: escapeMarkdownV2(`❌ Ha ocurrido un error inesperado al procesar la solicitud. Por favor, revisa los logs de Netlify. Detalles: \`${escapeMarkdownV2(error.message)}\``),
-                 parse_mode: 'MarkdownV2'
-             }).catch(e => console.error("Error sending generic error message to Telegram:", e.message));
+            await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                chat_id: body.message.chat.id,
+                text: escapeMarkdownV2(`❌ Ha ocurrido un error inesperado al procesar la solicitud. Por favor, revisa los logs de Netlify. Detalles: \`${escapeMarkdownV2(error.message)}\``),
+                parse_mode: 'MarkdownV2'
+            }).catch(e => console.error("Error sending generic error message to Telegram:", e.message));
         }
         return { statusCode: 500, body: `Error en el webhook: ${error.message}` };
     }
