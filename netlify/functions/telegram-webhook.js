@@ -6,16 +6,36 @@ function escapeMarkdownV2(text) {
     if (typeof text !== 'string') {
         text = String(text);
     }
-    const specialChars = /[_*\[\]()~`>#+\-={}.!]/g;
+    const specialChars = /[_*[\]()~`>#+\-=|{}.!]/g;
     return text.replace(specialChars, '\\$&');
 }
+
+// Configuración de Supabase (reemplaza con tus variables de entorno)
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+
+// Función para responder a Telegram
+const answerCallbackQuery = async (callbackQueryId, text = '', showAlert = false) => {
+    const telegramApiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`;
+    try {
+        await axios.post(telegramApiUrl, {
+            callback_query_id: callbackQueryId,
+            text: text,
+            show_alert: showAlert
+        });
+    } catch (error) {
+        console.error("Error al responder a la consulta de devolución de llamada:", error.response ? error.response.data : error.message);
+    }
+};
 
 exports.handler = async function(event, context) {
     if (event.httpMethod !== "POST") {
         return { statusCode: 405, body: "Method Not Allowed" };
     }
 
-    const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
     const SUPABASE_URL = process.env.SUPABASE_URL;
     const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
     const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR;
@@ -26,14 +46,12 @@ exports.handler = async function(event, context) {
         return { statusCode: 500, body: "Error de configuración del servidor." };
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-
     try {
         const body = JSON.parse(event.body);
         const callbackQuery = body.callback_query;
 
         // Función para obtener la transacción
-        async function getTransaction(id) {
+        async function getTransaction(id, callbackQueryId) {
             console.log(`DEBUG: Buscando transacción con id_transaccion: ${id}`);
             const { data: transaction, error: fetchError } = await supabase
                 .from('transactions')
@@ -43,30 +61,26 @@ exports.handler = async function(event, context) {
             
             if (fetchError && fetchError.code === 'PGRST116') {
                 console.error("Error al obtener la transacción de Supabase: Transacción no encontrada.", `Transaction ID: ${id}`);
-                await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-                    callback_query_id: callbackQuery.id,
-                    text: "❌ Error: Transacción no encontrada. Verifica la ID.",
-                    show_alert: true
-                });
+                await answerCallbackQuery(callbackQueryId, "❌ Error: Transacción no encontrada. Verifica la ID.", true);
                 return null;
             } else if (fetchError) {
                 console.error("Error al obtener la transacción de Supabase:", fetchError.message, `Transaction ID: ${id}`);
-                await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-                    callback_query_id: callbackQuery.id,
-                    text: `❌ Error de Supabase: ${escapeMarkdownV2(fetchError.message)}`,
-                    show_alert: true
-                });
+                await answerCallbackQuery(callbackQueryId, `❌ Error de Supabase: ${escapeMarkdownV2(fetchError.message)}`, true);
                 return null;
             }
             return transaction;
         }
 
         if (callbackQuery) {
-            const chatId = callbackQuery.message.chat.id;
-            const messageId = callbackQuery.message.message_id;
-            const userId = callbackQuery.from.id;
-            const userName = callbackQuery.from.first_name || `Usuario ${userId}`;
-            const data = callbackQuery.data;
+            const { id: callbackQueryId, message, from, data } = callbackQuery;
+            const chatId = message.chat.id;
+            const messageId = message.message_id;
+            const userId = from.id;
+            const userName = from.first_name || `Usuario ${userId}`;
+
+            // ✅ Primero, responde inmediatamente a Telegram para evitar el timeout
+            await answerCallbackQuery(callbackQueryId);
+            console.log(`DEBUG: Callback Query ID ${callbackQueryId} acknowledged successfully.`);
 
             // Handler unificado para 'update_transaction'
             if (data.startsWith('update_transaction:')) {
@@ -76,7 +90,7 @@ exports.handler = async function(event, context) {
                 
                 console.log(`DEBUG: Callback Data - Action: update_transaction, Transaction ID: ${transactionId}, Status: ${status}`);
 
-                const transaction = await getTransaction(transactionId);
+                const transaction = await getTransaction(transactionId, callbackQueryId);
                 
                 if (!transaction) {
                     return { statusCode: 200, body: "Error fetching transaction" };
@@ -84,40 +98,27 @@ exports.handler = async function(event, context) {
 
                 if (transaction.status === status) {
                     console.log(`DEBUG: Transacción ${transactionId} ya está en estado '${status}'.`);
-                    await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-                        callback_query_id: callbackQuery.id,
-                        text: `La transacción ya se encuentra en estado '${status}'.`,
-                        show_alert: false
-                    });
+                    await answerCallbackQuery(callbackQueryId, `La transacción ya se encuentra en estado '${status}'.`, false);
                     return { statusCode: 200, body: "Status not changed" };
                 }
 
-                await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-                    callback_query_id: callbackQuery.id,
-                    text: `Marcando la transacción ${transactionId} como '${status}'...`,
-                    show_alert: false
-                });
-
                 // Procesar la lógica de KingCoins si la transacción fue 'realizada'
-                if (status === 'realizada' && transaction.payment_method.toLowerCase().includes('kingcoins')) {
-                    console.log(`DEBUG: Procesando acreditación de KingCoins para transacción ${transactionId}.`);
-                    const now = new Date();
-                    const day = String(now.getDate()).padStart(2, '0');
-                    const month = String(now.getMonth() + 1).padStart(2, '0');
-                    const year = now.getFullYear();
-                    const formattedDate = `${day}/${month}/${year}`;
-                    const hours = String(now.getHours()).padStart(2, '0');
-                    const minutes = String(now.getMinutes()).padStart(2, '0');
-                    const formattedTime = `${hours}:${minutes}`;
+                if (status === 'realizada' && transaction.payment_method && transaction.payment_method.toLowerCase().includes('kingcoins')) {
+                    await answerCallbackQuery(callbackQueryId, `Acreditando KingCoins para la transacción ${transactionId}...`, false);
+                } else {
+                    await answerCallbackQuery(callbackQueryId, `Marcando la transacción ${transactionId} como '${status}'...`, false);
+                }
 
+                let kingcoinsCreditedMessage = '';
+
+                if (status === 'realizada' && transaction.payment_method && transaction.payment_method.toLowerCase().includes('kingcoins')) {
+                    console.log(`DEBUG: Procesando acreditación de KingCoins para transacción ${transactionId}.`);
                     const cleanedPackageName = transaction.package_name.includes('<i class="fas fa-crown"></i>')
                         ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins')
                         : transaction.package_name;
 
                     const kingcoinAmountMatch = cleanedPackageName.match(/(\d+)\s*KingCoins/i);
                     const kingcoinAmount = kingcoinAmountMatch ? parseInt(kingcoinAmountMatch[1], 10) : 0;
-
-                    let kingcoinsCreditedMessage = '';
 
                     if (kingcoinAmount > 0 && transaction.player_id) {
                         try {
@@ -136,14 +137,14 @@ exports.handler = async function(event, context) {
                                     });
                                 if (insertWalletError) {
                                     console.error(`Error al insertar nueva wallet para ${transaction.player_id}:`, insertWalletError.message);
-                                    kingcoinsCreditedMessage = `\n⚠️ Error al crear wallet para \`${transaction.player_id}\`: ${escapeMarkdownV2(insertWalletError.message)}`;
+                                    kingcoinsCreditedMessage = `\n⚠️ Error al crear wallet para \`${escapeMarkdownV2(transaction.player_id)}\`: ${escapeMarkdownV2(insertWalletError.message)}`;
                                 } else {
                                     console.log(`Wallet creada y ${kingcoinAmount} KingCoins acreditados a ${transaction.player_id}.`);
-                                    kingcoinsCreditedMessage = `\n✅ ${kingcoinAmount} KingCoins acreditados a \`${transaction.player_id}\`.`;
+                                    kingcoinsCreditedMessage = `\n✅ ${kingcoinAmount} KingCoins acreditados a \`${escapeMarkdownV2(transaction.player_id)}\`.`;
                                 }
                             } else if (fetchWalletError) {
                                 console.error(`Error al obtener wallet para ${transaction.player_id}:`, fetchWalletError.message);
-                                kingcoinsCreditedMessage = `\n⚠️ Error al obtener wallet para \`${transaction.player_id}\`: ${escapeMarkdownV2(fetchWalletError.message)}`;
+                                kingcoinsCreditedMessage = `\n⚠️ Error al obtener wallet para \`${escapeMarkdownV2(transaction.player_id)}\`: ${escapeMarkdownV2(fetchWalletError.message)}`;
                             } else {
                                 const newBalance = userWallet.balance + kingcoinAmount;
                                 const { error: updateWalletError } = await supabase
@@ -153,10 +154,10 @@ exports.handler = async function(event, context) {
 
                                 if (updateWalletError) {
                                     console.error(`Error al actualizar wallet para ${transaction.player_id}:`, updateWalletError.message);
-                                    kingcoinsCreditedMessage = `\n⚠️ Error al actualizar wallet para \`${transaction.player_id}\`: ${escapeMarkdownV2(updateWalletError.message)}`;
+                                    kingcoinsCreditedMessage = `\n⚠️ Error al actualizar wallet para \`${escapeMarkdownV2(transaction.player_id)}\`: ${escapeMarkdownV2(updateWalletError.message)}`;
                                 } else {
                                     console.log(`${kingcoinAmount} KingCoins acreditados a ${transaction.player_id}. Nuevo saldo: ${newBalance}`);
-                                    kingcoinsCreditedMessage = `\n✅ ${kingcoinAmount} KingCoins acreditados a \`${transaction.player_id}\`. Nuevo saldo: \`${newBalance}\`.`;
+                                    kingcoinsCreditedMessage = `\n✅ ${kingcoinAmount} KingCoins acreditados a \`${escapeMarkdownV2(transaction.player_id)}\`. Nuevo saldo: \`${escapeMarkdownV2(newBalance)}\`.`;
                                 }
                             }
                         } catch (walletOperationError) {
@@ -190,7 +191,7 @@ exports.handler = async function(event, context) {
 
 Aquí tienes los detalles de tu transacción:
 ---
-*Factura #${escapeMarkdownV2(transaction.id_transaccion)}*
+*Factura \\#${escapeMarkdownV2(transaction.id_transaccion)}*
 *Estado: LIBERADO ✅* 📅 Fecha: ${formattedDate}
 👑 Producto: KingCoins
 💰 Cantidad Comprada: ${escapeMarkdownV2(cleanedPackageName)}
@@ -207,7 +208,7 @@ Aquí tienes los detalles de tu transacción:
 
 Aquí tienes los detalles de tu recarga:
 ---
-*Factura #${escapeMarkdownV2(transaction.id_transaccion)}*
+*Factura \\#${escapeMarkdownV2(transaction.id_transaccion)}*
 *Estado: REALIZADA ✅* 📅 Fecha: ${formattedDate}
 🎮 Juego: ${escapeMarkdownV2(transaction.game)}
 👤 ID de Jugador: ${escapeMarkdownV2(transaction.player_id || 'N/A')}
@@ -221,7 +222,7 @@ Aquí tienes los detalles de tu recarga:
                     invoiceTextContent = `
 👋 ¡Hola!
 
-Lamentamos informarte que tu recarga con el ID de transacción *#${escapeMarkdownV2(transaction.id_transaccion)}* ha sido *RECHAZADA* ❌.
+Lamentamos informarte que tu recarga con el ID de transacción *\\#${escapeMarkdownV2(transaction.id_transaccion)}* ha sido *RECHAZADA* ❌.
 
 Esto puede deberse a:
 - El pago no fue verificado.
@@ -305,7 +306,7 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
             // Handler para 'send_whatsapp_'
             else if (data.startsWith('send_whatsapp_')) {
                 const transactionId = data.replace('send_whatsapp_', '');
-                const transaction = await getTransaction(transactionId);
+                const transaction = await getTransaction(transactionId, callbackQueryId);
                 
                 if (!transaction) {
                     return { statusCode: 200, body: "Error fetching transaction for send_whatsapp" };
@@ -324,12 +325,6 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
                 
                 const whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
 
-                await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-                    callback_query_id: callbackQuery.id,
-                    text: `Generando enlace de WhatsApp para el recargador de ${escapeMarkdownV2(transactionId)}...`,
-                    show_alert: false
-                });
-                
                 await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                     chat_id: chatId,
                     text: `👉 *Enlace para el recargador de la transacción \`${escapeMarkdownV2(transactionId)}\`:* [Haz clic aquí](${escapeMarkdownV2(whatsappLinkRecargador)})`,
@@ -341,11 +336,7 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
             }
             // Handler para callbacks de estado finalizados/informativos
             else if (data.startsWith('completed_status_') || data.startsWith('no_whatsapp_factura_')) {
-                await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-                    callback_query_id: callbackQuery.id,
-                    text: "Acción ya completada o informativa.",
-                    show_alert: false
-                });
+                await answerCallbackQuery(callbackQueryId, "Acción ya completada o informativa.", false);
             }
         }
 
@@ -356,7 +347,7 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
         if (body && body.message && body.message.chat && body.message.chat.id) {
             await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                 chat_id: body.message.chat.id,
-                text: escapeMarkdownV2(`❌ Ha ocurrido un error inesperado al procesar la solicitud. Por favor, revisa los logs de Netlify. Detalles: \`${escapeMarkdownV2(error.message)}\``),
+                text: `❌ Ha ocurrido un error inesperado al procesar la solicitud\\. Por favor, revisa los logs de Netlify\\. Detalles: \`${escapeMarkdownV2(error.message)}\``,
                 parse_mode: 'MarkdownV2'
             }).catch(e => console.error("Error sending generic error message to Telegram:", e.message));
         }
