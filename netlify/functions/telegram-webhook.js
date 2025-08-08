@@ -254,17 +254,23 @@ Puedes intentar realizar la compra de nuevo. Si crees que se trata de un error, 
                 
                 console.log(`Transacción ${transactionId} actualizada a '${status}' en Supabase.`);
 
-                let newCaption = callbackQuery.message.text;
                 const statusText = status === 'realizada' ? 'REALIZADA' : 'RECHAZADA';
                 const statusEmoji = status === 'realizada' ? '✅' : '❌';
-
-                // 👉 Corrección: Usamos una expresión regular para reemplazar la línea de estado
-                newCaption = newCaption.replace(/Estado: PENDIENTE/g, `Estado: ${statusText} ${statusEmoji}`);
+                const cleanedPackageName = transaction.package_name.includes('<i class="fas fa-crown"></i>')
+                        ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins')
+                        : transaction.package_name;
                 
-                const statusLine = `Marcada por: *${escapeMarkdownV2(userName)}*`;
-                if (!newCaption.includes(statusLine)) {
-                    newCaption += `\n\n${statusLine} (${escapeMarkdownV2(formattedTime)} ${escapeMarkdownV2(formattedDate)})`;
-                }
+                const newCaption = `
+*ID de Transacción:* \`${escapeMarkdownV2(transaction.id_transaccion)}\`
+*Juego:* ${escapeMarkdownV2(transaction.game || 'N/A')}
+*ID de Jugador:* \`${escapeMarkdownV2(transaction.player_id || 'N/A')}\`
+*Paquete:* ${escapeMarkdownV2(cleanedPackageName || 'N/A')}
+*Monto:* ${escapeMarkdownV2(transaction.final_price || 'N/A')} ${escapeMarkdownV2(transaction.currency || 'N/A')}
+*Método de Pago:* ${escapeMarkdownV2(transaction.payment_method.replace('-', ' ').toUpperCase() || 'N/A')}
+---
+*Estado:* ${statusText} ${statusEmoji}
+_Marcada por:_ *${escapeMarkdownV2(userName)}* (${escapeMarkdownV2(formattedTime)} ${escapeMarkdownV2(formattedDate)})
+`.trim();
 
                 let updatedInlineKeyboard = [];
 
