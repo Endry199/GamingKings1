@@ -207,13 +207,13 @@ exports.handler = async function(event, context) {
     if (isKingCoinsPurchase) {
         // Solo el botón para liberar KingCoins
         inlineKeyboard.push([
-            { text: "👑 Liberar KingCoins", callback_data: `update_transaction:${newTransactionData.id}:realizada` }
+            { text: "👑 Liberar KingCoins", callback_data: `update_transaction:${newTransactionData.id_transaccion}:realizada` }
         ]);
     } else {
         // Botones de estado general para cualquier otra transacción
         inlineKeyboard.push([
-            { text: "✅ Recarga Realizada", callback_data: `update_transaction:${newTransactionData.id}:realizada` },
-            { text: "❌ Recarga Rechazada", callback_data: `update_transaction:${newTransactionData.id}:rechazada` }
+            { text: "✅ Recarga Realizada", callback_data: `update_transaction:${newTransactionData.id_transaccion}:realizada` },
+            { text: "❌ Recarga Rechazada", callback_data: `update_transaction:${newTransactionData.id_transaccion}:rechazada` }
         ]);
         
         // Botón de WhatsApp para el recargador, si el juego es Free Fire
@@ -222,6 +222,7 @@ exports.handler = async function(event, context) {
             const cleanedPackageNameForWhatsappRecargador = (cleanedDisplayPackageName || 'N/A').replace(/\+/g, '%2B');
     
             let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
+            whatsappMessageRecargador += `*ID de Transacción:* ${newTransactionData.id_transaccion || 'N/A'}\n`;
             whatsappMessageRecargador += `*ID de Jugador:* ${playerId || 'N/A'}\n`;
             whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageNameForWhatsappRecargador}\n`;
     
