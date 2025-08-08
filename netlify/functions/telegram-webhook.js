@@ -32,7 +32,7 @@ exports.handler = async function(event, context) {
         const body = JSON.parse(event.body);
         const callbackQuery = body.callback_query;
 
-        // --- Nueva función para obtener la transacción (sin cambios) ---
+        // Función para obtener la transacción
         async function getTransaction(id) {
             console.log(`DEBUG: Buscando transacción con id_transaccion: ${id}`);
             const { data: transaction, error: fetchError } = await supabase
@@ -61,7 +61,6 @@ exports.handler = async function(event, context) {
             return transaction;
         }
 
-        // --- Manejador para el callback de los botones ---
         if (callbackQuery) {
             const chatId = callbackQuery.message.chat.id;
             const messageId = callbackQuery.message.message_id;
@@ -69,7 +68,7 @@ exports.handler = async function(event, context) {
             const userName = callbackQuery.from.first_name || `Usuario ${userId}`;
             const data = callbackQuery.data;
 
-            // --- Handler unificado para 'update_transaction' ---
+            // Handler unificado para 'update_transaction'
             if (data.startsWith('update_transaction:')) {
                 const parts = data.split(':');
                 const transactionId = parts[1];
@@ -102,7 +101,6 @@ exports.handler = async function(event, context) {
                 // Procesar la lógica de KingCoins si la transacción fue 'realizada'
                 if (status === 'realizada' && transaction.payment_method.toLowerCase().includes('kingcoins')) {
                     console.log(`DEBUG: Procesando acreditación de KingCoins para transacción ${transactionId}.`);
-                    // Aquí iría tu lógica para acreditar KingCoins.
                     const now = new Date();
                     const day = String(now.getDate()).padStart(2, '0');
                     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -260,7 +258,6 @@ Puedes intentar realizar la compra de nuevo. Si crees que se trata de un error, 
                 const statusEmoji = status === 'realizada' ? '✅' : '❌';
                 newCaption = newCaption.replace('Estado: PENDIENTE', `Estado: ${statusText} ${statusEmoji}`);
                 
-                // Actualiza el pie de página solo si ya existe o si es una actualización de estado
                 const statusLine = `Marcada por: *${escapeMarkdownV2(userName)}*`;
                 if (!newCaption.includes(statusLine)) {
                     newCaption += `\n\n${statusLine} (${escapeMarkdownV2(formattedTime)} ${escapeMarkdownV2(formattedDate)})`;
@@ -269,14 +266,13 @@ Puedes intentar realizar la compra de nuevo. Si crees que se trata de un error, 
                 let updatedInlineKeyboard = [];
 
                 if (status === 'realizada' || status === 'rechazada') {
-                    // Si ya se ha marcado, el botón de estado finalizado no es interactivo
                     updatedInlineKeyboard.push([{ text: `${statusEmoji} Recarga ${statusText}`, callback_data: `completed_status_${transactionId}` }]);
                     
                     if (status === 'realizada' && transaction.whatsapp_number && transaction.whatsapp_number.trim() !== '') {
                         const customerWhatsappNumberFormatted = transaction.whatsapp_number.startsWith('+') ? transaction.whatsapp_number : `+${transaction.whatsapp_number}`;
                         const invoiceLink = `${NETLIFY_SITE_URL}/.netlify/functions/get-invoice?id=${encodeURIComponent(transaction.id_transaccion)}`;
                         const shortWhatsappMessage = `
-🎉 ¡Hola! �
+🎉 ¡Hola! 👋
 ¡Tu recarga con la ID de transaccion: \`${escapeMarkdownV2(transaction.id_transaccion)}\` ha sido *COMPLETADA* por GamingKings!
 Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
 ¡Gracias por tu compra! ✨
@@ -306,7 +302,7 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
                     console.error(`ERROR: Fallo al editar mensaje de Telegram para ${transactionId}:`, telegramEditError.response ? telegramEditError.response.data : telegramEditError.message);
                 }
             }
-            // --- Handler para 'send_whatsapp_' ---
+            // Handler para 'send_whatsapp_'
             else if (data.startsWith('send_whatsapp_')) {
                 const transactionId = data.replace('send_whatsapp_', '');
                 const transaction = await getTransaction(transactionId);
@@ -343,7 +339,7 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
 
                 console.log(`Enlace de WhatsApp para recargador generado para transacción ${transactionId}.`);
             }
-            // --- Handler para callbacks de estado finalizados/informativos ---
+            // Handler para callbacks de estado finalizados/informativos
             else if (data.startsWith('completed_status_') || data.startsWith('no_whatsapp_factura_')) {
                 await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
                     callback_query_id: callbackQuery.id,
@@ -351,74 +347,6 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
                     show_alert: false
                 });
             }
-        } else if (body.message && body.message.text && body.message.text.startsWith('/transaction ')) {
-             // --- NUEVO CÓDIGO AÑADIDO PARA DEMOSTRACIÓN ---
-             // ESTE BLOQUE SIMULA LA LÓGICA QUE DEBE TENER TU FUNCIÓN QUE CREA EL MENSAJE ORIGINAL.
-             // El usuario enviaría un comando como '/transaction GMK-175...'
-             const messageText = body.message.text;
-             const chatId = body.message.chat.id;
-             const transactionId = messageText.split(' ')[1];
-
-             if (!transactionId) {
-                await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                    chat_id: chatId,
-                    text: escapeMarkdownV2("Por favor, proporciona un ID de transacción válido. Ejemplo: `/transaction GMK-123456789`"),
-                    parse_mode: 'MarkdownV2'
-                });
-                return { statusCode: 200, body: "Invalid command" };
-             }
-
-             console.log(`DEBUG: Solicitud para generar mensaje inicial para la transacción: ${transactionId}`);
-             const transaction = await getTransaction(transactionId);
-             
-             if (transaction) {
-                 const caption = `
-🧾 *Nueva Recarga Pendiente* 🧾
----
-*Factura #${escapeMarkdownV2(transaction.id_transaccion)}*
-*Estado: PENDIENTE* ⏳
-🎮 Juego: ${escapeMarkdownV2(transaction.game)}
-👤 ID de Jugador: ${escapeMarkdownV2(transaction.player_id || 'N/A')}
-📦 Paquete: ${escapeMarkdownV2(transaction.package_name)}
-💰 Monto: ${escapeMarkdownV2(transaction.final_price)} ${escapeMarkdownV2(transaction.currency)}
-💳 Método de Pago: ${escapeMarkdownV2(transaction.payment_method)}
----
-`;
-                 const keyboard = {
-                     inline_keyboard: [
-                         [
-                             {
-                                 text: '✅ Recarga Realizada',
-                                 callback_data: `update_transaction:${transaction.id_transaccion}:realizada` // <-- ¡AQUÍ ESTÁ LA CLAVE!
-                             },
-                             {
-                                 text: '❌ Recarga Rechazada',
-                                 callback_data: `update_transaction:${transaction.id_transaccion}:rechazada` // <-- ¡AQUÍ ESTÁ LA CLAVE!
-                             }
-                         ],
-                         [
-                             {
-                                 text: '📲 WhatsApp Recargador',
-                                 callback_data: `send_whatsapp_${transaction.id_transaccion}`
-                             }
-                         ]
-                     ]
-                 };
-
-                 try {
-                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                         chat_id: chatId,
-                         text: caption,
-                         parse_mode: 'MarkdownV2',
-                         reply_markup: keyboard
-                     });
-                     console.log(`DEBUG: Mensaje inicial de Telegram enviado con éxito para la transacción: ${transactionId}`);
-                 } catch (telegramError) {
-                     console.error("ERROR: Fallo al enviar mensaje inicial a Telegram:", telegramError.response ? telegramError.response.data : telegramError.message);
-                 }
-             } else {
-                 console.log(`DEBUG: Transacción ${transactionId} no encontrada para crear mensaje inicial.`);
-             }
         }
 
         return { statusCode: 200, body: "Webhook processed" };
