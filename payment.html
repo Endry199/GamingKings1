@@ -729,6 +729,7 @@
         await submitKingcoinsRequest();
     }
     
+    // Función MODIFICADA para llamar a process-payment.js
     async function submitKingcoinsRequest() {
         const buttonToDisable = payWithKGCBtn;
         const originalButtonText = buttonToDisable.textContent;
@@ -736,40 +737,45 @@
         buttonToDisable.textContent = 'Procesando...';
 
         const formData = new FormData();
-        // AÑADIR TODOS LOS DETALLES DE LA TRANSACCIÓN
         for (const key in transactionDetails) {
-            // Se debe evitar añadir el 'userEmail' y 'email' del localStorage
-            // ya que ya se están añadiendo a partir de userSession.user.email
             if (key !== 'userEmail' && key !== 'email') { 
                 formData.append(key, transactionDetails[key]);
             }
         }
-        // Se añaden el email del usuario de la sesión y el método de pago explícitamente
         formData.append('email', userSession.user.email);
         formData.append('paymentMethod', 'KINGCOINS');
 
         try {
-            const response = await fetch('/.netlify/functions/deduct-kingcoins', {
+            // Paso 1: Deducción de KingCoins
+            const deductResponse = await fetch('/.netlify/functions/deduct-kingcoins', {
                 method: 'POST',
                 body: formData
             });
 
-            if (response.ok) {
-                const result = await response.json();
-                
-                // Redirigir a una página de éxito o al inicio
-                alert('¡Pago con KingCoins realizado con éxito! La recarga ha sido acreditada.');
+            if (!deductResponse.ok) {
+                const errorData = await deductResponse.json();
+                throw new Error(errorData.message || 'Error desconocido al deducir KingCoins.');
+            }
+
+            // Paso 2: Notificación a Telegram a través de process-payment.js
+            const processPaymentResponse = await fetch('/.netlify/functions/process-payment', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (processPaymentResponse.ok) {
+                alert('¡Pago con KingCoins realizado con éxito! La recarga ha sido acreditada y el equipo de soporte ha sido notificado.');
                 localStorage.removeItem('transactionDetails');
                 window.location.href = 'index.html'; 
-                
             } else {
-                const errorData = await response.json();
-                alert(`Error al procesar el pago: ${errorData.message || response.statusText}. Por favor, verifica tu saldo.`);
-                console.error('Server error:', errorData);
+                const errorData = await processPaymentResponse.json();
+                console.error('Error al notificar el pago a través de process-payment:', errorData);
+                alert(`¡El pago se procesó, pero hubo un error al notificarlo! El saldo se ha deducido. Por favor, toma una captura de pantalla de este mensaje y contacta a soporte para verificar tu recarga. Error: ${errorData.message}`);
             }
+
         } catch (error) {
-            alert('Hubo un problema de conexión. Por favor, inténtalo de nuevo más tarde.');
-            console.error('Network or client error:', error);
+            alert('Hubo un problema: ' + error.message);
+            console.error('Error durante el proceso de pago con KingCoins:', error);
         } finally {
             buttonToDisable.disabled = false;
             buttonToDisable.textContent = originalButtonText;
