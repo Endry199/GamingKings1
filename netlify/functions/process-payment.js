@@ -125,9 +125,61 @@ exports.handler = async function(event, context) {
     let receiptUrl = null;
     let newTransactionData;
     let id_transaccion_generado;
+    let transactionStatus = 'pendiente'; // Estado predeterminado
 
     try {
         id_transaccion_generado = `GMK-${Date.now()}`;
+        
+        // --- NUEVA LÓGICA: DEDUCCIÓN DE SALDO PARA PAGOS CON KINGCOINS ---
+        if (paymentMethod === 'kingcoins') {
+            console.log(`DEBUG: Procesando pago con KingCoins para el email: ${email}`);
+            
+            // 1. Buscar la billetera del usuario
+            const { data: walletData, error: walletError } = await supabase
+                .from('user_wallets')
+                .select('balance')
+                .eq('email', email)
+                .single();
+
+            if (walletError || !walletData) {
+                console.error("Error al buscar la billetera del usuario:", walletError || "No se encontró la billetera.");
+                return {
+                    statusCode: 404,
+                    body: JSON.stringify({ message: "No se encontró una billetera KGC asociada a tu cuenta. Por favor, inicia sesión con tu billetera." })
+                };
+            }
+
+            const currentBalance = walletData.balance;
+            const price = parseFloat(finalPrice);
+
+            // 2. Verificar si hay saldo suficiente
+            if (currentBalance < price) {
+                console.error(`Error: Saldo insuficiente. Saldo actual: ${currentBalance}, Precio: ${price}`);
+                return {
+                    statusCode: 400,
+                    body: JSON.stringify({ message: `Saldo insuficiente para completar la compra. Tienes ${currentBalance} KGC y necesitas ${price} KGC.` })
+                };
+            }
+
+            // 3. Restar el saldo
+            const newBalance = currentBalance - price;
+            const { error: updateError } = await supabase
+                .from('user_wallets')
+                .update({ balance: newBalance })
+                .eq('email', email);
+
+            if (updateError) {
+                console.error("Error al actualizar el saldo de la billetera:", updateError);
+                return {
+                    statusCode: 500,
+                    body: JSON.stringify({ message: "Error interno al procesar el pago. Por favor, inténtalo de nuevo." })
+                };
+            }
+            
+            transactionStatus = 'completo'; // Marcar como completo si el pago con KGC fue exitoso
+            console.log(`DEBUG: Saldo KGC deducido exitosamente. Nuevo saldo para ${email}: ${newBalance}`);
+        }
+        // --- FIN DE LA NUEVA LÓGICA ---
 
         if (paymentReceiptFile && paymentReceiptFile.filepath && game !== "TikTok") {
             console.log(`Intentando subir archivo: ${paymentReceiptFile.originalFilename} (${paymentReceiptFile.mimetype})`);
@@ -159,7 +211,7 @@ exports.handler = async function(event, context) {
             currency: currency,
             payment_method: paymentMethod,
             email: email, // Usar la variable 'email' corregida aquí
-            status: 'pendiente',
+            status: transactionStatus, // Usar el estado dinámico
             player_id: playerId || null,
             full_name: fullName || null,
             whatsapp_number: whatsappNumber || null, // Guardamos el número tal cual, con el prefijo
@@ -196,6 +248,13 @@ exports.handler = async function(event, context) {
     }
 
     let whatsappLinkCustomer = null;
+    let finalMessage = "Solicitud de pago recibida exitosamente. ¡Te enviaremos una confirmación pronto!";
+
+    if (paymentMethod === 'kingcoins') {
+         finalMessage = "¡Tu pago con KingCoins ha sido procesado y completado exitosamente! La recarga ha sido acreditada.";
+         console.log("DEBUG: Mensaje final para el cliente (KGC):", finalMessage);
+    }
+
     if (whatsappNumber && whatsappNumber.trim() !== '') {
         const customerNamePart = fullName && fullName.trim() !== '' ? `${fullName.split(' ')[0]}` : '';
         const greeting = customerNamePart ? `¡Hola ${customerNamePart}! 👋` : `¡Hola! 👋`;
@@ -205,13 +264,22 @@ exports.handler = async function(event, context) {
             : (playerId ? ` para *${game}* (ID: \`${escapeMarkdownV2(playerId)}\`)` : ` para *${game}*`);
 
         // Usar cleanedDisplayPackageName para el mensaje de WhatsApp del cliente
-        const whatsappMessageCustomer = `
+        let whatsappMessageCustomer = '';
+        if (paymentMethod === 'kingcoins') {
+             whatsappMessageCustomer = `
+${greeting}
+
+Tu recarga de *${escapeMarkdownV2(cleanedDisplayPackageName)}* ha sido *COMPLETADA* exitosamente. ¡Tu saldo ha sido actualizado!
+`.trim();
+        } else {
+             whatsappMessageCustomer = `
 ${greeting}
 
 Tu solicitud de recarga de *${escapeMarkdownV2(cleanedDisplayPackageName)}*${gameAndPlayerId} ha sido recibida y está siendo *PROCESADA* bajo el número de transacción: \`${escapeMarkdownV2(id_transaccion_generado)}\`.
 
 Te enviaremos una notificación de confirmación cuando la recarga se haga efectiva. ¡Gracias por tu paciencia!
-        `.trim();
+`.trim();
+        }
 
         // Aseguramos que tenga el '+' aunque el frontend ya lo envíe
         const customerWhatsappNumberFormatted = whatsappNumber.startsWith('+') ? whatsappNumber : `+${whatsappNumber}`;
@@ -241,8 +309,14 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
 
 
     let messageText = `✨ *NUEVA RECARGA PENDIENTE* ✨\n\n`;
+    let telegramMessageStatus = 'PENDIENTE';
+    if (paymentMethod === 'kingcoins') {
+        telegramMessageStatus = 'COMPLETADA (Automático)';
+        messageText = `✅ *RECARGA COMPLETADA (KGC)* ✅\n\n`;
+    }
+
     messageText += `*ID de Transacción:* \`${escapeMarkdownV2(id_transaccion_generado || 'N/A')}\`\n`;
-    messageText += `*Estado:* \`PENDIENTE\`\n\n`;
+    messageText += `*Estado:* \`${escapeMarkdownV2(telegramMessageStatus)}\`\n\n`;
     messageText += `🎮 Juego: *${escapeMarkdownV2(game)}*\n`;
 
     // MODIFICACIÓN CLAVE: No mostrar el ID de Jugador si el juego es KingCoins
@@ -272,11 +346,10 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
     // --- Lógica de botones de Telegram: SÓLO botones específicos ---
     let inlineKeyboard = [];
 
-    // Si es KingCoins, añade solo el botón "Liberar KingCoins"
-    if (cleanedDisplayPackageName.includes('KingCoins')) {
-        inlineKeyboard.push([
-            { text: "👑 Liberar KingCoins", callback_data: `release_kingcoins_${id_transaccion_generado}` }
-        ]);
+    // Si es KingCoins, no se añade ningún botón porque la transacción es automática
+    if (paymentMethod === 'kingcoins') {
+        // No se agregan botones.
+        console.log("No se agregaron botones de acción porque el pago con KingCoins se procesó automáticamente.");
     }
     // Si es Free Fire, añade solo el botón "WhatsApp Recargador"
     else if (game && game.toLowerCase() === 'free fire') {
@@ -314,7 +387,7 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
             chat_id: TELEGRAM_CHAT_ID,
             text: messageText,
             parse_mode: 'MarkdownV2',
-            reply_markup: replyMarkup,
+            reply_markup: (paymentMethod === 'kingcoins') ? {} : replyMarkup,
             disable_web_page_preview: true
         });
         console.log("Mensaje de Telegram con botones de acción enviado con éxito.");
@@ -363,6 +436,6 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
 
     return {
         statusCode: 200,
-        body: JSON.stringify({ message: "Solicitud de pago recibida exitosamente. ¡Te enviaremos una confirmación pronto!" }),
+        body: JSON.stringify({ message: finalMessage }),
     };
 };
