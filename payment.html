@@ -338,7 +338,7 @@
     </footer>
     
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<script type="module">
+    <script type="module">
     import { supabase } from './supabaseClient.js';
     
     const userMenuContainer = document.querySelector('.user-menu-container');
@@ -562,9 +562,9 @@
         // Lógica para cambiar el mensaje de saludo
         let greeting = '';
         if (displayCurrency === 'KGC') {
-            greeting = 'Por favor, confirma tu pago con KingCoins a continuación.';
+            greeting = 'Por favor, realiza tu pago con KingCoins a continuación.';
         } else {
-            greeting = 'Por favor, realiza el pago por el monto exacto y selecciona tu método a continuación.';
+            greeting = 'Por favor, selecciona tu método a continuación y realiza el pago por el monto exacto.';
         }
 
         if (userProfileData && userProfileData.name) {
