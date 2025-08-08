@@ -190,14 +190,14 @@ exports.handler = async function(event, context) {
 ¡Tu compra de KingCoins ha sido *COMPLETADA* por GamingKings!
 
 Aquí tienes los detalles de tu transacción:
----
+\-\-\-
 *Factura \\#${escapeMarkdownV2(transaction.id_transaccion)}*
 *Estado: LIBERADO ✅* 📅 Fecha: ${formattedDate}
 👑 Producto: KingCoins
 💰 Cantidad Comprada: ${escapeMarkdownV2(cleanedPackageName)}
 💲 Monto Pagado: ${escapeMarkdownV2(transaction.final_price)} ${escapeMarkdownV2(transaction.currency)}
 💳 Método de Pago: ${escapeMarkdownV2(transaction.payment_method.replace(/-/g, ' ').toUpperCase())}
----
+\-\-\-
 ¡Gracias por tu compra! ✨
 `.trim();
                 } else if (status === 'realizada') {
@@ -207,7 +207,7 @@ Aquí tienes los detalles de tu transacción:
 ¡Tu recarga ha sido *COMPLETADA* por GamingKings!
 
 Aquí tienes los detalles de tu recarga:
----
+\-\-\-
 *Factura \\#${escapeMarkdownV2(transaction.id_transaccion)}*
 *Estado: REALIZADA ✅* 📅 Fecha: ${formattedDate}
 🎮 Juego: ${escapeMarkdownV2(transaction.game)}
@@ -215,7 +215,7 @@ Aquí tienes los detalles de tu recarga:
 📦 Paquete: ${escapeMarkdownV2(transaction.package_name.includes('<i class="fas fa-crown"></i>') ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins') : transaction.package_name)}
 💰 Monto Pagado: ${escapeMarkdownV2(transaction.final_price)} ${escapeMarkdownV2(transaction.currency)}
 💳 Método de Pago: ${escapeMarkdownV2(transaction.payment_method.replace(/-/g, ' ').toUpperCase())}
----
+\-\-\-
 ¡Gracias por tu compra! ✨
 `.trim();
                 } else if (status === 'rechazada') {
@@ -261,9 +261,9 @@ Puedes intentar realizar la compra de nuevo. Si crees que se trata de un error, 
                         : transaction.package_name;
                 
                 const newCaption = `
-*ID de Transacción:* \`${escapeMarkdownV2(transaction.id_transaccion)}\`
+*ID de Transacción:* \`${transaction.id_transaccion}\`
 *Juego:* ${escapeMarkdownV2(transaction.game || 'N/A')}
-*ID de Jugador:* \`${escapeMarkdownV2(transaction.player_id || 'N/A')}\`
+*ID de Jugador:* \`${transaction.player_id || 'N/A'}\`
 *Paquete:* ${escapeMarkdownV2(cleanedPackageName || 'N/A')}
 *Monto:* ${escapeMarkdownV2(transaction.final_price || 'N/A')} ${escapeMarkdownV2(transaction.currency || 'N/A')}
 *Método de Pago:* ${escapeMarkdownV2(transaction.payment_method.replace(/-/g, ' ').toUpperCase() || 'N/A')}
