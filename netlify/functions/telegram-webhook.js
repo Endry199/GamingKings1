@@ -281,7 +281,7 @@ _Marcada por:_ *${escapeMarkdownV2(userName)}* (${escapeMarkdownV2(formattedTime
                         const customerWhatsappNumberFormatted = transaction.whatsapp_number.startsWith('+') ? transaction.whatsapp_number : `+${transaction.whatsapp_number}`;
                         const invoiceLink = `${NETLIFY_SITE_URL}/.netlify/functions/get-invoice?id=${encodeURIComponent(transaction.id_transaccion)}`;
                         const shortWhatsappMessage = `
-🎉 ¡Hola! �
+🎉 ¡Hola! 👋
 ¡Tu recarga con la ID de transaccion: \`${escapeMarkdownV2(transaction.id_transaccion)}\` ha sido *COMPLETADA* por GamingKings!
 Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
 ¡Gracias por tu compra! ✨
@@ -332,7 +332,7 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
 
                 let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
                 whatsappMessageRecargador += `*ID de Transacción:* ${escapeMarkdownV2(transaction.id_transaccion || 'N/A')}\n`;
-                whatsappMessageRecargador += `*ID de Jugador:* ${escapeMarkdownV2(transaction.player_id || 'N/A')}\n`;
+                whatsappMessageRecargador += `*ID de Jugador:* \`${escapeMarkdownV2(transaction.player_id || 'N/A')}\`\n`;
                 whatsappMessageRecargador += `*Paquete a Recargar:* ${escapeMarkdownV2(cleanedPackageNameForRecargador || 'N/A')}\n`;
                 
                 const whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
@@ -365,3 +365,4 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
         }
         return { statusCode: 500, body: `Error en el webhook: ${error.message}` };
     }
+};
