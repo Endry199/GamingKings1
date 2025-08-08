@@ -297,6 +297,10 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
                     inline_keyboard: updatedInlineKeyboard
                 };
 
+                // Agregamos estos console.log para depurar la causa del error.
+                console.log(`DEBUG: Mensaje que se va a enviar a Telegram:\n${newCaption}`);
+                console.log('DEBUG: Markup de respuesta que se va a enviar:', JSON.stringify(updatedReplyMarkup, null, 2));
+
                 try {
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
                         chat_id: chatId,
