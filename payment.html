@@ -736,13 +736,17 @@
         buttonToDisable.textContent = 'Procesando...';
 
         const formData = new FormData();
-        formData.append('paymentMethod', 'kingcoins');
-        formData.append('email', userSession.user.email);
-        formData.append('userEmail', userSession.user.email);
-
+        // AÑADIR TODOS LOS DETALLES DE LA TRANSACCIÓN
         for (const key in transactionDetails) {
-            formData.append(key, transactionDetails[key]);
+            // Se debe evitar añadir el 'userEmail' y 'email' del localStorage
+            // ya que ya se están añadiendo a partir de userSession.user.email
+            if (key !== 'userEmail' && key !== 'email') { 
+                formData.append(key, transactionDetails[key]);
+            }
         }
+        // Se añaden el email del usuario de la sesión y el método de pago explícitamente
+        formData.append('email', userSession.user.email);
+        formData.append('paymentMethod', 'KINGCOINS');
 
         try {
             const response = await fetch('/.netlify/functions/deduct-kingcoins', {

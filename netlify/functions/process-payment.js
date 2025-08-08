@@ -25,27 +25,19 @@ exports.handler = async function(event, context) {
     // --- Configuración de Supabase ---
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
-
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // --- Parsing de FormData con formidable ---
     const form = new Formidable({ multiples: true });
-
-    let bodyBuffer;
-    if (event.isBase64Encoded) {
-        bodyBuffer = Buffer.from(event.body, 'base64');
-    } else {
-        bodyBuffer = Buffer.from(event.body || '');
-    }
-
-    const reqStream = new Readable();
-    reqStream.push(bodyBuffer);
-    reqStream.push(null);
-
-    reqStream.headers = event.headers;
-    reqStream.method = event.httpMethod;
-
+    
     try {
+        const bodyBuffer = event.isBase64Encoded ? Buffer.from(event.body, 'base64') : Buffer.from(event.body || '');
+        const reqStream = new Readable();
+        reqStream.push(bodyBuffer);
+        reqStream.push(null);
+        reqStream.headers = event.headers;
+        reqStream.method = event.httpMethod;
+
         if (event.headers['content-type'] && event.headers['content-type'].includes('multipart/form-data')) {
             const { fields, files } = await new Promise((resolve, reject) => {
                 form.parse(reqStream, (err, fields, files) => {
@@ -68,16 +60,11 @@ exports.handler = async function(event, context) {
             fieldsData = parse(event.body);
         }
         console.log("DEBUG: fieldsData al inicio de la función:", fieldsData);
-        console.log("DEBUG: whatsappNumber recibido:", fieldsData.whatsappNumber);
-        // MODIFICACIÓN: Log del campo de email en ambos posibles nombres
-        console.log("DEBUG: email recibido:", fieldsData.email);
-        console.log("DEBUG: userEmail recibido:", fieldsData.userEmail);
-
     } catch (parseError) {
         console.error("Error al procesar los datos de la solicitud:", parseError);
         return {
             statusCode: 400,
-            body: JSON.stringify({ message: `Error al procesar los datos de la solicitud: ${parseError.message || 'Unknown error'}. Por favor, verifica tus datos e inténtalo de nuevo.` })
+            body: JSON.stringify({ message: `Error al procesar los datos de la solicitud: ${parseError.message || 'Unknown error'}.` })
         };
     }
 
@@ -85,14 +72,8 @@ exports.handler = async function(event, context) {
     const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
     const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR;
 
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !supabaseUrl || !supabaseServiceKey || !WHATSAPP_NUMBER_RECARGADOR) {
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !supabaseUrl || !supabaseServiceKey) {
         console.error("Faltan variables de entorno requeridas.");
-        console.error(`Missing TELEGRAM_BOT_TOKEN: ${!TELEGRAM_BOT_TOKEN}`);
-        console.error(`Missing TELEGRAM_CHAT_ID: ${!TELEGRAM_CHAT_ID}`);
-        console.error(`Missing SUPABASE_URL: ${!supabaseUrl}`);
-        console.error(`Missing SUPABASE_SERVICE_KEY: ${!supabaseServiceKey}`);
-        console.error(`Missing WHATSAPP_NUMBER_RECARGADOR: ${!WHATSAPP_NUMBER_RECARGADOR}`);
-
         return {
             statusCode: 500,
             body: JSON.stringify({ message: "Error de configuración del servidor: Faltan credenciales o configuración inválida." })
@@ -107,18 +88,16 @@ exports.handler = async function(event, context) {
         currency,
         paymentMethod,
         fullName,
-        whatsappNumber, // Este campo ya contendrá el prefijo del país
+        whatsappNumber,
         referenceNumber,
         txid
     } = fieldsData;
 
-    // MODIFICACIÓN CLAVE: Obtener el email del campo correcto
     const email = fieldsData.email || fieldsData.userEmail;
     console.log("DEBUG: Email final usado para la transacción:", email);
 
-    // MODIFICACIÓN: Limpiar packageName específicamente para la visualización en mensajes
     let cleanedDisplayPackageName = packageName;
-    if (cleanedDisplayPackageName.includes('<i class="fas fa-crown"></i>')) {
+    if (cleanedDisplayPackageName && cleanedDisplayPackageName.includes('<i class="fas fa-crown"></i>')) {
         cleanedDisplayPackageName = cleanedDisplayPackageName.replace('<i class="fas fa-crown"></i>', ' KingCoins');
     }
 
@@ -129,7 +108,8 @@ exports.handler = async function(event, context) {
     try {
         id_transaccion_generado = `GMK-${Date.now()}`;
 
-        if (paymentReceiptFile && paymentReceiptFile.filepath && game !== "TikTok") {
+        // MODIFICACIÓN CLAVE: NO subir el comprobante si el método de pago es KingCoins
+        if (paymentReceiptFile && paymentReceiptFile.filepath && game !== "TikTok" && paymentMethod.toLowerCase() !== 'kingcoins') {
             console.log(`Intentando subir archivo: ${paymentReceiptFile.originalFilename} (${paymentReceiptFile.mimetype})`);
             const fileBuffer = fs.readFileSync(paymentReceiptFile.filepath);
             const fileName = `${id_transaccion_generado}_${Date.now()}_${paymentReceiptFile.originalFilename}`;
@@ -149,20 +129,22 @@ exports.handler = async function(event, context) {
                 receiptUrl = publicUrlData.publicUrl;
                 console.log("Comprobante subido a Supabase Storage:", receiptUrl);
             }
+        } else if (paymentMethod.toLowerCase() === 'kingcoins') {
+            console.log("DEBUG: El método de pago es KingCoins, no se sube comprobante.");
         }
 
         const dataToInsert = {
             id_transaccion: id_transaccion_generado,
             game: game,
-            package_name: packageName, // Guardar el valor original en la DB
+            package_name: packageName,
             final_price: parseFloat(finalPrice),
             currency: currency,
             payment_method: paymentMethod,
-            email: email, // Usar la variable 'email' corregida aquí
+            email: email,
             status: 'pendiente',
             player_id: playerId || null,
             full_name: fullName || null,
-            whatsapp_number: whatsappNumber || null, // Guardamos el número tal cual, con el prefijo
+            whatsapp_number: whatsappNumber || null,
             reference_number: referenceNumber || null,
             txid: txid || null,
             receipt_url: receiptUrl,
@@ -195,70 +177,24 @@ exports.handler = async function(event, context) {
         };
     }
 
-    let whatsappLinkCustomer = null;
-    if (whatsappNumber && whatsappNumber.trim() !== '') {
-        const customerNamePart = fullName && fullName.trim() !== '' ? `${fullName.split(' ')[0]}` : '';
-        const greeting = customerNamePart ? `¡Hola ${customerNamePart}! 👋` : `¡Hola! 👋`;
-        // Modificación: Eliminar playerId del mensaje de WhatsApp al cliente si es KingCoins
-        const gameAndPlayerId = (game && cleanedDisplayPackageName.includes('KingCoins'))
-            ? ` para *${game}*` // Si es KingCoins, no incluir ID de jugador aquí
-            : (playerId ? ` para *${game}* (ID: \`${escapeMarkdownV2(playerId)}\`)` : ` para *${game}*`);
-
-        // Usar cleanedDisplayPackageName para el mensaje de WhatsApp del cliente
-        const whatsappMessageCustomer = `
-${greeting}
-
-Tu solicitud de recarga de *${escapeMarkdownV2(cleanedDisplayPackageName)}*${gameAndPlayerId} ha sido recibida y está siendo *PROCESADA* bajo el número de transacción: \`${escapeMarkdownV2(id_transaccion_generado)}\`.
-
-Te enviaremos una notificación de confirmación cuando la recarga se haga efectiva. ¡Gracias por tu paciencia!
-        `.trim();
-
-        // Aseguramos que tenga el '+' aunque el frontend ya lo envíe
-        const customerWhatsappNumberFormatted = whatsappNumber.startsWith('+') ? whatsappNumber : `+${whatsappNumber}`;
-        whatsappLinkCustomer = `https://wa.me/${customerWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageCustomer)}`;
-        console.log("DEBUG: whatsappLinkCustomer generado para el cliente:", whatsappLinkCustomer);
-    } else {
-        console.log(`DEBUG: No se pudo generar whatsappLinkCustomer (cliente). whatsappNumber: '${whatsappNumber}'.`);
-    }
-
-    let whatsappLinkRecargador = null;
-    if (game && game.toLowerCase() === 'free fire' && WHATSAPP_NUMBER_RECARGADOR) {
-        // Asumimos que WHATSAPP_NUMBER_RECARGADOR ya tiene el prefijo '+', o lo añadimos
-        const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
-
-        // Usar cleanedDisplayPackageName para el mensaje de WhatsApp del recargador
-        const cleanedPackageNameForWhatsappRecargador = (cleanedDisplayPackageName || 'N/A').replace(/\+/g, '%2B');
-
-        let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
-        whatsappMessageRecargador += `*ID de Jugador:* ${playerId || 'N/A'}\n`;
-        whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageNameForWhatsappRecargador}\n`;
-
-        whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
-        console.log("DEBUG: whatsappLinkRecargador generado:", whatsappLinkRecargador);
-    } else {
-        console.log(`DEBUG: No se generará el enlace de WhatsApp para el recargador porque el juego no es Free Fire o falta WHATSAPP_NUMBER_RECARGADOR. Juego: ${game}`);
-    }
-
-
     let messageText = `✨ *NUEVA RECARGA PENDIENTE* ✨\n\n`;
     messageText += `*ID de Transacción:* \`${escapeMarkdownV2(id_transaccion_generado || 'N/A')}\`\n`;
     messageText += `*Estado:* \`PENDIENTE\`\n\n`;
     messageText += `🎮 Juego: *${escapeMarkdownV2(game)}*\n`;
 
-    // MODIFICACIÓN CLAVE: No mostrar el ID de Jugador si el juego es KingCoins
     if (game && !cleanedDisplayPackageName.includes('KingCoins')) {
         messageText += `👤 ID de Jugador: *${escapeMarkdownV2(playerId || 'N/A')}*\n`;
     }
 
-    messageText += `📦 Paquete: *${escapeMarkdownV2(cleanedDisplayPackageName)}*\n`; // Usar la variable limpia aquí
+    messageText += `📦 Paquete: *${escapeMarkdownV2(cleanedDisplayPackageName)}*\n`;
     messageText += `💰 Total a Pagar: *${escapeMarkdownV2(finalPrice)} ${escapeMarkdownV2(currency)}*\n`;
     messageText += `💳 Método de Pago: *${escapeMarkdownV2(paymentMethod.replace('-', ' ').toUpperCase())}*\n`;
-    messageText += `📧 Correo Cliente: ${escapeMarkdownV2(email || 'N/A')}\n`; // Usar la variable 'email' corregida aquí
+    messageText += `📧 Correo Cliente: ${escapeMarkdownV2(email || 'N/A')}\n`;
     if (fullName) {
         messageText += `🧑‍💻 Nombre Cliente: ${escapeMarkdownV2(fullName)}\n`;
     }
     if (whatsappNumber) {
-        messageText += `📱 WhatsApp Cliente: ${escapeMarkdownV2(whatsappNumber)}\n`; // Muestra el número completo en el mensaje de Telegram
+        messageText += `📱 WhatsApp Cliente: ${escapeMarkdownV2(whatsappNumber)}\n`;
     }
 
     if (paymentMethod === 'pago-movil' && referenceNumber) {
@@ -266,40 +202,30 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
     } else if (paymentMethod === 'binance' && txid) {
         messageText += `🆔 TXID Binance: ${escapeMarkdownV2(txid)}\n`;
     } else if (paymentMethod === 'zinli' && referenceNumber) {
-        messageText += `📊 Referencia Zinli: ${referenceNumber}\n`;
+        messageText += `📊 Referencia Zinli: ${escapeMarkdownV2(referenceNumber)}\n`;
     }
 
-    // --- Lógica de botones de Telegram: SÓLO botones específicos ---
     let inlineKeyboard = [];
 
-    // Si es KingCoins, añade solo el botón "Liberar KingCoins"
-    if (cleanedDisplayPackageName.includes('KingCoins')) {
+    if (cleanedDisplayPackageName && cleanedDisplayPackageName.includes('KingCoins')) {
         inlineKeyboard.push([
             { text: "👑 Liberar KingCoins", callback_data: `release_kingcoins_${id_transaccion_generado}` }
         ]);
-    }
-    // Si es Free Fire, añade solo el botón "WhatsApp Recargador"
-    else if (game && game.toLowerCase() === 'free fire') {
-        if (WHATSAPP_NUMBER_RECARGADOR) {
-            const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
-            const cleanedPackageNameForWhatsappRecargador = (cleanedDisplayPackageName || 'N/A').replace(/\+/g, '%2B');
+    } else if (game && game.toLowerCase() === 'free fire' && WHATSAPP_NUMBER_RECARGADOR) {
+        const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
+        const cleanedPackageNameForWhatsappRecargador = (cleanedDisplayPackageName || 'N/A').replace(/\+/g, '%2B');
 
-            let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
-            whatsappMessageRecargador += `*ID de Jugador:* ${playerId || 'N/A'}\n`;
-            whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageNameForWhatsappRecargador}\n`;
+        let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
+        whatsappMessageRecargador += `*ID de Jugador:* ${playerId || 'N/A'}\n`;
+        whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageNameForWhatsappRecargador}\n`;
 
-            const whatsappLinkRecargadorButton = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
+        const whatsappLinkRecargadorButton = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
 
-            inlineKeyboard.push([
-                { text: "📲 WhatsApp Recargador", url: whatsappLinkRecargadorButton }
-            ]);
-        } else {
-            console.log("Advertencia: WHATSAPP_NUMBER_RECARGADOR no está configurado para Free Fire. El botón no se mostrará.");
-        }
-    }
-    // Para cualquier otro juego, no se añade ningún botón.
-    else {
-        console.log(`No se añadieron botones de acción para el juego ${game} y la transacción ${id_transaccion_generado} según la nueva política.`);
+        inlineKeyboard.push([
+            { text: "📲 WhatsApp Recargador", url: whatsappLinkRecargadorButton }
+        ]);
+    } else {
+        console.log(`No se añadieron botones de acción para el juego ${game} y la transacción ${id_transaccion_generado}.`);
     }
 
     const replyMarkup = {
@@ -322,7 +248,6 @@ Te enviaremos una notificación de confirmación cuando la recarga se haga efect
         if (receiptUrl) {
             try {
                 const sendFileUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument`;
-
                 await axios.post(sendFileUrl, {
                     chat_id: TELEGRAM_CHAT_ID,
                     document: receiptUrl,

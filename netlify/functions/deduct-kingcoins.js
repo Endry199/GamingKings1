@@ -8,37 +8,52 @@ exports.handler = async function(event, context) {
         return { statusCode: 405, body: "Method Not Allowed" };
     }
 
-    let fieldsData;
-
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+        console.error("Faltan variables de entorno requeridas para Supabase.");
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ message: "Error de configuración del servidor: Faltan credenciales de Supabase." })
+        };
+    }
     
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    let fieldsData;
+
     try {
-        const form = new Formidable({ multiples: true });
-        
-        const bodyBuffer = event.isBase64Encoded ? Buffer.from(event.body, 'base64') : Buffer.from(event.body || '');
+        if (event.headers['content-type'] && event.headers['content-type'].includes('multipart/form-data')) {
+            const form = new Formidable({ multiples: true });
+            const bodyBuffer = event.isBase64Encoded ? Buffer.from(event.body, 'base64') : Buffer.from(event.body || '');
+            const reqStream = new Readable();
+            reqStream.push(bodyBuffer);
+            reqStream.push(null);
+            reqStream.headers = event.headers;
+            reqStream.method = event.httpMethod;
 
-        const reqStream = new Readable();
-        reqStream.push(bodyBuffer);
-        reqStream.push(null);
-        reqStream.headers = event.headers;
-        reqStream.method = event.httpMethod;
-
-        const { fields } = await new Promise((resolve, reject) => {
-            form.parse(reqStream, (err, fields) => {
-                if (err) return reject(err);
-                resolve({ fields });
+            const { fields } = await new Promise((resolve, reject) => {
+                form.parse(reqStream, (err, fields) => {
+                    if (err) {
+                        console.error('Formidable parse error:', err);
+                        return reject(err);
+                    }
+                    resolve({ fields });
+                });
             });
-        });
-        
-        fieldsData = Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]));
+            fieldsData = Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]));
 
+        } else if (event.headers['content-type'] && event.headers['content-type'].includes('application/json')) {
+            fieldsData = JSON.parse(event.body);
+        } else {
+            const { parse } = require('querystring');
+            fieldsData = parse(event.body);
+        }
     } catch (parseError) {
         console.error("Error al procesar los datos de la solicitud:", parseError);
         return {
             statusCode: 400,
-            body: JSON.stringify({ message: `Error al procesar los datos: ${parseError.message}` })
+            body: JSON.stringify({ message: `Error al procesar los datos: ${parseError.message || 'Unknown error'}.` })
         };
     }
     
@@ -52,7 +67,6 @@ exports.handler = async function(event, context) {
     }
     
     try {
-        // PASO 1: Buscar el id del usuario en la tabla 'profiles' usando el email
         const { data: userData, error: userError } = await supabase
             .from('profiles')
             .select('id')
@@ -69,11 +83,10 @@ exports.handler = async function(event, context) {
         
         const userId = userData.id;
 
-        // PASO 2: Buscar la billetera en la tabla 'user_wallets' usando el user_id
         const { data: walletData, error: walletError } = await supabase
             .from('user_wallets')
             .select('balance')
-            .eq('user_id', userId) // ¡CORREGIDO! Usar 'user_id' como nos has indicado
+            .eq('user_id', userId)
             .single();
 
         if (walletError || !walletData) {
@@ -87,6 +100,13 @@ exports.handler = async function(event, context) {
         const currentBalance = parseFloat(walletData.balance);
         const price = parseFloat(finalPrice);
 
+        if (isNaN(currentBalance) || isNaN(price)) {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ message: "El saldo o el precio no son números válidos." })
+            };
+        }
+
         if (currentBalance < price) {
             return {
                 statusCode: 400,
@@ -98,7 +118,7 @@ exports.handler = async function(event, context) {
         const { error: updateError } = await supabase
             .from('user_wallets')
             .update({ balance: newBalance })
-            .eq('user_id', userId); // ¡CORREGIDO! Usar 'user_id' para la actualización también
+            .eq('user_id', userId);
 
         if (updateError) {
             console.error("Error al actualizar el saldo:", updateError);
@@ -114,7 +134,7 @@ exports.handler = async function(event, context) {
         };
 
     } catch (error) {
-        console.error("Error en la función deduct-kingcoins:", error);
+        console.error("Error inesperado en la función deduct-kingcoins:", error);
         return {
             statusCode: 500,
             body: JSON.stringify({ message: "Error interno del servidor.", error: error.message })
