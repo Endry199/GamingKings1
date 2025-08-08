@@ -196,7 +196,7 @@ Aquí tienes los detalles de tu transacción:
 👑 Producto: KingCoins
 💰 Cantidad Comprada: ${escapeMarkdownV2(cleanedPackageName)}
 💲 Monto Pagado: ${escapeMarkdownV2(transaction.final_price)} ${escapeMarkdownV2(transaction.currency)}
-💳 Método de Pago: ${escapeMarkdownV2(transaction.payment_method.replace('-', ' ').toUpperCase())}
+💳 Método de Pago: ${escapeMarkdownV2(transaction.payment_method.replace(/-/g, ' ').toUpperCase())}
 ---
 ¡Gracias por tu compra! ✨
 `.trim();
@@ -214,7 +214,7 @@ Aquí tienes los detalles de tu recarga:
 👤 ID de Jugador: ${escapeMarkdownV2(transaction.player_id || 'N/A')}
 📦 Paquete: ${escapeMarkdownV2(transaction.package_name.includes('<i class="fas fa-crown"></i>') ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins') : transaction.package_name)}
 💰 Monto Pagado: ${escapeMarkdownV2(transaction.final_price)} ${escapeMarkdownV2(transaction.currency)}
-💳 Método de Pago: ${escapeMarkdownV2(transaction.payment_method.replace('-', ' ').toUpperCase())}
+💳 Método de Pago: ${escapeMarkdownV2(transaction.payment_method.replace(/-/g, ' ').toUpperCase())}
 ---
 ¡Gracias por tu compra! ✨
 `.trim();
@@ -266,8 +266,8 @@ Puedes intentar realizar la compra de nuevo. Si crees que se trata de un error, 
 *ID de Jugador:* \`${escapeMarkdownV2(transaction.player_id || 'N/A')}\`
 *Paquete:* ${escapeMarkdownV2(cleanedPackageName || 'N/A')}
 *Monto:* ${escapeMarkdownV2(transaction.final_price || 'N/A')} ${escapeMarkdownV2(transaction.currency || 'N/A')}
-*Método de Pago:* ${escapeMarkdownV2(transaction.payment_method.replace('-', ' ').toUpperCase() || 'N/A')}
----
+*Método de Pago:* ${escapeMarkdownV2(transaction.payment_method.replace(/-/g, ' ').toUpperCase() || 'N/A')}
+\-\-\-
 *Estado:* ${statusText} ${statusEmoji}
 _Marcada por:_ *${escapeMarkdownV2(userName)}* (${escapeMarkdownV2(formattedTime)} ${escapeMarkdownV2(formattedDate)})
 `.trim();
@@ -281,7 +281,7 @@ _Marcada por:_ *${escapeMarkdownV2(userName)}* (${escapeMarkdownV2(formattedTime
                         const customerWhatsappNumberFormatted = transaction.whatsapp_number.startsWith('+') ? transaction.whatsapp_number : `+${transaction.whatsapp_number}`;
                         const invoiceLink = `${NETLIFY_SITE_URL}/.netlify/functions/get-invoice?id=${encodeURIComponent(transaction.id_transaccion)}`;
                         const shortWhatsappMessage = `
-🎉 ¡Hola! 👋
+🎉 ¡Hola! �
 ¡Tu recarga con la ID de transaccion: \`${escapeMarkdownV2(transaction.id_transaccion)}\` ha sido *COMPLETADA* por GamingKings!
 Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
 ¡Gracias por tu compra! ✨
@@ -365,4 +365,3 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
         }
         return { statusCode: 500, body: `Error en el webhook: ${error.message}` };
     }
-};
