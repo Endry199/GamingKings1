@@ -180,7 +180,7 @@ exports.handler = async function(event, context) {
                 const formattedTime = `${hours}:${minutes}`;
 
                 let invoiceTextContent = null;
-                if (status === 'realizada' && transaction.payment_method.toLowerCase().includes('kingcoins')) {
+                if (status === 'realizada' && transaction.payment_method && transaction.payment_method.toLowerCase().includes('kingcoins')) {
                     const cleanedPackageName = transaction.package_name.includes('<i class="fas fa-crown"></i>')
                         ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins')
                         : transaction.package_name;
@@ -257,7 +257,9 @@ Puedes intentar realizar la compra de nuevo. Si crees que se trata de un error, 
                 let newCaption = callbackQuery.message.text;
                 const statusText = status === 'realizada' ? 'REALIZADA' : 'RECHAZADA';
                 const statusEmoji = status === 'realizada' ? '✅' : '❌';
-                newCaption = newCaption.replace('Estado: PENDIENTE', `Estado: ${statusText} ${statusEmoji}`);
+
+                // 👉 Corrección: Usamos una expresión regular para reemplazar la línea de estado
+                newCaption = newCaption.replace(/Estado: PENDIENTE/g, `Estado: ${statusText} ${statusEmoji}`);
                 
                 const statusLine = `Marcada por: *${escapeMarkdownV2(userName)}*`;
                 if (!newCaption.includes(statusLine)) {
