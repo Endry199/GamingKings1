@@ -467,17 +467,28 @@
     }
 
     async function fetchUserProfile(userId) {
-        const { data, error } = await supabase
+        const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('name, last_name, kingcoins_balance')
+            .select('name, last_name')
             .eq('id', userId)
             .single();
 
-        if (error) {
-            console.error('Error fetching user profile:', error.message);
+        const { data: wallet, error: walletError } = await supabase
+            .from('user_wallets')
+            .select('balance')
+            .eq('user_id', userId)
+            .single();
+
+        if (profileError || walletError) {
+            console.error('Error fetching user data:', profileError?.message || walletError?.message);
             return null;
         }
-        return data;
+        
+        return {
+            name: profile.name,
+            last_name: profile.last_name,
+            kingcoins_balance: wallet.balance
+        };
     }
 
     async function checkUserSession() {
