@@ -881,11 +881,11 @@
             let currentCurrency = localStorage.getItem('selectedCurrency') || 'VES';
 
             // Formato de precios
-            function formatPrice(price, currency) {
-                if (currency === 'VES') return `Bs. ${price.toFixed(2)}`;
-                if (currency === 'USD') return `$${price.toFixed(2)}`;
-                if (currency === 'KGC') return `${price.toFixed(2)} KGC`;
-                return `${price.toFixed(2)}`;
+           function formatPrice(price, currency) {
+           if (currency === 'VES') return `Bs. ${price.toFixed(2)}`;
+            if (currency === 'USD') return `$${price.toFixed(2)}`;
+           if (currency === 'KGC') return `<i class="fas fa-crown" style="color: var(--secondary-pink);"></i> ${price.toFixed(2)}`;
+            return `${price.toFixed(2)}`;
             }
 
             function updatePackages(currency) {

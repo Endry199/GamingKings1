@@ -37,77 +37,693 @@
             --box-shadow-card: 0 0 15px rgba(var(--primary-purple-rgb), 0.7);
             --box-shadow-card-hover: 0 0 20px rgba(var(--primary-purple-rgb), 0.8), 0 0 30px rgba(var(--secondary-pink-rgb), 0.5);
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: var(--dark-grey-bg); color: var(--text-color); line-height: 1.6; display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
-        main { flex: 1; margin: 0 auto; width: 100%; box-sizing: border-box; }
-        h1, h2, h3 { color: var(--primary-purple); text-align: center; margin-bottom: 25px; font-weight: 700; text-shadow: 1px 1px 3px var(--shadow-dark); }
-        p { text-align: center; margin-bottom: 15px; }
-        header { background-color: #121212; padding: 10px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: none; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8); flex-wrap: wrap; position: sticky; top: 0; z-index: 1000; width: 100%; box-sizing: border-box; }
-        .header-left .logo-img { height: auto; max-height: 85px; width: auto; border-radius: 8px; object-fit: contain; }
-        .header-right { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; justify-content: center; }
-        .search-bar { position: relative; display: flex; align-items: center; }
-        .search-bar input { background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: 20px; padding: 10px 15px 10px 40px; color: var(--text-color); outline: none; width: 200px; transition: border-color 0.3s ease, box-shadow 0.3s ease; box-sizing: border-box; }
-        .search-bar input:focus { border-color: var(--primary-purple); box-shadow: 0 0 8px var(--shadow-light); }
-        .search-bar .fas.fa-search { position: absolute; left: 15px; color: var(--secondary-text); font-size: 1em; }
-        .custom-currency-selector { position: relative; cursor: pointer; user-select: none; background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: 20px; padding: 10px 15px; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease; min-width: 120px; justify-content: space-between; box-sizing: border-box; }
-        .custom-currency-selector:hover { border-color: var(--primary-purple); box-shadow: 0 0 8px var(--shadow-light); }
-        .selected-currency { display: flex; align-items: center; gap: 8px; flex-grow: 1; }
-        .selected-currency img { height: 20px; width: 20px; border-radius: 50%; object-fit: cover; }
-        .selected-currency span { font-weight: 600; color: var(--text-color); white-space: nowrap; }
-        .selected-currency i { font-size: 0.8em; transition: transform 0.3s ease; color: var(--secondary-text); margin-left: auto; }
-        .custom-currency-selector.show .selected-currency i { transform: rotate(180deg); }
-        .currency-options { position: absolute; top: calc(100% + 8px); left: 0; right: 0; background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; box-shadow: 0 4px 12px var(--shadow-dark); z-index: 10; display: none; overflow: hidden; opacity: 0; transform: translateY(10px); transition: opacity 0.3s ease, transform 0.3s ease; }
-        .custom-currency-selector.show .currency-options { display: block; opacity: 1; transform: translateY(0); }
-        .currency-options .option { padding: 12px 18px; display: flex; align-items: center; gap: 8px; transition: background-color 0.2s ease; }
-        .currency-options .option:hover { background-color: var(--dark-grey-bg); color: var(--primary-purple); }
-        .currency-options .option img { height: 20px; width: 20px; border-radius: 50%; object-fit: cover; }
-        .user-menu-container, .guest-menu-container { position: relative; }
-        .user-menu-button, .guest-menu-button { background: none; border: none; color: var(--text-color); cursor: pointer; font-size: 1.8em; transition: color 0.3s ease; }
-        .user-menu-button:hover, .guest-menu-button:hover { color: var(--primary-purple); }
-        .user-menu-dropdown, .guest-menu-dropdown { position: absolute; top: calc(100% + 10px); right: 0; background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 4px 12px var(--shadow-dark); padding: 10px 0; min-width: 200px; z-index: 100; }
-        .user-menu-item, .guest-menu-item { display: block; padding: 10px 15px; color: var(--text-color); text-decoration: none; transition: background-color 0.2s ease, color 0.2s ease; }
-        .user-menu-item:hover, .guest-menu-item:hover { background-color: var(--input-bg); color: var(--primary-purple); }
-        .hidden { display: none; }
-        .btn-primary { background: var(--button-gradient); color: #ffffff; padding: 12px 25px; border: none; border-radius: 25px; cursor: pointer; font-size: 1.1em; font-weight: 700; transition: all 0.3s ease; box-shadow: 0 3px 10px var(--shadow-dark); display: block; margin: 20px auto; letter-spacing: 0.5px; }
-        .btn-primary:hover { background: var(--button-hover-gradient); transform: translateY(-2px); box-shadow: 0 5px 15px var(--shadow-dark); }
-        .btn-primary:disabled { background: var(--border-color); cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.6; }
-        .game-main { width: 100%; margin-top: 0; padding: 0; }
-        .game-main .game-hero { position: relative; width: 100%; height: 250px; overflow: hidden; margin-bottom: 40px; display: flex; align-items: center; justify-content: center; text-align: center; background-color: var(--dark-grey-bg); border-radius: 0; box-shadow: 0 10px 25px var(--shadow-dark); }
-        .game-main .game-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .game-main .game-hero .game-hero-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); display: flex; align-items: center; justify-content: center; z-index: 1; }
-        .game-main .game-hero h1 { color: var(--white); font-size: 3em; text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7); margin: 0; position: relative; z-index: 2; }
-        .game-content-wrapper { max-width: 900px; margin: 0 auto 40px auto; padding: 0 20px; box-sizing: border-box; }
-        .game-info-card, .recharge-form { background-color: var(--card-bg); border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: var(--box-shadow-card); color: var(--text-color); border: 2px solid var(--border-color-card); transition: box-shadow 0.3s ease-in-out; }
-        .game-info-card:hover, .recharge-form:hover { box-shadow: var(--box-shadow-card-hover); }
-        .game-info-card h2, .recharge-form h2 { color: var(--primary-purple); margin-top: 0; margin-bottom: 15px; font-size: 1.8em; text-align: center; }
-        .game-info-card p { margin-bottom: 10px; line-height: 1.6; text-align: center; }
-        .game-info-card span { font-weight: bold; color: var(--secondary-pink); }
-        #bloodstrike-recharge-form { background-color: transparent; border: none; box-shadow: none; padding: 0; }
-        .form-group { margin-bottom: 25px; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-color); font-size: 1em; text-align: center; }
-        .form-group input[type="text"] { width: 100%; max-width: 350px; padding: 12px 15px; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--input-bg); color: var(--text-color); font-size: 1em; outline: none; transition: border-color 0.3s ease, box-shadow 0.3s ease; box-sizing: border-box; display: block; margin: 0 auto; }
-        .form-group input[type="text"]:focus { border-color: var(--primary-purple); box-shadow: 0 0 8px var(--shadow-light); }
-        .form-group input::placeholder { color: var(--secondary-text); }
-        .package-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
-        .package-item { position: relative; background-color: var(--card-bg); border: 2px solid var(--border-color); border-radius: 10px; padding: 15px; cursor: pointer; transition: all 0.3s ease; display: flex !important; flex-direction: column; align-items: center; justify-content: center; text-align: center; box-shadow: 0 2px 8px var(--shadow-dark); min-height: 100px; visibility: visible !important; opacity: 1 !important; box-sizing: border-box; }
-        .package-item:hover { border-color: var(--item-border-hover); transform: translateY(-5px); box-shadow: var(--item-shadow-hover); }
-        .package-item.selected { border-color: var(--secondary-pink); box-shadow: 0 0 10px rgba(var(--secondary-pink-rgb), 0.5), 0 0 20px rgba(var(--secondary-pink-rgb), 0.3); background: var(--card-bg); transform: translateY(-3px); }
-        .package-item.selected::after { content: '\f058'; font-family: "Font Awesome 6 Free"; font-weight: 900; position: absolute; top: 0.5rem; right: 0.5rem; color: #28a745; background-color: var(--card-bg); border-radius: 50%; font-size: 1.5rem; }
-        .package-item span:first-child { font-size: 1.05em; font-weight: 600; margin-bottom: 5px; }
-        .package-item .price { font-weight: 700; color: var(--secondary-pink); font-size: 1.25em; }
-        #confirm-recharge-btn { display: block; width: 100%; padding: 15px; background: var(--button-gradient); color: var(--white); border: none; border-radius: 30px; font-size: 1.3em; font-weight: bold; cursor: pointer; transition: all 0.3s ease; margin-top: 30px; box-shadow: 0 5px 15px var(--shadow-dark); }
-        #confirm-recharge-btn:hover:not(:disabled) { background: var(--button-hover-gradient); transform: translateY(-2px); box-shadow: 0 8px 20px var(--shadow-dark); }
-        #confirm-recharge-btn:disabled { background-color: var(--border-color); cursor: not-allowed; opacity: 0.7; transform: none; box-shadow: none; }
-        footer { background-color: var(--card-bg); color: var(--secondary-text); padding: 20px; text-align: center; margin-top: 30px; border-top: 1px solid var(--border-color); box-shadow: 0 -2px 8px var(--shadow-dark); width: 100%; box-sizing: border-box; }
-        .footer-content { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 0 20px; box-sizing: border-box; }
-        footer p { margin-bottom: 0; font-size: 0.9em; }
-        .footer-links { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 500px; margin: 0 auto; }
-        .footer-links a { color: var(--secondary-text); text-decoration: none; transition: color 0.3s ease; font-size: 0.9em; }
-        .footer-links a:hover { color: var(--primary-purple); }
-        .whatsapp-link { display: inline-flex; align-items: center; gap: 8px; background-color: var(--success-green); color: #ffffff; padding: 10px 18px; border-radius: 20px; text-decoration: none; font-weight: 600; margin-top: 15px; font-size: 1em; transition: background-color 0.3s ease, transform 0.2s ease; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
-        .whatsapp-link:hover { background-color: #218838; transform: translateY(-1px); }
-        .whatsapp-link .fab.fa-whatsapp { font-size: 1.2em; }
-        @media (max-width: 768px) { header { flex-direction: column; gap: 15px; padding: 15px; justify-content: center; } .header-right { flex-direction: column; width: 100%; max-width: 350px; margin: 0 auto; gap: 12px; } .search-bar, .custom-currency-selector, .user-menu-container, .guest-menu-container { width: 100%; max-width: none; } .search-bar input { width: 100%; padding: 10px 15px 10px 40px; box-sizing: border-box; } .game-main .game-hero { height: 200px; margin-bottom: 30px; } .game-main .game-hero h1 { font-size: 2em; } .game-content-wrapper { padding: 0 15px; } .game-info-card, .recharge-form { padding: 20px; margin-bottom: 25px; } .game-info-card h2, .recharge-form h2 { font-size: 1.6em; } .package-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); } .package-item { padding: 12px; min-height: 80px; } .package-item span:first-child { font-size: 0.95em; } .package-item .price { font-size: 1.1em; } .footer-content { padding: 0 15px; } .footer-links { gap: 15px; max-width: 400px; } }
-        @media (max-width: 480px) { .header-left .logo-img { max-height: 60px; } .game-main .game-hero { height: 150px; margin-bottom: 25px; } .game-main .game-hero h1 { font-size: 1.8em; } .game-info-card h2, .recharge-form h2 { font-size: 1.4em; } .form-group input[type="text"] { padding: 10px 15px; } .package-grid { grid-template-columns: 1fr 1fr; } #confirm-recharge-btn { padding: 12px; font-size: 1.1em; } .footer-links { flex-direction: column; gap: 8px; max-width: 250px; } .whatsapp-link { padding: 8px 15px; } }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--dark-grey-bg);
+            color: var(--text-color);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        main {
+            flex: 1;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        h1, h2, h3 {
+            color: var(--primary-purple);
+            text-align: center;
+            margin-bottom: 25px;
+            font-weight: 700;
+            text-shadow: 1px 1px 3px var(--shadow-dark);
+        }
+
+        p {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        header {
+            background-color: #121212;
+            padding: 10px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+            flex-wrap: wrap;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .header-left .logo-img {
+            height: auto;
+            max-height: 85px;
+            width: auto;
+            border-radius: 8px;
+            object-fit: contain;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .search-bar {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-bar input {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 10px 15px 10px 40px;
+            color: var(--text-color);
+            outline: none;
+            width: 200px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .search-bar input:focus {
+            border-color: var(--primary-purple);
+            box-shadow: 0 0 8px var(--shadow-light);
+        }
+
+        .search-bar .fas.fa-search {
+            position: absolute;
+            left: 15px;
+            color: var(--secondary-text);
+            font-size: 1em;
+        }
+
+        .custom-currency-selector {
+            position: relative;
+            cursor: pointer;
+            user-select: none;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            min-width: 120px;
+            justify-content: space-between;
+            box-sizing: border-box;
+        }
+
+        .custom-currency-selector:hover {
+            border-color: var(--primary-purple);
+            box-shadow: 0 0 8px var(--shadow-light);
+        }
+
+        .selected-currency {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-grow: 1;
+        }
+
+        .selected-currency img {
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .selected-currency span {
+            font-weight: 600;
+            color: var(--text-color);
+            white-space: nowrap;
+        }
+
+        .selected-currency i {
+            font-size: 0.8em;
+            transition: transform 0.3s ease;
+            color: var(--secondary-text);
+            margin-left: auto;
+        }
+
+        .custom-currency-selector.show .selected-currency i {
+            transform: rotate(180deg);
+        }
+
+        .currency-options {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: 0 4px 12px var(--shadow-dark);
+            z-index: 10;
+            display: none;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .custom-currency-selector.show .currency-options {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .currency-options .option {
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.2s ease;
+        }
+
+        .currency-options .option:hover {
+            background-color: var(--dark-grey-bg);
+            color: var(--primary-purple);
+        }
+
+        .currency-options .option img {
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .user-menu-container, .guest-menu-container {
+            position: relative;
+        }
+
+        .user-menu-button, .guest-menu-button {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 1.8em;
+            transition: color 0.3s ease;
+        }
+
+        .user-menu-button:hover, .guest-menu-button:hover {
+            color: var(--primary-purple);
+        }
+
+        .user-menu-dropdown, .guest-menu-dropdown {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px var(--shadow-dark);
+            padding: 10px 0;
+            min-width: 200px;
+            z-index: 100;
+        }
+
+        .user-menu-item, .guest-menu-item {
+            display: block;
+            padding: 10px 15px;
+            color: var(--text-color);
+            text-decoration: none;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .user-menu-item:hover, .guest-menu-item:hover {
+            background-color: var(--input-bg);
+            color: var(--primary-purple);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .btn-primary {
+            background: var(--button-gradient);
+            color: #ffffff;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px var(--shadow-dark);
+            display: block;
+            margin: 20px auto;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary:hover {
+            background: var(--button-hover-gradient);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px var(--shadow-dark);
+        }
+
+        .btn-primary:disabled {
+            background: var(--border-color);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            opacity: 0.6;
+        }
+
+        .game-main {
+            width: 100%;
+            margin-top: 0;
+            padding: 0;
+        }
+
+        .game-main .game-hero {
+            position: relative;
+            width: 100%;
+            height: 250px;
+            overflow: hidden;
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background-color: var(--dark-grey-bg);
+            border-radius: 0;
+            box-shadow: 0 10px 25px var(--shadow-dark);
+        }
+
+        .game-main .game-hero img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .game-main .game-hero .game-hero-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+        }
+
+        .game-main .game-hero h1 {
+            color: var(--white);
+            font-size: 3em;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
+            margin: 0;
+            position: relative;
+            z-index: 2;
+        }
+
+        .game-content-wrapper {
+            max-width: 900px;
+            margin: 0 auto 40px auto;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        .game-info-card, .recharge-form {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: var(--box-shadow-card);
+            color: var(--text-color);
+            border: 2px solid var(--border-color-card);
+            transition: box-shadow 0.3s ease-in-out;
+        }
+
+        .game-info-card:hover, .recharge-form:hover {
+            box-shadow: var(--box-shadow-card-hover);
+        }
+
+        .game-info-card h2, .recharge-form h2 {
+            color: var(--primary-purple);
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+            text-align: center;
+        }
+
+        .game-info-card p {
+            margin-bottom: 10px;
+            line-height: 1.6;
+            text-align: center;
+        }
+
+        .game-info-card span {
+            font-weight: bold;
+            color: var(--secondary-pink);
+        }
+
+        #bloodstrike-recharge-form {
+            background-color: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-color);
+            font-size: 1em;
+            text-align: center;
+        }
+
+        .form-group input[type="text"] {
+            width: 100%;
+            max-width: 350px;
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            font-size: 1em;
+            outline: none;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            box-sizing: border-box;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .form-group input[type="text"]:focus {
+            border-color: var(--primary-purple);
+            box-shadow: 0 0 8px var(--shadow-light);
+        }
+
+        .form-group input::placeholder {
+            color: var(--secondary-text);
+        }
+
+        .package-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+        }
+
+        .package-item {
+            position: relative;
+            background-color: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex !important;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 2px 8px var(--shadow-dark);
+            min-height: 100px;
+            visibility: visible !important;
+            opacity: 1 !important;
+            box-sizing: border-box;
+        }
+
+        .package-item:hover {
+            border-color: var(--item-border-hover);
+            transform: translateY(-5px);
+            box-shadow: var(--item-shadow-hover);
+        }
+
+        .package-item.selected {
+            border-color: var(--secondary-pink);
+            box-shadow: 0 0 10px rgba(var(--secondary-pink-rgb), 0.5), 0 0 20px rgba(var(--secondary-pink-rgb), 0.3);
+            background: var(--card-bg);
+            transform: translateY(-3px);
+        }
+
+        .package-item.selected::after {
+            content: '\f058';
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            color: #28a745;
+            background-color: var(--card-bg);
+            border-radius: 50%;
+            font-size: 1.5rem;
+        }
+
+        .package-item span:first-child {
+            font-size: 1.05em;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .package-item .price {
+            font-weight: 700;
+            color: var(--secondary-pink);
+            font-size: 1.25em;
+        }
+
+        #confirm-recharge-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: var(--button-gradient);
+            color: var(--white);
+            border: none;
+            border-radius: 30px;
+            font-size: 1.3em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 30px;
+            box-shadow: 0 5px 15px var(--shadow-dark);
+        }
+
+        #confirm-recharge-btn:hover:not(:disabled) {
+            background: var(--button-hover-gradient);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px var(--shadow-dark);
+        }
+
+        #confirm-recharge-btn:disabled {
+            background-color: var(--border-color);
+            cursor: not-allowed;
+            opacity: 0.7;
+            transform: none;
+            box-shadow: none;
+        }
+
+        footer {
+            background-color: var(--card-bg);
+            color: var(--secondary-text);
+            padding: 20px;
+            text-align: center;
+            margin-top: 30px;
+            border-top: 1px solid var(--border-color);
+            box-shadow: 0 -2px 8px var(--shadow-dark);
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .footer-content {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        footer p {
+            margin-bottom: 0;
+            font-size: 0.9em;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .footer-links a {
+            color: var(--secondary-text);
+            text-decoration: none;
+            transition: color 0.3s ease;
+            font-size: 0.9em;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary-purple);
+        }
+
+        .whatsapp-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background-color: var(--success-green);
+            color: #ffffff;
+            padding: 10px 18px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 15px;
+            font-size: 1em;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .whatsapp-link:hover {
+            background-color: #218838;
+            transform: translateY(-1px);
+        }
+
+        .whatsapp-link .fab.fa-whatsapp {
+            font-size: 1.2em;
+        }
+
+        /* --- Nuevos estilos para KingCoins --- */
+        .kingcoins-balance {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-color);
+            font-weight: 600;
+            padding: 10px 15px;
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+        .kingcoins-balance .fa-crown {
+            color: #FF69B4;
+        }
+        /* --- Fin de nuevos estilos --- */
+
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px;
+                justify-content: center;
+            }
+            .header-right {
+                flex-direction: column;
+                width: 100%;
+                max-width: 350px;
+                margin: 0 auto;
+                gap: 12px;
+            }
+            .search-bar, .custom-currency-selector, .user-menu-container, .guest-menu-container {
+                width: 100%;
+                max-width: none;
+            }
+            .search-bar input {
+                width: 100%;
+                padding: 10px 15px 10px 40px;
+                box-sizing: border-box;
+            }
+            .game-main .game-hero {
+                height: 200px;
+                margin-bottom: 30px;
+            }
+            .game-main .game-hero h1 {
+                font-size: 2em;
+            }
+            .game-content-wrapper {
+                padding: 0 15px;
+            }
+            .game-info-card, .recharge-form {
+                padding: 20px;
+                margin-bottom: 25px;
+            }
+            .game-info-card h2, .recharge-form h2 {
+                font-size: 1.6em;
+            }
+            .package-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
+            .package-item {
+                padding: 12px;
+                min-height: 80px;
+            }
+            .package-item span:first-child {
+                font-size: 0.95em;
+            }
+            .package-item .price {
+                font-size: 1.1em;
+            }
+            .footer-content {
+                padding: 0 15px;
+            }
+            .footer-links {
+                gap: 15px;
+                max-width: 400px;
+            }
+            .whatsapp-link {
+                padding: 8px 15px;
+            }
+        }
+        @media (max-width: 480px) {
+            .header-left .logo-img {
+                max-height: 60px;
+            }
+            .game-main .game-hero {
+                height: 150px;
+                margin-bottom: 25px;
+            }
+            .game-main .game-hero h1 {
+                font-size: 1.8em;
+            }
+            .game-info-card h2, .recharge-form h2 {
+                font-size: 1.4em;
+            }
+            .form-group input[type="text"] {
+                padding: 10px 15px;
+            }
+            .package-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            #confirm-recharge-btn {
+                padding: 12px;
+                font-size: 1.1em;
+            }
+            .footer-links {
+                flex-direction: column;
+                gap: 8px;
+                max-width: 250px;
+            }
+            .whatsapp-link {
+                padding: 8px 15px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -116,6 +732,10 @@
             <a href="index.html" class="logo-link"><img src="images/gamingkings_logo.png" alt="GamingKings Logo" class="logo-img"></a>
         </div>
         <div class="header-right">
+            <div class="kingcoins-balance hidden">
+                <i class="fas fa-crown"></i>
+                <span id="kingcoins-display">Cargando...</span>
+            </div>
             <div class="search-bar">
                 <input type="text" placeholder="Buscar juego..."><i class="fas fa-search"></i>
             </div>
@@ -129,6 +749,9 @@
                     </div>
                     <div class="option" data-value="USD">
                         <img src="images/flag_us.png" alt="Bandera de Estados Unidos"> <span>$ (USD)</span>
+                    </div>
+                    <div class="option" data-value="KGC">
+                        <img src="images/gamingkings_logo.png" alt="KingCoins"> <span><i class="fas fa-crown"></i> (KGC)</span>
                     </div>
                 </div>
             </div>
@@ -205,6 +828,10 @@
         const userMenuDropdown = document.querySelector('.user-menu-dropdown');
         const guestMenuButton = document.querySelector('.guest-menu-button');
         const guestMenuDropdown = document.querySelector('.guest-menu-dropdown');
+        
+        // Elementos de KingCoins
+        const kingcoinsBalanceContainer = document.querySelector('.kingcoins-balance');
+        const kingcoinsDisplay = document.getElementById('kingcoins-display');
 
         async function checkUserSession() {
             const { data: { session } } = await supabase.auth.getSession();
@@ -212,12 +839,36 @@
                 userMenuContainer.classList.remove('hidden');
                 guestMenuContainer.classList.add('hidden');
                 userDisplayName.textContent = session.user.email || 'Usuario';
+                fetchUserKingcoins(session.user.id);
             } else {
                 userMenuContainer.classList.add('hidden');
                 guestMenuContainer.classList.remove('hidden');
+                kingcoinsBalanceContainer.classList.add('hidden'); 
             }
         }
         
+        // Función para obtener el saldo de KingCoins del usuario
+        async function fetchUserKingcoins(userId) {
+            if (kingcoinsBalanceContainer && kingcoinsDisplay) {
+                kingcoinsBalanceContainer.classList.remove('hidden');
+                try {
+                    const { data, error } = await supabase
+                        .from('user_wallets')
+                        .select('balance')
+                        .eq('user_id', userId)
+                        .single();
+
+                    if (error && error.code !== 'PGRST116') throw error;
+                    
+                    const balance = data ? parseFloat(data.balance).toFixed(2) : '0.00';
+                    kingcoinsDisplay.textContent = `${balance}`;
+                } catch (error) {
+                    console.error('Error al cargar el saldo de KingCoins:', error.message);
+                    kingcoinsDisplay.textContent = 'Error';
+                }
+            }
+        }
+
         async function handleLogout() {
             const { error } = await supabase.auth.signOut();
             if (error) {
@@ -232,9 +883,11 @@
                 userMenuContainer.classList.remove('hidden');
                 guestMenuContainer.classList.add('hidden');
                 userDisplayName.textContent = session.user.email || 'Usuario';
+                fetchUserKingcoins(session.user.id);
             } else {
                 userMenuContainer.classList.add('hidden');
                 guestMenuContainer.classList.remove('hidden');
+                kingcoinsBalanceContainer.classList.add('hidden');
             }
         });
         
@@ -258,14 +911,14 @@
 
         // Lógica de paquetes y selector de moneda
         const bloodstrikePackages = [
-            { id: 1, name: '105 Gold', priceUSD: 1.00, priceVES: 168.50 },
-            { id: 2, name: '320 Gold', priceUSD: 3.00, priceVES: 505.50 },
-            { id: 3, name: '540 Gold', priceUSD: 4.90, priceVES: 825.65 },
-            { id: 4, name: '1100 Gold', priceUSD: 9.60, priceVES: 1619.69 },
-            { id: 5, name: '2260 Gold', priceUSD: 18.60, priceVES: 3139.76 },
-            { id: 6, name: '5800 Gold', priceUSD: 47.50, priceVES: 8000.78 },
-            { id: 7, name: 'Pase Elite', priceUSD: 4.00, priceVES: 679.05 },
-            { id: 8, name: 'Pase Elite Plus', priceUSD: 9.30, priceVES: 1574.69 }
+            { id: 1, name: '105 Gold', priceUSD: 1.00, priceVES: 168.50, priceKGC: 110.00 },
+            { id: 2, name: '320 Gold', priceUSD: 3.00, priceVES: 505.50, priceKGC: 325.00 },
+            { id: 3, name: '540 Gold', priceUSD: 4.90, priceVES: 825.65, priceKGC: 540.00 },
+            { id: 4, name: '1100 Gold', priceUSD: 9.60, priceVES: 1619.69, priceKGC: 1080.00 },
+            { id: 5, name: '2260 Gold', priceUSD: 18.60, priceVES: 3139.76, priceKGC: 2160.00 },
+            { id: 6, name: '5800 Gold', priceUSD: 47.50, priceVES: 8000.78, priceKGC: 5400.00 },
+            { id: 7, name: 'Pase Elite', priceUSD: 4.00, priceVES: 679.05, priceKGC: 420.00 },
+            { id: 8, name: 'Pase Elite Plus', priceUSD: 9.30, priceVES: 1574.69, priceKGC: 980.00 }
         ];
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -275,25 +928,31 @@
             const currencyDisplaySpan = document.getElementById('currency-display');
             const customCurrencySelector = document.getElementById('custom-currency-selector');
             const currencyOptions = document.getElementById('currency-options');
-            const selectedCurrencyDisplay = document.querySelector('#selected-currency span');
-            const selectedCurrencyIcon = document.querySelector('#selected-currency img');
             let selectedPackage = null;
             let currentCurrency = localStorage.getItem('selectedCurrency') || 'VES';
 
-            function formatPrice(price, currency) {
-                return currency === 'VES' ? `Bs. ${price.toFixed(2)}` : `$${price.toFixed(2)}`;
-            }
+         function formatPrice(price, currency) {
+          if (currency === 'VES') return `Bs. ${price.toFixed(2)}`;
+         if (currency === 'USD') return `$${price.toFixed(2)}`;
+         if (currency === 'KGC') return `<i class="fas fa-crown" style="color: var(--secondary-pink);"></i> ${price.toFixed(2)}`;
+         return `${price.toFixed(2)}`;
+          }
 
             function updatePackages(currency) {
                 currencyDisplaySpan.textContent = currency;
                 packageListDiv.innerHTML = '';
                 bloodstrikePackages.forEach(pkg => {
-                    const displayPrice = currency === 'VES' ? pkg.priceVES : pkg.priceUSD;
+                    let displayPrice;
+                    if (currency === 'VES') displayPrice = pkg.priceVES;
+                    else if (currency === 'USD') displayPrice = pkg.priceUSD;
+                    else if (currency === 'KGC') displayPrice = pkg.priceKGC;
+                    
                     const packageItem = document.createElement('div');
                     packageItem.classList.add('package-item');
                     packageItem.dataset.id = pkg.id;
                     packageItem.dataset.priceUsd = pkg.priceUSD;
                     packageItem.dataset.priceVes = pkg.priceVES;
+                    packageItem.dataset.priceKgc = pkg.priceKGC;
                     packageItem.innerHTML = `
                         <span>${pkg.name}</span>
                         <span class="price">${formatPrice(displayPrice, currency)}</span>
@@ -312,8 +971,17 @@
             }
 
             function updateCurrencyDisplay(currency) {
-                selectedCurrencyDisplay.textContent = currency === 'VES' ? 'Bs. (VES)' : '$ (USD)';
-                selectedCurrencyIcon.src = currency === 'VES' ? 'images/flag_ve.png' : 'images/flag_us.png';
+                const selectedCurrencyElement = document.querySelector('#selected-currency');
+                const selectedCurrencyIcon = selectedCurrencyElement.querySelector('img');
+                const selectedCurrencyText = selectedCurrencyElement.querySelector('span');
+
+                if (currency === 'VES') {
+                    selectedCurrencyElement.innerHTML = `<img src="images/flag_ve.png" alt="Bandera de Venezuela"> <span>Bs. (VES)</span> <i class="fas fa-chevron-down"></i>`;
+                } else if (currency === 'USD') {
+                    selectedCurrencyElement.innerHTML = `<img src="images/flag_us.png" alt="Bandera de Estados Unidos"> <span>$ (USD)</span> <i class="fas fa-chevron-down"></i>`;
+                } else if (currency === 'KGC') {
+                    selectedCurrencyElement.innerHTML = `<img src="images/gamingkings_logo.png" alt="KingCoins"> <span><i class="fas fa-crown"></i> (KGC)</span> <i class="fas fa-chevron-down"></i>`;
+                }
             }
 
             function checkFormValidity() {
@@ -321,15 +989,14 @@
                 confirmBtn.disabled = !(playerIdValid && selectedPackage);
             }
 
-            // Event listener para el selector de moneda
             customCurrencySelector.addEventListener('click', () => {
                 customCurrencySelector.classList.toggle('show');
             });
 
-            // Event listener para las opciones de moneda
             currencyOptions.addEventListener('click', (e) => {
-                if (e.target.closest('.option')) {
-                    const newCurrency = e.target.closest('.option').dataset.value;
+                const optionElement = e.target.closest('.option');
+                if (optionElement) {
+                    const newCurrency = optionElement.dataset.value;
                     if (newCurrency !== currentCurrency) {
                         currentCurrency = newCurrency;
                         localStorage.setItem('selectedCurrency', currentCurrency);
@@ -339,14 +1006,12 @@
                 }
             });
 
-            // Cerrar el menú si se hace clic fuera
             window.addEventListener('click', (e) => {
                 if (!customCurrencySelector.contains(e.target)) {
                     customCurrencySelector.classList.remove('show');
                 }
             });
 
-            // Inicializar la página con la moneda guardada o por defecto
             updateCurrencyDisplay(currentCurrency);
             updatePackages(currentCurrency);
 
@@ -357,9 +1022,19 @@
                 if (selectedPackage) {
                     const playerId = playerIdInput.value.trim();
                     const packageName = selectedPackage.querySelector('span:first-child').textContent;
+                    
                     const basePriceUSD = parseFloat(selectedPackage.dataset.priceUsd);
                     const basePriceVES = parseFloat(selectedPackage.dataset.priceVes);
-                    const finalPrice = currentCurrency === 'VES' ? basePriceVES : basePriceUSD;
+                    const basePriceKGC = parseFloat(selectedPackage.dataset.priceKgc);
+
+                    let finalPrice;
+                    if (currentCurrency === 'VES') {
+                        finalPrice = basePriceVES;
+                    } else if (currentCurrency === 'USD') {
+                        finalPrice = basePriceUSD;
+                    } else if (currentCurrency === 'KGC') {
+                        finalPrice = basePriceKGC;
+                    }
                     
                     const transactionDetails = {
                         game: "Blood Strike",

@@ -339,506 +339,502 @@
     
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script type="module">
-        import { supabase } from './supabaseClient.js';
-        
-        const userMenuContainer = document.querySelector('.user-menu-container');
-        const guestMenuContainer = document.querySelector('.guest-menu-container');
-        const userDisplayName = document.getElementById('user-display-name');
-        const kingcoinsBalanceDisplay = document.getElementById('kingcoins-balance-display');
-        const kingcoinsBalanceHeader = document.querySelector('.kingcoins-balance');
-        const logoutButton = document.getElementById('logout-button');
-        const userMenuButton = document.querySelector('.user-menu-button');
-        const userMenuDropdown = document.querySelector('.user-menu-dropdown');
-        const guestMenuButton = document.querySelector('.guest-menu-button');
-        const guestMenuDropdown = document.querySelector('.guest-menu-dropdown');
+    import { supabase } from './supabaseClient.js';
+    
+    const userMenuContainer = document.querySelector('.user-menu-container');
+    const guestMenuContainer = document.querySelector('.guest-menu-container');
+    const userDisplayName = document.getElementById('user-display-name');
+    const kingcoinsBalanceDisplay = document.getElementById('kingcoins-balance-display');
+    const kingcoinsBalanceHeader = document.querySelector('.kingcoins-balance');
+    const logoutButton = document.getElementById('logout-button');
+    const userMenuButton = document.querySelector('.user-menu-button');
+    const userMenuDropdown = document.querySelector('.user-menu-dropdown');
+    const guestMenuButton = document.querySelector('.guest-menu-button');
+    const guestMenuDropdown = document.querySelector('.guest-menu-dropdown');
 
-        let userProfileData = null;
-        let transactionDetails = null;
-        let userSession = null;
+    let userProfileData = null;
+    let transactionDetails = null;
+    let userSession = null;
 
-        const paymentDetailsTemplates = {
-            'pago-movil': `
-                <p><strong>Paso 1:</strong> Realiza el Pago Móvil a los siguientes datos:</p>
-                <ul>
-                    <li><strong>Banco:</strong> Banco de Venezuela (0102)</li>
-                    <li><strong>Cédula/RIF:</strong> V-31605458</li>
-                    <li><strong>Teléfono:</strong> 0412-7123391</li>
-                </ul>
-                <div class="payment-fields-container">
-                    <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
-                    <label for="payment-receipt">Subir Comprobante de Pago:</label>
-                    <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
-                </div>
-            `,
-            'binance': `
-                <p><strong>Paso 1:</strong> Realiza la transferencia a nuestra cuenta Binance (USDT BEP20) O (Binance Pay).</p>
-                <ul>
-                    <p><strong>USDT (BEP20):</strong></p>
-                    <li>
-                        <div class="copy-container">
-                            <span class="address-label">Dirección de Billetera BEP20:</span>
-                            <span class="wallet-address" id="binance-address">0x9ebe5fe682123c531408944236a99754886a46dd</span>
-                            <button type="button" class="copy-button" data-copy-target="binance-address">Copiar</button>
-                            <span class="copy-feedback" id="binance-copy-feedback">¡Copiado!</span>
-                        </div>
-                    </li>
-                    <li><strong>Moneda:</strong> USDT (BEP20)</li>
-                    <p><strong>Binance Pay:</strong></p>
-                    <li><strong>ID Binance Pay:</strong> 909792776</li>
-                </ul>
-                <div class="payment-fields-container">
-                    <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
-                    <label for="payment-receipt">Subir Comprobante de Pago:</label>
-                    <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
-                </div>
-            `,
-            'zinli': `
-                <p><strong>Paso 1:</strong> Transfiere el monto exacto a nuestra cuenta Zinli.</p>
-                <ul>
-                    <li><strong>Usuario Zinli:</strong> endryreyes199@gmail.com</li>
-                </ul>
-                <div class="payment-fields-container">
-                    <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
-                    <label for="payment-receipt">Subir Comprobante de Pago:</label>
-                    <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
-                </div>
-            `
-        };
+    const paymentDetailsTemplates = {
+        'pago-movil': `
+            <p><strong>Paso 1:</strong> Realiza el Pago Móvil a los siguientes datos:</p>
+            <ul>
+                <li><strong>Banco:</strong> Banco de Venezuela (0102)</li>
+                <li><strong>Cédula/RIF:</strong> V-31605458</li>
+                <li><strong>Teléfono:</strong> 0412-7123391</li>
+            </ul>
+            <div class="payment-fields-container">
+                <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
+                <label for="payment-receipt">Subir Comprobante de Pago:</label>
+                <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
+            </div>
+        `,
+        'binance': `
+            <p><strong>Paso 1:</strong> Realiza la transferencia a nuestra cuenta Binance (USDT BEP20) O (Binance Pay).</p>
+            <ul>
+                <p><strong>USDT (BEP20):</strong></p>
+                <li>
+                    <div class="copy-container">
+                        <span class="address-label">Dirección de Billetera BEP20:</span>
+                        <span class="wallet-address" id="binance-address">0x9ebe5fe682123c531408944236a99754886a46dd</span>
+                        <button type="button" class="copy-button" data-copy-target="binance-address">Copiar</button>
+                        <span class="copy-feedback" id="binance-copy-feedback">¡Copiado!</span>
+                    </div>
+                </li>
+                <li><strong>Moneda:</strong> USDT (BEP20)</li>
+                <p><strong>Binance Pay:</strong></p>
+                <li><strong>ID Binance Pay:</strong> 909792776</li>
+            </ul>
+            <div class="payment-fields-container">
+                <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
+                <label for="payment-receipt">Subir Comprobante de Pago:</label>
+                <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
+            </div>
+        `,
+        'zinli': `
+            <p><strong>Paso 1:</strong> Transfiere el monto exacto a nuestra cuenta Zinli.</p>
+            <ul>
+                <li><strong>Usuario Zinli:</strong> endryreyes199@gmail.com</li>
+            </ul>
+            <div class="payment-fields-container">
+                <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
+                <label for="payment-receipt">Subir Comprobante de Pago:</label>
+                <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
+            </div>
+        `
+    };
 
-        const paymentMethodsVES = [
-            { id: 'pago-movil', name: 'Pago Móvil', type: 'ves', icon: 'fas fa-mobile-alt' }
-        ];
+    const paymentMethodsVES = [
+        { id: 'pago-movil', name: 'Pago Móvil', type: 'ves', icon: 'fas fa-mobile-alt' }
+    ];
 
-        const paymentMethodsUSD = [
-            { id: 'binance', name: 'Binance', type: 'usd', icon: 'fab fa-bitcoin' },
-            { id: 'zinli', name: 'Zinli', type: 'usd', icon: 'fas fa-wallet' }
-        ];
-        
-        const paymentForm = document.getElementById('payment-form');
-        const paymentMethodStep = document.getElementById('payment-method-step');
-        const paymentDetailsStep = document.getElementById('payment-details-step');
-        const kingcoinsPaymentContainer = document.getElementById('kingcoins-payment-container');
-        const payWithKGCBtn = document.getElementById('pay-with-kgc-btn');
-        const whatsappMessageContainer = document.getElementById('whatsapp-message-container');
-        const finalizeBtn = document.getElementById('finalize-recharge-btn');
-        const successMessageDisplay = document.getElementById('success-message-display'); 
-        const gamePaymentHeader = document.getElementById('game-payment-header');
-        const gameBannerDisplay = document.getElementById('gameBannerDisplay');
-        const gameTitleDisplay = document.getElementById('gameTitleDisplay');
-        const transactionSummaryDiv = document.getElementById('transaction-summary');
+    const paymentMethodsUSD = [
+        { id: 'binance', name: 'Binance', type: 'usd', icon: 'fab fa-bitcoin' },
+        { id: 'zinli', name: 'Zinli', type: 'usd', icon: 'fas fa-wallet' }
+    ];
+    
+    const paymentForm = document.getElementById('payment-form');
+    const paymentMethodStep = document.getElementById('payment-method-step');
+    const paymentDetailsStep = document.getElementById('payment-details-step');
+    const kingcoinsPaymentContainer = document.getElementById('kingcoins-payment-container');
+    const payWithKGCBtn = document.getElementById('pay-with-kgc-btn');
+    const whatsappMessageContainer = document.getElementById('whatsapp-message-container');
+    const finalizeBtn = document.getElementById('finalize-recharge-btn');
+    const successMessageDisplay = document.getElementById('success-message-display'); 
+    const gamePaymentHeader = document.getElementById('game-payment-header');
+    const gameBannerDisplay = document.getElementById('gameBannerDisplay');
+    const gameTitleDisplay = document.getElementById('gameTitleDisplay');
+    const transactionSummaryDiv = document.getElementById('transaction-summary');
 
-        function toggleDropdown(dropdown) {
-            dropdown.classList.toggle('hidden');
-        }
+    function toggleDropdown(dropdown) {
+        dropdown.classList.toggle('hidden');
+    }
 
-        function setupEventListeners() {
-            userMenuButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                toggleDropdown(userMenuDropdown);
-                if (!guestMenuDropdown.classList.contains('hidden')) {
-                    toggleDropdown(guestMenuDropdown);
-                }
-            });
-
-            guestMenuButton.addEventListener('click', (e) => {
-                e.stopPropagation();
+    function setupEventListeners() {
+        userMenuButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown(userMenuDropdown);
+            if (!guestMenuDropdown.classList.contains('hidden')) {
                 toggleDropdown(guestMenuDropdown);
-                if (!userMenuDropdown.classList.contains('hidden')) {
-                    toggleDropdown(userMenuDropdown);
-                }
-            });
-
-            document.addEventListener('click', () => {
-                if (!userMenuDropdown.classList.contains('hidden')) {
-                    toggleDropdown(userMenuDropdown);
-                }
-                if (!guestMenuDropdown.classList.contains('hidden')) {
-                    toggleDropdown(guestMenuDropdown);
-                }
-            });
-
-            if (logoutButton) {
-                logoutButton.addEventListener('click', handleLogout);
             }
+        });
 
-            if (payWithKGCBtn) {
-                payWithKGCBtn.addEventListener('click', handleKGCPayment);
+        guestMenuButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown(guestMenuDropdown);
+            if (!userMenuDropdown.classList.contains('hidden')) {
+                toggleDropdown(userMenuDropdown);
+            }
+        });
+
+        document.addEventListener('click', () => {
+            if (!userMenuDropdown.classList.contains('hidden')) {
+                toggleDropdown(userMenuDropdown);
+            }
+            if (!guestMenuDropdown.classList.contains('hidden')) {
+                toggleDropdown(guestMenuDropdown);
+            }
+        });
+
+        if (logoutButton) {
+            logoutButton.addEventListener('click', handleLogout);
+        }
+
+        if (payWithKGCBtn) {
+            payWithKGCBtn.addEventListener('click', handleKGCPayment);
+        }
+    }
+
+    async function fetchUserProfile(userId) {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('name, last_name, kingcoins_balance')
+            .eq('id', userId)
+            .single();
+
+        if (error) {
+            console.error('Error fetching user profile:', error.message);
+            return null;
+        }
+        return data;
+    }
+
+    async function checkUserSession() {
+        const { data: { session } } = await supabase.auth.getSession();
+        userSession = session;
+        if (userSession) {
+            userMenuContainer.classList.remove('hidden');
+            guestMenuContainer.classList.add('hidden');
+            
+            userProfileData = await fetchUserProfile(userSession.user.id);
+            if (userProfileData) {
+                userDisplayName.textContent = `${userProfileData.name} ${userProfileData.last_name || ''}`;
+                if (userProfileData.kingcoins_balance !== undefined) {
+                    kingcoinsBalanceDisplay.textContent = `${userProfileData.kingcoins_balance.toFixed(2)}`;
+                    kingcoinsBalanceHeader.classList.remove('hidden');
+                }
+            } else {
+                userDisplayName.textContent = userSession.user.email || 'Usuario';
+            }
+        } else {
+            userMenuContainer.classList.add('hidden');
+            guestMenuContainer.classList.remove('hidden');
+            kingcoinsBalanceHeader.classList.add('hidden');
+        }
+        return userProfileData;
+    }
+
+    async function handleLogout() {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+            console.error('Error al cerrar sesión:', error.message);
+        } else {
+            window.location.href = 'index.html';
+        }
+    }
+    
+    function updateGameHeader() {
+        if (transactionDetails && transactionDetails.game) {
+            gamePaymentHeader.style.display = 'block';
+            gameTitleDisplay.textContent = `Confirmar Recarga para ${transactionDetails.game}`;
+            if (transactionDetails.gameBanner) {
+                gameBannerDisplay.src = transactionDetails.gameBanner;
+                gameBannerDisplay.style.display = 'block';
+            } else {
+                gameBannerDisplay.style.display = 'none';
+            }
+        } else {
+            gamePaymentHeader.style.display = 'none';
+        }
+    }
+
+    function updateTransactionSummary() {
+        if (!transactionDetails) {
+            transactionSummaryDiv.innerHTML = '<p>No se encontraron detalles de la transacción.</p>';
+            return;
+        }
+        
+        const displayAmount = parseFloat(transactionDetails.finalPrice);
+        const displayCurrency = transactionDetails.currency;
+        
+        let otherCurrencyDisplay = '';
+        if (transactionDetails.priceUSD && transactionDetails.priceVES) {
+            if (displayCurrency === 'VES') {
+                otherCurrencyDisplay = ` (~ $${parseFloat(transactionDetails.priceUSD).toFixed(2)} USD)`;
+            } else if (displayCurrency === 'USD') {
+                otherCurrencyDisplay = ` (~ Bs. ${parseFloat(transactionDetails.priceVES).toFixed(2)} VES)`;
             }
         }
 
-        async function fetchUserProfile(userId) {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('name, last_name, country_code, phone, kingcoins_balance')
-                .eq('id', userId)
-                .single();
-
-            if (error) {
-                console.error('Error fetching user profile:', error.message);
-                return null;
-            }
-            return data;
+        const playerIdHtml = transactionDetails.playerId ? `<p><strong>ID de Jugador:</strong> ${transactionDetails.playerId}</p>` : '';
+        
+        let greeting = 'Por favor, realiza el pago por el monto exacto y selecciona tu método a continuación.';
+        if (userProfileData && userProfileData.name) {
+            greeting = `Hola ${userProfileData.name} ${userProfileData.last_name || ''}, por favor, realiza el pago por el monto exacto y selecciona tu método a continuación.`;
         }
 
-        async function checkUserSession() {
-            const { data: { session } } = await supabase.auth.getSession();
-            userSession = session;
+        transactionSummaryDiv.innerHTML = `
+            <p><strong>Juego:</strong> ${transactionDetails.game}</p>
+            ${playerIdHtml}
+            <p><strong>Plan Seleccionado:</strong> ${transactionDetails.package}</p>
+            <p><strong>Total a Pagar:</strong> <span class="amount">${displayCurrency === 'VES' ? 'Bs.' : (displayCurrency === 'USD' ? '$' : '')} ${displayAmount.toFixed(2)} ${displayCurrency}</span>${otherCurrencyDisplay}</p>
+            <p>${greeting}</p>
+        `;
+    }
+
+    function updatePaymentMethods() {
+        const paymentMethodsDiv = document.getElementById('payment-methods');
+        paymentMethodsDiv.innerHTML = '';
+        if (!transactionDetails) return;
+        const currentCurrency = transactionDetails.currency;
+        
+        paymentMethodStep.style.display = 'none';
+        paymentDetailsStep.style.display = 'none';
+        kingcoinsPaymentContainer.style.display = 'none';
+        finalizeBtn.style.display = 'none';
+
+        if (currentCurrency === 'KGC') {
             if (userSession) {
-                userMenuContainer.classList.remove('hidden');
-                guestMenuContainer.classList.add('hidden');
-                
-                userProfileData = await fetchUserProfile(userSession.user.id);
-                if (userProfileData) {
-                    userDisplayName.textContent = `${userProfileData.name} ${userProfileData.last_name || ''}`;
-                    if (userProfileData.kingcoins_balance !== undefined) {
-                        kingcoinsBalanceDisplay.textContent = `${userProfileData.kingcoins_balance.toFixed(2)}`;
-                        kingcoinsBalanceHeader.classList.remove('hidden');
-                    }
-                } else {
-                    userDisplayName.textContent = userSession.user.email || 'Usuario';
-                }
+                kingcoinsPaymentContainer.style.display = 'block';
             } else {
-                userMenuContainer.classList.add('hidden');
-                guestMenuContainer.classList.remove('hidden');
-                kingcoinsBalanceHeader.classList.add('hidden');
+                kingcoinsPaymentContainer.innerHTML = '<p>Debes <a href="login.html">iniciar sesión</a> para pagar con KingCoins.</p>';
+                kingcoinsPaymentContainer.style.display = 'block';
             }
-            return userProfileData;
+            return;
+        }
+        
+        paymentMethodStep.style.display = 'block';
+        paymentDetailsStep.style.display = 'block';
+        finalizeBtn.style.display = 'block';
+
+        let methods = [];
+        if (currentCurrency === 'VES') {
+            methods = paymentMethodsVES;
+        } else if (currentCurrency === 'USD') {
+            methods = paymentMethodsUSD;
         }
 
-        async function handleLogout() {
-            const { error } = await supabase.auth.signOut();
-            if (error) {
-                console.error('Error al cerrar sesión:', error.message);
+        methods.forEach(method => {
+            const methodItem = document.createElement('div');
+            methodItem.classList.add('payment-method-option');
+            methodItem.innerHTML = `
+                <input type="radio" id="method-${method.id}" name="paymentMethod" value="${method.id}" data-type="${method.type}">
+                <label for="method-${method.id}">
+                    <i class="${method.icon}"></i>
+                    <span>${method.name}</span>
+                </label>
+            `;
+            paymentMethodsDiv.appendChild(methodItem);
+        });
+
+        paymentMethodsDiv.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
+            radio.addEventListener('change', (event) => {
+                const selectedMethodId = event.target.value;
+                loadPaymentDetails(selectedMethodId);
+                checkFormValidity();
+            });
+        });
+        checkFormValidity();
+    }
+
+    function loadPaymentDetails(methodId) {
+        const paymentDetailsFormDiv = document.getElementById('payment-details-form');
+        let methodHtml = paymentDetailsTemplates[methodId];
+
+        if (methodHtml) {
+            paymentDetailsFormDiv.innerHTML = methodHtml;
+
+            if (transactionDetails.game === "TikTok") {
+                const fieldsContainer = paymentDetailsFormDiv.querySelector('.payment-fields-container');
+                if (fieldsContainer) {
+                    fieldsContainer.style.display = 'none';
+                }
             } else {
-                window.location.href = 'index.html';
+                const fileInput = document.getElementById('payment-receipt');
+                if (fileInput) {
+                    fileInput.addEventListener('change', checkFormValidity);
+                    fileInput.required = true; 
+                }
+            }
+
+            const copyButton = paymentDetailsFormDiv.querySelector('.copy-button');
+            if (copyButton) {
+                copyButton.addEventListener('click', handleCopyButtonClick);
+            }
+
+        } else {
+            paymentDetailsFormDiv.innerHTML = '<p>Selecciona un método de pago para ver los detalles.</p>';
+        }
+        checkFormValidity();
+    }
+
+    async function handleCopyButtonClick(event) {
+        const button = event.currentTarget;
+        const targetId = button.dataset.copyTarget;
+        const textToCopyElement = document.getElementById(targetId);
+        const feedbackElement = document.getElementById(`${targetId}-copy-feedback`);
+
+        if (textToCopyElement && navigator.clipboard) {
+            try {
+                await navigator.clipboard.writeText(textToCopyElement.textContent);
+                if (feedbackElement) {
+                    feedbackElement.textContent = '¡Copiado!';
+                    feedbackElement.style.display = 'inline-block';
+                    setTimeout(() => {
+                        feedbackElement.style.display = 'none';
+                    }, 1500);
+                }
+            } catch (err) {
+                console.error('Error al copiar: ', err);
+                if (feedbackElement) {
+                    feedbackElement.textContent = 'Error al copiar';
+                    feedbackElement.style.display = 'inline-block';
+                    setTimeout(() => {
+                        feedbackElement.style.display = 'none';
+                    }, 1500);
+                }
+                alert('No se pudo copiar el texto. Por favor, cópialo manualmente.');
+            }
+        } else {
+            alert('Tu navegador no soporta la copia automática o no se encontró el elemento. Por favor, selecciona y copia la dirección manualmente.');
+        }
+    }
+
+    function checkFormValidity() {
+        const selectedRadio = document.querySelector('input[name="paymentMethod"]:checked');
+        const isMethodSelected = selectedRadio !== null;
+        
+        let areDetailsFilled = false;
+        if (isMethodSelected) {
+            if (transactionDetails.game === "TikTok") {
+                areDetailsFilled = true;
+            } else {
+                const fileInput = document.getElementById('payment-receipt');
+                areDetailsFilled = fileInput && fileInput.files.length > 0;
             }
         }
         
-        function updateGameHeader() {
-            if (transactionDetails && transactionDetails.game) {
-                gamePaymentHeader.style.display = 'block';
-                gameTitleDisplay.textContent = `Confirmar Recarga para ${transactionDetails.game}`;
-                if (transactionDetails.gameBanner) {
-                    gameBannerDisplay.src = transactionDetails.gameBanner;
-                    gameBannerDisplay.style.display = 'block';
-                } else {
-                    gameBannerDisplay.style.display = 'none';
-                }
-            } else {
+        finalizeBtn.disabled = !areDetailsFilled;
+        finalizeBtn.style.display = areDetailsFilled ? 'block' : 'none';
+    }
+
+    async function submitPaymentRequest(paymentMethod) {
+        if (!userSession) {
+            alert('Debes iniciar sesión para finalizar el pago.');
+            window.location.href = 'login.html';
+            return;
+        }
+        
+        let formData = new FormData();
+        formData.append('paymentMethod', paymentMethod);
+
+        if (userSession.user.email) {
+            formData.append('userEmail', userSession.user.email);
+        }
+        
+        if (paymentMethod !== 'kingcoins' && transactionDetails.game !== "TikTok") {
+            const paymentReceipt = document.getElementById('payment-receipt');
+            if (!paymentReceipt || paymentReceipt.files.length === 0) {
+                alert('Por favor, sube tu comprobante de pago para continuar.');
+                return;
+            }
+            formData.append('paymentReceipt', paymentReceipt.files[0]);
+        }
+        
+        for (const key in transactionDetails) {
+            formData.append(key, transactionDetails[key]);
+        }
+
+        const buttonToDisable = paymentMethod === 'kingcoins' ? payWithKGCBtn : finalizeBtn;
+        const originalButtonText = buttonToDisable.textContent;
+        buttonToDisable.disabled = true;
+        buttonToDisable.textContent = 'Procesando...';
+
+        try {
+            const response = await fetch('/.netlify/functions/process-payment', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                paymentForm.style.display = 'none';
+                whatsappMessageContainer.style.display = 'none';
+                successMessageDisplay.style.display = 'block';
                 gamePaymentHeader.style.display = 'none';
-            }
-        }
 
-        function updateTransactionSummary() {
-            if (!transactionDetails) {
-                transactionSummaryDiv.innerHTML = '<p>No se encontraron detalles de la transacción.</p>';
-                return;
-            }
-            
-            const displayAmount = parseFloat(transactionDetails.finalPrice);
-            const displayCurrency = transactionDetails.currency;
-            
-            let otherCurrencyDisplay = '';
-            if (transactionDetails.priceUSD && transactionDetails.priceVES) {
-                if (displayCurrency === 'VES') {
-                    otherCurrencyDisplay = ` (~ $${parseFloat(transactionDetails.priceUSD).toFixed(2)} USD)`;
-                } else if (displayCurrency === 'USD') {
-                    otherCurrencyDisplay = ` (~ Bs. ${parseFloat(transactionDetails.priceVES).toFixed(2)} VES)`;
-                }
-            }
+                localStorage.removeItem('transactionDetails');
 
-            const playerIdHtml = transactionDetails.playerId ? `<p><strong>ID de Jugador:</strong> ${transactionDetails.playerId}</p>` : '';
-            
-            let greeting = 'Por favor, realiza el pago por el monto exacto y selecciona tu método a continuación.';
-            if (userProfileData && userProfileData.name) {
-                greeting = `Hola ${userProfileData.name} ${userProfileData.last_name || ''}, por favor, realiza el pago por el monto exacto y selecciona tu método a continuación.`;
-            }
-
-            transactionSummaryDiv.innerHTML = `
-                <p><strong>Juego:</strong> ${transactionDetails.game}</p>
-                ${playerIdHtml}
-                <p><strong>Plan Seleccionado:</strong> ${transactionDetails.package}</p>
-                <p><strong>Total a Pagar:</strong> <span class="amount">${displayCurrency === 'VES' ? 'Bs.' : (displayCurrency === 'USD' ? '$' : '')} ${displayAmount.toFixed(2)} ${displayCurrency}</span>${otherCurrencyDisplay}</p>
-                <p>${greeting}</p>
-            `;
-        }
-
-        function updatePaymentMethods() {
-            const paymentMethodsDiv = document.getElementById('payment-methods');
-            paymentMethodsDiv.innerHTML = '';
-            if (!transactionDetails) return;
-            const currentCurrency = transactionDetails.currency;
-            
-            paymentMethodStep.style.display = 'none';
-            paymentDetailsStep.style.display = 'none';
-            kingcoinsPaymentContainer.style.display = 'none';
-            finalizeBtn.style.display = 'none';
-
-            if (currentCurrency === 'KGC') {
-                if (userSession) {
-                    kingcoinsPaymentContainer.style.display = 'block';
-                } else {
-                    kingcoinsPaymentContainer.innerHTML = '<p>Debes <a href="login.html">iniciar sesión</a> para pagar con KingCoins.</p>';
-                    kingcoinsPaymentContainer.style.display = 'block';
-                }
-                return;
-            }
-            
-            paymentMethodStep.style.display = 'block';
-            paymentDetailsStep.style.display = 'block';
-            finalizeBtn.style.display = 'block';
-
-            let methods = [];
-            if (currentCurrency === 'VES') {
-                methods = paymentMethodsVES;
-            } else if (currentCurrency === 'USD') {
-                methods = paymentMethodsUSD;
-            }
-
-            methods.forEach(method => {
-                const methodItem = document.createElement('div');
-                methodItem.classList.add('payment-method-option');
-                methodItem.innerHTML = `
-                    <input type="radio" id="method-${method.id}" name="paymentMethod" value="${method.id}" data-type="${method.type}">
-                    <label for="method-${method.id}">
-                        <i class="${method.icon}"></i>
-                        <span>${method.name}</span>
-                    </label>
-                `;
-                paymentMethodsDiv.appendChild(methodItem);
-            });
-
-            paymentMethodsDiv.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
-                radio.addEventListener('change', (event) => {
-                    const selectedMethodId = event.target.value;
-                    loadPaymentDetails(selectedMethodId);
-                    checkFormValidity();
-                });
-            });
-            checkFormValidity();
-        }
-
-        function loadPaymentDetails(methodId) {
-            const paymentDetailsFormDiv = document.getElementById('payment-details-form');
-            let methodHtml = paymentDetailsTemplates[methodId];
-
-            if (methodHtml) {
-                paymentDetailsFormDiv.innerHTML = methodHtml;
-
-                if (transactionDetails.game === "TikTok") {
-                    const fieldsContainer = paymentDetailsFormDiv.querySelector('.payment-fields-container');
-                    if (fieldsContainer) {
-                        fieldsContainer.style.display = 'none';
-                    }
-                } else {
-                    const fileInput = document.getElementById('payment-receipt');
-                    if (fileInput) {
-                        fileInput.addEventListener('change', checkFormValidity);
-                        fileInput.required = true; 
-                    }
-                }
-
-                const copyButton = paymentDetailsFormDiv.querySelector('.copy-button');
-                if (copyButton) {
-                    copyButton.addEventListener('click', handleCopyButtonClick);
-                }
-
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 5000);
             } else {
-                paymentDetailsFormDiv.innerHTML = '<p>Selecciona un método de pago para ver los detalles.</p>';
-            }
-            checkFormValidity();
-        }
-
-        async function handleCopyButtonClick(event) {
-            const button = event.currentTarget;
-            const targetId = button.dataset.copyTarget;
-            const textToCopyElement = document.getElementById(targetId);
-            const feedbackElement = document.getElementById(`${targetId}-copy-feedback`);
-
-            if (textToCopyElement && navigator.clipboard) {
-                try {
-                    await navigator.clipboard.writeText(textToCopyElement.textContent);
-                    if (feedbackElement) {
-                        feedbackElement.textContent = '¡Copiado!';
-                        feedbackElement.style.display = 'inline-block';
-                        setTimeout(() => {
-                            feedbackElement.style.display = 'none';
-                        }, 1500);
-                    }
-                } catch (err) {
-                    console.error('Error al copiar: ', err);
-                    if (feedbackElement) {
-                        feedbackElement.textContent = 'Error al copiar';
-                        feedbackElement.style.display = 'inline-block';
-                        setTimeout(() => {
-                            feedbackElement.style.display = 'none';
-                        }, 1500);
-                    }
-                    alert('No se pudo copiar el texto. Por favor, cópialo manualmente.');
-                }
-            } else {
-                alert('Tu navegador no soporta la copia automática o no se encontró el elemento. Por favor, selecciona y copia la dirección manualmente.');
-            }
-        }
-
-        function checkFormValidity() {
-            const selectedRadio = document.querySelector('input[name="paymentMethod"]:checked');
-            const isMethodSelected = selectedRadio !== null;
-            
-            let areDetailsFilled = false;
-            if (isMethodSelected) {
-                if (transactionDetails.game === "TikTok") {
-                    areDetailsFilled = true;
-                } else {
-                    const fileInput = document.getElementById('payment-receipt');
-                    areDetailsFilled = fileInput && fileInput.files.length > 0;
-                }
-            }
-            
-            finalizeBtn.disabled = !areDetailsFilled;
-            finalizeBtn.style.display = areDetailsFilled ? 'block' : 'none';
-        }
-
-        async function submitPaymentRequest(paymentMethod) {
-            if (!userSession) {
-                alert('Debes iniciar sesión para finalizar el pago.');
-                window.location.href = 'login.html';
-                return;
-            }
-            
-            let formData = new FormData();
-            formData.append('paymentMethod', paymentMethod);
-
-            if (userSession.user.email) {
-                formData.append('userEmail', userSession.user.email);
-            }
-            if (userProfileData && userProfileData.country_code && userProfileData.phone) {
-                const fullPhoneNumber = `${userProfileData.country_code}${userProfileData.phone}`;
-                formData.append('whatsappNumber', fullPhoneNumber);
-            }
-            
-            if (paymentMethod !== 'kingcoins' && transactionDetails.game !== "TikTok") {
-                const paymentReceipt = document.getElementById('payment-receipt');
-                if (!paymentReceipt || paymentReceipt.files.length === 0) {
-                    alert('Por favor, sube tu comprobante de pago para continuar.');
-                    return;
-                }
-                formData.append('paymentReceipt', paymentReceipt.files[0]);
-            }
-            
-            for (const key in transactionDetails) {
-                formData.append(key, transactionDetails[key]);
-            }
-
-            const buttonToDisable = paymentMethod === 'kingcoins' ? payWithKGCBtn : finalizeBtn;
-            const originalButtonText = buttonToDisable.textContent;
-            buttonToDisable.disabled = true;
-            buttonToDisable.textContent = 'Procesando...';
-
-            try {
-                const response = await fetch('/.netlify/functions/process-payment', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (response.ok) {
-                    paymentForm.style.display = 'none';
-                    whatsappMessageContainer.style.display = 'none';
-                    successMessageDisplay.style.display = 'block';
-                    gamePaymentHeader.style.display = 'none';
-
-                    localStorage.removeItem('transactionDetails');
-
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 5000);
-                } else {
-                    const errorData = await response.json();
-                    alert(`Ocurrió un error: ${errorData.message || response.statusText}. Por favor, verifica tus datos e inténtalo de nuevo.`);
-                    console.error('Server error:', errorData);
-                    buttonToDisable.disabled = false;
-                    buttonToDisable.textContent = originalButtonText;
-                }
-            } catch (error) {
-                alert('Hubo un problema de conexión. Por favor, inténtalo de nuevo más tarde.');
-                console.error('Network or client error:', error);
+                const errorData = await response.json();
+                alert(`Ocurrió un error: ${errorData.message || response.statusText}. Por favor, verifica tus datos e inténtalo de nuevo.`);
+                console.error('Server error:', errorData);
                 buttonToDisable.disabled = false;
                 buttonToDisable.textContent = originalButtonText;
             }
+        } catch (error) {
+            alert('Hubo un problema de conexión. Por favor, inténtalo de nuevo más tarde.');
+            console.error('Network or client error:', error);
+            buttonToDisable.disabled = false;
+            buttonToDisable.textContent = originalButtonText;
         }
+    }
+    
+    async function handleKGCPayment() {
+        if (!userSession) {
+            alert('Debes iniciar sesión para usar KingCoins.');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        if (!userProfileData || userProfileData.kingcoins_balance === undefined) {
+            alert('No se pudo obtener el saldo de tu billetera. Por favor, intenta recargar la página.');
+            return;
+        }
+
+        const amountNeeded = parseFloat(transactionDetails.finalPrice);
+        if (userProfileData.kingcoins_balance < amountNeeded) {
+            alert('Saldo insuficiente de KingCoins. Por favor, recarga tu billetera o selecciona otro método de pago.');
+            return;
+        }
+
+        submitPaymentRequest('kingcoins');
+    }
+
+    function handleFormSubmission() {
+        paymentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked');
+            if (selectedMethod) {
+                submitPaymentRequest(selectedMethod.value);
+            }
+        });
+    }
+    
+    // Lógica principal
+    document.addEventListener('DOMContentLoaded', async () => {
+        setupEventListeners();
         
-        async function handleKGCPayment() {
-            if (!userSession) {
-                alert('Debes iniciar sesión para usar KingCoins.');
-                window.location.href = 'login.html';
-                return;
-            }
+        const storedDetails = localStorage.getItem('transactionDetails');
+        if (storedDetails) {
+            try {
+                transactionDetails = JSON.parse(storedDetails);
+                if (transactionDetails && transactionDetails.game && transactionDetails.package && transactionDetails.finalPrice) {
+                    await checkUserSession();
+                    
+                    updateGameHeader();
+                    updatePaymentMethods();
+                    updateTransactionSummary();
 
-            if (!userProfileData || userProfileData.kingcoins_balance === undefined) {
-                alert('No se pudo obtener el saldo de tu billetera. Por favor, intenta recargar la página.');
-                return;
-            }
+                    paymentForm.style.display = 'block';
 
-            const amountNeeded = parseFloat(transactionDetails.finalPrice);
-            if (userProfileData.kingcoins_balance < amountNeeded) {
-                alert('Saldo insuficiente de KingCoins. Por favor, recarga tu billetera o selecciona otro método de pago.');
-                return;
-            }
-
-            submitPaymentRequest('kingcoins');
-        }
-
-        function handleFormSubmission() {
-            paymentForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked');
-                if (selectedMethod) {
-                    submitPaymentRequest(selectedMethod.value);
-                }
-            });
-        }
-        
-        // Lógica principal
-        document.addEventListener('DOMContentLoaded', async () => {
-            setupEventListeners();
-            
-            const storedDetails = localStorage.getItem('transactionDetails');
-            if (storedDetails) {
-                try {
-                    transactionDetails = JSON.parse(storedDetails);
-                    if (transactionDetails && transactionDetails.game && transactionDetails.package && transactionDetails.finalPrice) {
-                        await checkUserSession();
-                        
-                        updateGameHeader();
-                        updatePaymentMethods();
-                        updateTransactionSummary();
-
-                        paymentForm.style.display = 'block';
-
-                        if (transactionDetails.game === "TikTok") {
-                            whatsappMessageContainer.style.display = 'block';
-                        } else {
-                            whatsappMessageContainer.style.display = 'none';
-                        }
-                        
-                        handleFormSubmission();
+                    if (transactionDetails.game === "TikTok") {
+                        whatsappMessageContainer.style.display = 'block';
                     } else {
-                        throw new Error('Transaction details are incomplete or invalid.');
+                        whatsappMessageContainer.style.display = 'none';
                     }
-                } catch (e) {
-                    console.error("Error parsing transaction details from localStorage:", e);
-                    transactionSummaryDiv.innerHTML = '<p>Error al cargar los detalles de la transacción. Por favor, regresa a la página de inicio y selecciona un plan para la recarga.</p>';
-                    paymentForm.style.display = 'none';
-                    whatsappMessageContainer.style.display = 'none';
-                    gamePaymentHeader.style.display = 'none';
+                    
+                    handleFormSubmission();
+                } else {
+                    throw new Error('Transaction details are incomplete or invalid.');
                 }
-            } else {
-                transactionSummaryDiv.innerHTML = '<p>No se encontraron detalles de la transacción. Por favor, regresa a la página de inicio y selecciona un plan para la recarga.</p>';
+            } catch (e) {
+                console.error("Error parsing transaction details from localStorage:", e);
+                transactionSummaryDiv.innerHTML = '<p>Error al cargar los detalles de la transacción. Por favor, regresa a la página de inicio y selecciona un plan para la recarga.</p>';
                 paymentForm.style.display = 'none';
                 whatsappMessageContainer.style.display = 'none';
                 gamePaymentHeader.style.display = 'none';
             }
-        });
-    </script>
+        } else {
+            transactionSummaryDiv.innerHTML = '<p>No se encontraron detalles de la transacción. Por favor, regresa a la página de inicio y selecciona un plan para la recarga.</p>';
+            paymentForm.style.display = 'none';
+            whatsappMessageContainer.style.display = 'none';
+            gamePaymentHeader.style.display = 'none';
+        }
+    });
+</script>
 </body>
 </html>
