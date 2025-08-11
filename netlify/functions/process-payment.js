@@ -9,7 +9,7 @@ function escapeMarkdownV2(text) {
     if (typeof text !== 'string') {
         text = String(text);
     }
-    const specialChars = /[_*\[\]()~`>#+\-={}.!]/g;
+    const specialChars = /[_*[\]()~`>#+\-=|{}.!]/g;
     return text.replace(specialChars, '\\$&');
 }
 
@@ -28,7 +28,7 @@ exports.handler = async function(event, context) {
 
     // --- Parsing de FormData con formidable ---
     const form = new Formidable({ multiples: true });
-    
+
     try {
         const bodyBuffer = event.isBase64Encoded ? Buffer.from(event.body, 'base64') : Buffer.from(event.body || '');
         const reqStream = new Readable();
@@ -174,16 +174,17 @@ exports.handler = async function(event, context) {
         };
     }
     
+    // Aquí es donde se genera el mensaje inicial, por eso el error persiste
     let messageText = `✨ *NUEVA RECARGA PENDIENTE* ✨\n\n`;
-    messageText += `*ID de Transacción:* \`${escapeMarkdownV2(newTransactionData.id_transaccion || 'N/A')}\`\n`;
-    messageText += `*Estado:* \`PENDIENTE\`\n\n`;
-    messageText += `🎮 Juego: *${escapeMarkdownV2(game)}*\n`;
+    messageText += `*Juego:* ${escapeMarkdownV2(game)}\n`;
     if (playerId) {
-        messageText += `👤 ID de Jugador: *${escapeMarkdownV2(playerId)}*\n`;
+        messageText += `👤 ID de Jugador: \`${escapeMarkdownV2(playerId)}\`\n`;
     }
-    messageText += `📦 Paquete: *${escapeMarkdownV2(cleanedDisplayPackageName)}*\n`;
-    messageText += `💰 Total a Pagar: *${escapeMarkdownV2(finalPrice)} ${escapeMarkdownV2(currency)}*\n`;
-    messageText += `💳 Método de Pago: *${escapeMarkdownV2(paymentMethod.replace('-', ' ').toUpperCase())}*\n`;
+    messageText += `📦 Paquete: ${escapeMarkdownV2(cleanedDisplayPackageName)}\n`;
+    messageText += `💰 Total a Pagar: ${escapeMarkdownV2(finalPrice)} ${escapeMarkdownV2(currency)}\n`;
+    messageText += `💳 Método de Pago: ${escapeMarkdownV2(paymentMethod.replace('-', ' ').toUpperCase())}\n`;
+    messageText += `\-\-\-\n`; // <-- Línea corregida
+    messageText += `*ID de Transacción:* \`${escapeMarkdownV2(newTransactionData.id_transaccion || 'N/A')}\`\n`;
     messageText += `📧 Correo Cliente: ${escapeMarkdownV2(email || 'N/A')}\n`;
     if (fullName) {
         messageText += `🧑‍💻 Nombre Cliente: ${escapeMarkdownV2(fullName)}\n`;
@@ -222,7 +223,6 @@ exports.handler = async function(event, context) {
             const cleanedPackageNameForWhatsappRecargador = (cleanedDisplayPackageName || 'N/A').replace(/\+/g, '%2B');
     
             let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
-            whatsappMessageRecargador += `*ID de Transacción:* ${newTransactionData.id_transaccion || 'N/A'}\n`;
             whatsappMessageRecargador += `*ID de Jugador:* ${playerId || 'N/A'}\n`;
             whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageNameForWhatsappRecargador}\n`;
     
