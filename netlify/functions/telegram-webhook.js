@@ -210,9 +210,9 @@ exports.handler = async function(event, context) {
 *Paquete:* ${escapeMarkdownV2(cleanedPackageName || 'N/A')}
 *Monto:* ${escapeMarkdownV2(transaction.final_price || 'N/A')} ${escapeMarkdownV2(transaction.currency || 'N/A')}
 *Método de Pago:* ${escapeMarkdownV2(transaction.payment_method.replace(/-/g, ' ').toUpperCase() || 'N/A')}
-\\-\\-\\-
+\\-\\-\-
 *Estado:* ${statusText} ${statusEmoji}
-_Marcada por:_ *${escapeMarkdownV2(userName)}* (${escapeMarkdownV2(formattedTime)} ${escapeMarkdownV2(formattedDate)})
+_Marcada por:_ *${escapeMarkdownV2(userName)}* \\(${escapeMarkdownV2(formattedTime)} ${escapeMarkdownV2(formattedDate)}\\)
 `.trim();
 
                 let updatedInlineKeyboard = [];
