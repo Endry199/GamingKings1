@@ -183,7 +183,7 @@ exports.handler = async function(event, context) {
     messageText += `📦 Paquete: ${escapeMarkdownV2(cleanedDisplayPackageName)}\n`;
     messageText += `💰 Total a Pagar: ${escapeMarkdownV2(finalPrice)} ${escapeMarkdownV2(currency)}\n`;
     messageText += `💳 Método de Pago: ${escapeMarkdownV2(paymentMethod.replace('-', ' ').toUpperCase())}\n`;
-    messageText += `\-\-\-\n`; // <-- Línea corregida
+    messageText += `\\-\\-\\- \n`; // <-- Línea corregida
     messageText += `*ID de Transacción:* \`${escapeMarkdownV2(newTransactionData.id_transaccion || 'N/A')}\`\n`;
     messageText += `📧 Correo Cliente: ${escapeMarkdownV2(email || 'N/A')}\n`;
     if (fullName) {
