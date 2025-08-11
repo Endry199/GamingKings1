@@ -58,7 +58,7 @@ exports.handler = async function(event, context) {
                 .select('id_transaccion, game, player_id, package_name, final_price, currency, payment_method, status, email, full_name, whatsapp_number, receipt_url, invoice_text_content')
                 .eq('id_transaccion', id)
                 .single();
-            
+
             if (fetchError && fetchError.code === 'PGRST116') {
                 console.error("Error al obtener la transacción de Supabase: Transacción no encontrada.", `Transaction ID: ${id}`);
                 await answerCallbackQuery(callbackQueryId, "❌ Error: Transacción no encontrada. Verifica la ID.", true);
@@ -87,11 +87,11 @@ exports.handler = async function(event, context) {
                 const parts = data.split(':');
                 const transactionId = parts[1];
                 const status = parts[2];
-                
+
                 console.log(`DEBUG: Callback Data - Action: update_transaction, Transaction ID: ${transactionId}, Status: ${status}`);
 
                 const transaction = await getTransaction(transactionId, callbackQueryId);
-                
+
                 if (!transaction) {
                     return { statusCode: 200, body: "Error fetching transaction" };
                 }
@@ -169,77 +169,12 @@ exports.handler = async function(event, context) {
                     }
                 }
 
-                // Preparar el texto para la factura
-                const now = new Date();
-                const day = String(now.getDate()).padStart(2, '0');
-                const month = String(now.getMonth() + 1).padStart(2, '0');
-                const year = now.getFullYear();
-                const formattedDate = `${day}/${month}/${year}`;
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                const formattedTime = `${hours}:${minutes}`;
-
-                let invoiceTextContent = null;
-                if (status === 'realizada' && transaction.payment_method && transaction.payment_method.toLowerCase().includes('kingcoins')) {
-                    const cleanedPackageName = transaction.package_name.includes('<i class="fas fa-crown"></i>')
-                        ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins')
-                        : transaction.package_name;
-                    invoiceTextContent = `
-🎉 ¡Hola! 👋
-
-¡Tu compra de KingCoins ha sido *COMPLETADA* por GamingKings!
-
-Aquí tienes los detalles de tu transacción:
-\-\-\-
-*Factura \\#${escapeMarkdownV2(transaction.id_transaccion)}*
-*Estado: LIBERADO ✅* 📅 Fecha: ${formattedDate}
-👑 Producto: KingCoins
-💰 Cantidad Comprada: ${escapeMarkdownV2(cleanedPackageName)}
-💲 Monto Pagado: ${escapeMarkdownV2(transaction.final_price)} ${escapeMarkdownV2(transaction.currency)}
-💳 Método de Pago: ${escapeMarkdownV2(transaction.payment_method.replace(/-/g, ' ').toUpperCase())}
-\-\-\-
-¡Gracias por tu compra! ✨
-`.trim();
-                } else if (status === 'realizada') {
-                    invoiceTextContent = `
-🎉 ¡Hola! 👋
-
-¡Tu recarga ha sido *COMPLETADA* por GamingKings!
-
-Aquí tienes los detalles de tu recarga:
-\-\-\-
-*Factura \\#${escapeMarkdownV2(transaction.id_transaccion)}*
-*Estado: REALIZADA ✅* 📅 Fecha: ${formattedDate}
-🎮 Juego: ${escapeMarkdownV2(transaction.game)}
-👤 ID de Jugador: ${escapeMarkdownV2(transaction.player_id || 'N/A')}
-📦 Paquete: ${escapeMarkdownV2(transaction.package_name.includes('<i class="fas fa-crown"></i>') ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins') : transaction.package_name)}
-💰 Monto Pagado: ${escapeMarkdownV2(transaction.final_price)} ${escapeMarkdownV2(transaction.currency)}
-💳 Método de Pago: ${escapeMarkdownV2(transaction.payment_method.replace(/-/g, ' ').toUpperCase())}
-\-\-\-
-¡Gracias por tu compra! ✨
-`.trim();
-                } else if (status === 'rechazada') {
-                    invoiceTextContent = `
-👋 ¡Hola!
-
-Lamentamos informarte que tu recarga con el ID de transacción *\\#${escapeMarkdownV2(transaction.id_transaccion)}* ha sido *RECHAZADA* ❌.
-
-Esto puede deberse a:
-- El pago no fue verificado.
-- Datos incorrectos en la solicitud.
-- O algún otro problema técnico.
-
-Puedes intentar realizar la compra de nuevo. Si crees que se trata de un error, por favor contacta con el soporte de GamingKings.
-
-¡Gracias por tu comprensión!
-`.trim();
-                }
-                
+                // Aquí ya no se genera ningún texto de factura para el cliente
                 const updateData = {
                     status: status,
                     completed_at: status === 'realizada' ? new Date().toISOString() : null,
                     completed_by: status === 'realizada' ? userName : null,
-                    invoice_text_content: invoiceTextContent
+                    invoice_text_content: null // Se establece como null para evitar guardar datos innecesarios.
                 };
 
                 const { error: updateError } = await supabase
@@ -251,15 +186,24 @@ Puedes intentar realizar la compra de nuevo. Si crees que se trata de un error, 
                     console.error("Error al actualizar la transacción en Supabase:", updateError.message, `Transaction ID: ${transactionId}`);
                     return { statusCode: 200, body: "Error updating transaction status" };
                 }
-                
+
                 console.log(`Transacción ${transactionId} actualizada a '${status}' en Supabase.`);
 
                 const statusText = status === 'realizada' ? 'REALIZADA' : 'RECHAZADA';
                 const statusEmoji = status === 'realizada' ? '✅' : '❌';
                 const cleanedPackageName = transaction.package_name.includes('<i class="fas fa-crown"></i>')
-                        ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins')
-                        : transaction.package_name;
-                
+                    ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins')
+                    : transaction.package_name;
+
+                const now = new Date();
+                const day = String(now.getDate()).padStart(2, '0');
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const year = now.getFullYear();
+                const formattedDate = `${day}/${month}/${year}`;
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const formattedTime = `${hours}:${minutes}`;
+
                 const newCaption = `
 *ID de Transacción:* \`${transaction.id_transaccion}\`
 *Juego:* ${escapeMarkdownV2(transaction.game || 'N/A')}
@@ -276,21 +220,6 @@ _Marcada por:_ *${escapeMarkdownV2(userName)}* (${escapeMarkdownV2(formattedTime
 
                 if (status === 'realizada' || status === 'rechazada') {
                     updatedInlineKeyboard.push([{ text: `${statusEmoji} Recarga ${statusText}`, callback_data: `completed_status_${transactionId}` }]);
-                    
-                    if (status === 'realizada' && transaction.whatsapp_number && transaction.whatsapp_number.trim() !== '') {
-                        const customerWhatsappNumberFormatted = transaction.whatsapp_number.startsWith('+') ? transaction.whatsapp_number : `+${transaction.whatsapp_number}`;
-                        const invoiceLink = `${NETLIFY_SITE_URL}/.netlify/functions/get-invoice?id=${encodeURIComponent(transaction.id_transaccion)}`;
-                        const shortWhatsappMessage = `
-🎉 ¡Hola! 👋
-¡Tu recarga con la ID de transaccion: \`${escapeMarkdownV2(transaction.id_transaccion)}\` ha sido *COMPLETADA* por GamingKings!
-Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
-¡Gracias por tu compra! ✨
-`.trim();
-                        const whatsappLinkCompletedCustomer = `https://wa.me/${customerWhatsappNumberFormatted}?text=${encodeURIComponent(shortWhatsappMessage)}`;
-                        updatedInlineKeyboard.push([{ text: "📲 WhatsApp Cliente (Factura)", url: whatsappLinkCompletedCustomer }]);
-                    } else if (status === 'realizada') {
-                        updatedInlineKeyboard.push([{ text: "⚠️ Cliente sin WhatsApp para factura", callback_data: `no_whatsapp_factura_${transactionId}` }]);
-                    }
                 }
 
                 const updatedReplyMarkup = {
@@ -305,7 +234,7 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
                     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
                         chat_id: chatId,
                         message_id: messageId,
-                        text: newCaption, 
+                        text: newCaption,
                         parse_mode: 'MarkdownV2',
                         reply_markup: updatedReplyMarkup,
                         disable_web_page_preview: true
@@ -319,22 +248,21 @@ Puedes ver los detalles de tu factura aquí: ${escapeMarkdownV2(invoiceLink)}
             else if (data.startsWith('send_whatsapp_')) {
                 const transactionId = data.replace('send_whatsapp_', '');
                 const transaction = await getTransaction(transactionId, callbackQueryId);
-                
+
                 if (!transaction) {
                     return { statusCode: 200, body: "Error fetching transaction for send_whatsapp" };
                 }
-                
+
                 const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
-                
+
                 const cleanedPackageNameForRecargador = transaction.package_name.includes('<i class="fas fa-crown"></i>')
                     ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins')
                     : transaction.package_name;
 
                 let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
-                whatsappMessageRecargador += `*ID de Transacción:* ${escapeMarkdownV2(transaction.id_transaccion || 'N/A')}\n`;
                 whatsappMessageRecargador += `*ID de Jugador:* \`${escapeMarkdownV2(transaction.player_id || 'N/A')}\`\n`;
                 whatsappMessageRecargador += `*Paquete a Recargar:* ${escapeMarkdownV2(cleanedPackageNameForRecargador || 'N/A')}\n`;
-                
+
                 const whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
 
                 await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
