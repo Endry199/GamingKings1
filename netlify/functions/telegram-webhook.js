@@ -205,7 +205,6 @@ exports.handler = async function(event, context) {
                 const formattedTime = `${hours}:${minutes}`;
 
                 const newCaption = `
-*ID de Transacción:* \`${transaction.id_transaccion}\`
 *Juego:* ${escapeMarkdownV2(transaction.game || 'N/A')}
 *ID de Jugador:* \`${transaction.player_id || 'N/A'}\`
 *Paquete:* ${escapeMarkdownV2(cleanedPackageName || 'N/A')}
