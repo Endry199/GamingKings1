@@ -910,16 +910,16 @@
         checkUserSession();
 
         // Lógica de paquetes y selector de moneda
-        const bloodstrikePackages = [
-            { id: 1, name: '105 Gold', priceUSD: 1.00, priceVES: 168.50, priceKGC: 110.00 },
-            { id: 2, name: '320 Gold', priceUSD: 3.00, priceVES: 505.50, priceKGC: 325.00 },
-            { id: 3, name: '540 Gold', priceUSD: 4.90, priceVES: 825.65, priceKGC: 540.00 },
-            { id: 4, name: '1100 Gold', priceUSD: 9.60, priceVES: 1619.69, priceKGC: 1080.00 },
-            { id: 5, name: '2260 Gold', priceUSD: 18.60, priceVES: 3139.76, priceKGC: 2160.00 },
-            { id: 6, name: '5800 Gold', priceUSD: 47.50, priceVES: 8000.78, priceKGC: 5400.00 },
-            { id: 7, name: 'Pase Elite', priceUSD: 4.00, priceVES: 679.05, priceKGC: 420.00 },
-            { id: 8, name: 'Pase Elite Plus', priceUSD: 9.30, priceVES: 1574.69, priceKGC: 980.00 }
-        ];
+const bloodstrikePackages = [
+    { id: 1, name: '105 Gold', priceUSD: 1.00, priceVES: 189.00, priceKGC: 14.28 },
+    { id: 2, name: '320 Gold', priceUSD: 3.00, priceVES: 567.00, priceKGC: 42.84 },
+    { id: 3, name: '540 Gold', priceUSD: 4.90, priceVES: 926.10, priceKGC: 69.97 },
+    { id: 4, name: '1100 Gold', priceUSD: 9.60, priceVES: 1814.40, priceKGC: 137.10 },
+    { id: 5, name: '2260 Gold', priceUSD: 18.60, priceVES: 3515.40, priceKGC: 265.55 },
+    { id: 6, name: '5800 Gold', priceUSD: 47.50, priceVES: 8977.50, priceKGC: 678.30 },
+    { id: 7, name: 'Pase Elite', priceUSD: 4.00, priceVES: 756.00, priceKGC: 57.12 },
+    { id: 8, name: 'Pase Elite Plus', priceUSD: 9.30, priceVES: 1757.70, priceKGC: 132.80 }
+ ];
 
         document.addEventListener('DOMContentLoaded', () => {
             const playerIdInput = document.getElementById('player-id');

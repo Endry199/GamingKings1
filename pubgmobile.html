@@ -294,15 +294,14 @@
         
         checkUserSession();
 
-        const pubgmobilePackages = [
-            { id: 1, name: '60 UC', priceUSD: 1.00, priceVES: 168.50, priceKGC: 1000 },
-            { id: 2, name: '300 + 25 UC', priceUSD: 5.00, priceVES: 842.50, priceKGC: 5000 },
-            { id: 3, name: '600 + 60 UC', priceUSD: 10.00, priceVES: 1685.00, priceKGC: 10000 },
-            { id: 4, name: '1500 + 300 UC', priceUSD: 25.00, priceVES: 4212.50, priceKGC: 25000 },
-            { id: 5, name: '3000 + 850 UC', priceUSD: 50.00, priceVES: 8425.00, priceKGC: 50000 },
-            { id: 6, name: '6000 + 2100 UC', priceUSD: 100.00, priceVES: 16850.00, priceKGC: 100000 }
-        ];
-
+const pubgmobilePackages = [
+    { id: 1, name: '60 UC', priceUSD: 1.00, priceVES: 189.00, priceKGC: 14.28 },
+    { id: 2, name: '300 + 25 UC', priceUSD: 5.00, priceVES: 945.00, priceKGC: 71.40 },
+    { id: 3, name: '600 + 60 UC', priceUSD: 10.00, priceVES: 1890.00, priceKGC: 142.80 },
+    { id: 4, name: '1500 + 300 UC', priceUSD: 25.00, priceVES: 4725.00, priceKGC: 357.00 },
+    { id: 5, name: '3000 + 850 UC', priceUSD: 50.00, priceVES: 9450.00, priceKGC: 714.00 },
+    { id: 6, name: '6000 + 2100 UC', priceUSD: 100.00, priceVES: 18900.00, priceKGC: 1428.00 }
+];
         let selectedPackage = null;
         let currentCurrency = localStorage.getItem('selectedCurrency') || 'VES';
         const playerIdInput = document.getElementById('player-id');
