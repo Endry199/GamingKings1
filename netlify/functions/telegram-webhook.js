@@ -1,0 +1,295 @@
+const axios = require('axios');
+const { createClient } = require('@supabase/supabase-js');
+
+// Función para escapar caracteres especiales de MarkdownV2 para Telegram
+function escapeMarkdownV2(text) {
+    if (typeof text !== 'string') {
+        text = String(text);
+    }
+    const specialChars = /[_*[\]()~`>#+\-=|{}.!]/g;
+    return text.replace(specialChars, '\\$&');
+}
+
+// Configuración de Supabase (reemplaza con tus variables de entorno)
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+
+// Función para responder a Telegram
+const answerCallbackQuery = async (callbackQueryId, text = '', showAlert = false) => {
+    const telegramApiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`;
+    try {
+        await axios.post(telegramApiUrl, {
+            callback_query_id: callbackQueryId,
+            text: text,
+            show_alert: showAlert
+        });
+    } catch (error) {
+        console.error("Error al responder a la consulta de devolución de llamada:", error.response ? error.response.data : error.message);
+    }
+};
+
+exports.handler = async function(event, context) {
+    if (event.httpMethod !== "POST") {
+        return { statusCode: 405, body: "Method Not Allowed" };
+    }
+
+    const SUPABASE_URL = process.env.SUPABASE_URL;
+    const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+    const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR;
+    const NETLIFY_SITE_URL = process.env.URL || 'https://gamingkings.netlify.app';
+
+    if (!TELEGRAM_BOT_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_KEY || !NETLIFY_SITE_URL) {
+        console.error("Faltan variables de entorno requeridas para el webhook de Telegram.");
+        return { statusCode: 500, body: "Error de configuración del servidor." };
+    }
+
+    try {
+        const body = JSON.parse(event.body);
+        const callbackQuery = body.callback_query;
+
+        // Función para obtener la transacción
+        async function getTransaction(id, callbackQueryId) {
+            console.log(`DEBUG: Buscando transacción con id_transaccion: ${id}`);
+            const { data: transaction, error: fetchError } = await supabase
+                .from('transactions')
+                .select('id_transaccion, game, player_id, package_name, final_price, currency, payment_method, status, email, full_name, whatsapp_number, receipt_url, invoice_text_content')
+                .eq('id_transaccion', id)
+                .single();
+
+            if (fetchError && fetchError.code === 'PGRST116') {
+                console.error("Error al obtener la transacción de Supabase: Transacción no encontrada.", `Transaction ID: ${id}`);
+                await answerCallbackQuery(callbackQueryId, "❌ Error: Transacción no encontrada. Verifica la ID.", true);
+                return null;
+            } else if (fetchError) {
+                console.error("Error al obtener la transacción de Supabase:", fetchError.message, `Transaction ID: ${id}`);
+                await answerCallbackQuery(callbackQueryId, `❌ Error de Supabase: ${escapeMarkdownV2(fetchError.message)}`, true);
+                return null;
+            }
+            return transaction;
+        }
+
+        if (callbackQuery) {
+            const { id: callbackQueryId, message, from, data } = callbackQuery;
+            const chatId = message.chat.id;
+            const messageId = message.message_id;
+            const userId = from.id;
+            const userName = from.first_name || `Usuario ${userId}`;
+
+            // ✅ Primero, responde inmediatamente a Telegram para evitar el timeout
+            await answerCallbackQuery(callbackQueryId);
+            console.log(`DEBUG: Callback Query ID ${callbackQueryId} acknowledged successfully.`);
+
+            // Handler unificado para 'update_transaction'
+            if (data.startsWith('update_transaction:')) {
+                const parts = data.split(':');
+                const transactionId = parts[1];
+                const status = parts[2];
+
+                console.log(`DEBUG: Callback Data - Action: update_transaction, Transaction ID: ${transactionId}, Status: ${status}`);
+
+                const transaction = await getTransaction(transactionId, callbackQueryId);
+
+                if (!transaction) {
+                    return { statusCode: 200, body: "Error fetching transaction" };
+                }
+
+                if (transaction.status === status) {
+                    console.log(`DEBUG: Transacción ${transactionId} ya está en estado '${status}'.`);
+                    await answerCallbackQuery(callbackQueryId, `La transacción ya se encuentra en estado '${status}'.`, false);
+                    return { statusCode: 200, body: "Status not changed" };
+                }
+
+                // Procesar la lógica de KingCoins si la transacción fue 'realizada'
+                if (status === 'realizada' && transaction.payment_method && transaction.payment_method.toLowerCase().includes('kingcoins')) {
+                    await answerCallbackQuery(callbackQueryId, `Acreditando KingCoins para la transacción ${transactionId}...`, false);
+                } else {
+                    await answerCallbackQuery(callbackQueryId, `Marcando la transacción ${transactionId} como '${status}'...`, false);
+                }
+
+                let kingcoinsCreditedMessage = '';
+
+                if (status === 'realizada' && transaction.payment_method && transaction.payment_method.toLowerCase().includes('kingcoins')) {
+                    console.log(`DEBUG: Procesando acreditación de KingCoins para transacción ${transactionId}.`);
+                    const cleanedPackageName = transaction.package_name.includes('<i class="fas fa-crown"></i>')
+                        ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins')
+                        : transaction.package_name;
+
+                    const kingcoinAmountMatch = cleanedPackageName.match(/(\d+)\s*KingCoins/i);
+                    const kingcoinAmount = kingcoinAmountMatch ? parseInt(kingcoinAmountMatch[1], 10) : 0;
+
+                    if (kingcoinAmount > 0 && transaction.player_id) {
+                        try {
+                            const { data: userWallet, error: fetchWalletError } = await supabase
+                                .from('user_wallets')
+                                .select('balance')
+                                .eq('user_id', transaction.player_id)
+                                .single();
+
+                            if (fetchWalletError && fetchWalletError.code === 'PGRST116') {
+                                const { error: insertWalletError } = await supabase
+                                    .from('user_wallets')
+                                    .insert({
+                                        user_id: transaction.player_id,
+                                        balance: kingcoinAmount
+                                    });
+                                if (insertWalletError) {
+                                    console.error(`Error al insertar nueva wallet para ${transaction.player_id}:`, insertWalletError.message);
+                                    kingcoinsCreditedMessage = `\n⚠️ Error al crear wallet para \`${escapeMarkdownV2(transaction.player_id)}\`: ${escapeMarkdownV2(insertWalletError.message)}`;
+                                } else {
+                                    console.log(`Wallet creada y ${kingcoinAmount} KingCoins acreditados a ${transaction.player_id}.`);
+                                    kingcoinsCreditedMessage = `\n✅ ${kingcoinAmount} KingCoins acreditados a \`${escapeMarkdownV2(transaction.player_id)}\`.`;
+                                }
+                            } else if (fetchWalletError) {
+                                console.error(`Error al obtener wallet para ${transaction.player_id}:`, fetchWalletError.message);
+                                kingcoinsCreditedMessage = `\n⚠️ Error al obtener wallet para \`${escapeMarkdownV2(transaction.player_id)}\`: ${escapeMarkdownV2(fetchWalletError.message)}`;
+                            } else {
+                                const newBalance = userWallet.balance + kingcoinAmount;
+                                const { error: updateWalletError } = await supabase
+                                    .from('user_wallets')
+                                    .update({ balance: newBalance })
+                                    .eq('user_id', transaction.player_id);
+
+                                if (updateWalletError) {
+                                    console.error(`Error al actualizar wallet para ${transaction.player_id}:`, updateWalletError.message);
+                                    kingcoinsCreditedMessage = `\n⚠️ Error al actualizar wallet para \`${escapeMarkdownV2(transaction.player_id)}\`: ${escapeMarkdownV2(updateWalletError.message)}`;
+                                } else {
+                                    console.log(`${kingcoinAmount} KingCoins acreditados a ${transaction.player_id}. Nuevo saldo: ${newBalance}`);
+                                    kingcoinsCreditedMessage = `\n✅ ${kingcoinAmount} KingCoins acreditados a \`${escapeMarkdownV2(transaction.player_id)}\`. Nuevo saldo: \`${escapeMarkdownV2(newBalance)}\`.`;
+                                }
+                            }
+                        } catch (walletOperationError) {
+                            console.error("Error inesperado en operación de wallet:", walletOperationError.message);
+                            kingcoinsCreditedMessage = `\n❌ Error inesperado al acreditar KingCoins: ${escapeMarkdownV2(walletOperationError.message)}`;
+                        }
+                    } else {
+                        kingcoinsCreditedMessage = `\nℹ️ No se pudieron acreditar KingCoins (cantidad 0 o ID de jugador/usuario no válida).`;
+                    }
+                }
+
+                // Aquí ya no se genera ningún texto de factura para el cliente
+                const updateData = {
+                    status: status,
+                    completed_at: status === 'realizada' ? new Date().toISOString() : null,
+                    completed_by: status === 'realizada' ? userName : null,
+                    invoice_text_content: null // Se establece como null para evitar guardar datos innecesarios.
+                };
+
+                const { error: updateError } = await supabase
+                    .from('transactions')
+                    .update(updateData)
+                    .eq('id_transaccion', transactionId);
+
+                if (updateError) {
+                    console.error("Error al actualizar la transacción en Supabase:", updateError.message, `Transaction ID: ${transactionId}`);
+                    return { statusCode: 200, body: "Error updating transaction status" };
+                }
+
+                console.log(`Transacción ${transactionId} actualizada a '${status}' en Supabase.`);
+
+                const statusText = status === 'realizada' ? 'REALIZADA' : 'RECHAZADA';
+                const statusEmoji = status === 'realizada' ? '✅' : '❌';
+                const cleanedPackageName = transaction.package_name.includes('<i class="fas fa-crown"></i>')
+                    ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins')
+                    : transaction.package_name;
+
+                const now = new Date();
+                const day = String(now.getDate()).padStart(2, '0');
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const year = now.getFullYear();
+                const formattedDate = `${day}/${month}/${year}`;
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const formattedTime = `${hours}:${minutes}`;
+
+                const newCaption = `
+*Juego:* ${escapeMarkdownV2(transaction.game || 'N/A')}
+*ID de Jugador:* \`${transaction.player_id || 'N/A'}\`
+*Paquete:* ${escapeMarkdownV2(cleanedPackageName || 'N/A')}
+*Monto:* ${escapeMarkdownV2(transaction.final_price || 'N/A')} ${escapeMarkdownV2(transaction.currency || 'N/A')}
+*Método de Pago:* ${escapeMarkdownV2(transaction.payment_method.replace(/-/g, ' ').toUpperCase() || 'N/A')}
+\\-\\-\\-\n
+*Estado:* ${statusText} ${statusEmoji}
+_Marcada por:_ *${escapeMarkdownV2(userName)}* \\(${escapeMarkdownV2(formattedTime)} ${escapeMarkdownV2(formattedDate)}\\)
+`.trim();
+
+                let updatedInlineKeyboard = [];
+
+                if (status === 'realizada' || status === 'rechazada') {
+                    updatedInlineKeyboard.push([{ text: `${statusEmoji} Recarga ${statusText}`, callback_data: `completed_status_${transactionId}` }]);
+                }
+
+                const updatedReplyMarkup = {
+                    inline_keyboard: updatedInlineKeyboard
+                };
+
+                // Agregamos estos console.log para depurar la causa del error.
+                console.log(`DEBUG: Mensaje que se va a enviar a Telegram:\n${newCaption}`);
+                console.log('DEBUG: Markup de respuesta que se va a enviar:', JSON.stringify(updatedReplyMarkup, null, 2));
+
+                try {
+                    await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
+                        chat_id: chatId,
+                        message_id: messageId,
+                        text: newCaption,
+                        parse_mode: 'MarkdownV2',
+                        reply_markup: updatedReplyMarkup,
+                        disable_web_page_preview: true
+                    });
+                    console.log(`DEBUG: Mensaje de Telegram para ${transactionId} editado con éxito.`);
+                } catch (telegramEditError) {
+                    console.error(`ERROR: Fallo al editar mensaje de Telegram para ${transactionId}:`, telegramEditError.response ? telegramEditError.response.data : telegramEditError.message);
+                }
+            }
+            // Handler para 'send_whatsapp_'
+            else if (data.startsWith('send_whatsapp_')) {
+                const transactionId = data.replace('send_whatsapp_', '');
+                const transaction = await getTransaction(transactionId, callbackQueryId);
+
+                if (!transaction) {
+                    return { statusCode: 200, body: "Error fetching transaction for send_whatsapp" };
+                }
+
+                const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
+
+                const cleanedPackageNameForRecargador = transaction.package_name.includes('<i class="fas fa-crown"></i>')
+                    ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins')
+                    : transaction.package_name;
+
+                let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
+                whatsappMessageRecargador += `*ID de Jugador:* \`${escapeMarkdownV2(transaction.player_id || 'N/A')}\`\n`;
+                whatsappMessageRecargador += `*Paquete a Recargar:* ${escapeMarkdownV2(cleanedPackageNameForRecargador || 'N/A')}\n`;
+
+                const whatsappLinkRecargador = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
+
+                await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                    chat_id: chatId,
+                    text: `👉 *Enlace para el recargador de la recarga:* [Haz clic aquí](${escapeMarkdownV2(whatsappLinkRecargador)})`,
+                    parse_mode: 'MarkdownV2',
+                    disable_web_page_preview: true
+                });
+
+                console.log(`Enlace de WhatsApp para recargador generado para transacción ${transactionId}.`);
+            }
+            // Handler para callbacks de estado finalizados/informativos
+            else if (data.startsWith('completed_status_') || data.startsWith('no_whatsapp_factura_')) {
+                await answerCallbackQuery(callbackQueryId, "Acción ya completada o informativa.", false);
+            }
+        }
+
+        return { statusCode: 200, body: "Webhook processed" };
+    } catch (error) {
+        console.error("Error en el webhook de Telegram:", error.response ? error.response.data : error.message);
+        const body = JSON.parse(event.body || '{}');
+        if (body && body.message && body.message.chat && body.message.chat.id) {
+            await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                chat_id: body.message.chat.id,
+                text: `❌ Ha ocurrido un error inesperado al procesar la solicitud\\. Por favor, revisa los logs de Netlify\\. Detalles: \`${escapeMarkdownV2(error.message)}\``,
+                parse_mode: 'MarkdownV2'
+            }).catch(e => console.error("Error sending generic error message to Telegram:", e.message));
+        }
+        return { statusCode: 500, body: `Error en el webhook: ${error.message}` };
+    }
+};

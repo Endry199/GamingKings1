@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inicio de Sesión - GamingKings</title>
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos específicos para el contenedor de autenticación */
+        .auth-container {
+            background-color: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 0 30px var(--secondary-pink), 0 0 15px var(--primary-purple);
+            border: 2px solid var(--secondary-pink);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            margin: 2rem auto;
+        }
+
+        .auth-container h1 {
+            color: var(--primary-purple);
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+        }
+
+        /* Estilo para centrar el botón de Google usando Flexbox */
+        .g_id_signin {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <a href="index.html" class="logo-link">
+                <img src="images/gamingkings_logo.png" alt="GamingKings Logo" class="logo-img">
+            </a>
+        </div>
+        <div class="header-right">
+            <div class="search-bar">
+                <input type="text" placeholder="Buscar juego...">
+                <i class="fas fa-search"></i>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="auth-container">
+            <h1>Iniciar Sesión</h1>
+            <div id="auth-message" class="auth-message hidden"></div>
+            <div id="g_id_onload"
+                 data-client_id="321583559900-k18ptc5cjtld5ifu5deb8uha8cheagh4.apps.googleusercontent.com"
+                 data-context="signin"
+                 data-ux_mode="popup"
+                 data-callback="handleCredentialResponse"
+                 data-auto_prompt="false">
+            </div>
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-shape="rectangular"
+                 data-theme="filled_black"
+                 data-text="signin_with"
+                 data-size="large"
+                 data-logo_alignment="left">
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 GamingKings. Todos los derechos reservados.</p>
+            <div class="footer-links">
+                <a href="privacy.html">Políticas de Privacidad</a>
+                <a href="terms.html">Términos de Servicio</a>
+            </div>
+            <a href="https://wa.me/573021090841" target="_blank" class="whatsapp-link">
+                <i class="fab fa-whatsapp"></i> Contáctanos por WhatsApp
+            </a>
+        </div>
+    </footer>
+    <script src="https://accounts.google.com/gsi/client" async></script>
+    <script type="module" src="supabaseClient.js"></script>
+    <script type="module" src="auth-logic.js"></script>
+    <script type="module" src="login.js"></script>
+</body>
+</html>

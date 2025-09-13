@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprar KingsCoins - GamingKings</title>
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="preload" href="images/gamingkings_logo.png" as="image">
+    <link rel="preload" href="images/flag_ve.png" as="image">
+    <link rel="preload" href="images/flag_us.png" as="image">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        :root {
+            --primary-purple: #8A2BE2;
+            --secondary-pink: #FF69B4;
+            --accent-grey: #6A6A6A;
+            --dark-grey-bg: #1C1C1E;
+            --card-bg: #2C2C2E;
+            --text-color: #E0E0E0;
+            --secondary-text: #A0A0A0;
+            --border-color: #404044;
+            --input-bg: #232325;
+            --hover-purple: #7B1FA2;
+            --button-gradient: linear-gradient(45deg, var(--primary-purple), var(--secondary-pink));
+            --button-hover-gradient: linear-gradient(45deg, var(--hover-purple), #EE4080);
+            --shadow-dark: rgba(0, 0, 0, 0.6);
+            --shadow-light: rgba(138, 43, 226, 0.3);
+            --item-border-hover: var(--primary-purple);
+            --item-shadow-hover: 0 4px 15px rgba(138, 43, 226, 0.4);
+            --item-selected-bg: var(--primary-purple);
+            --item-selected-text: #ffffff;
+            --item-selected-border: var(--primary-purple);
+            --item-selected-shadow: 0 0 20px rgba(138, 43, 226, 0.6);
+            --success-green: #28a745;
+            --white: #ffffff;
+            --primary-purple-rgb: 138, 43, 226;
+            --secondary-pink-rgb: 255, 105, 180;
+            --border-color-card: var(--primary-purple);
+            --box-shadow-card: 0 0 15px rgba(var(--primary-purple-rgb), 0.7);
+            --box-shadow-card-hover: 0 0 20px rgba(var(--primary-purple-rgb), 0.8), 0 0 30px rgba(var(--secondary-pink-rgb), 0.5);
+            --card-bg-rgb: 44, 44, 46;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: var(--dark-grey-bg); color: var(--text-color); line-height: 1.6; display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
+        main { flex: 1; margin: 0 auto; width: 100%; box-sizing: border-box; }
+        h1, h2, h3 { color: var(--primary-purple); text-align: center; margin-bottom: 25px; font-weight: 700; text-shadow: 1px 1px 3px var(--shadow-dark); }
+        p { text-align: center; margin-bottom: 15px; }
+        .hidden { display: none !important; }
+        .header-right { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; justify-content: center; }
+        .user-menu-container, .guest-menu-container { position: relative; }
+        .user-menu-button, .guest-menu-button { background-color: transparent; border: none; cursor: pointer; font-size: 1.8em; color: var(--text-color); transition: color 0.3s ease; padding: 10px; }
+        .user-menu-button:hover, .guest-menu-button:hover { color: var(--primary-purple); }
+        .user-menu-dropdown, .guest-menu-dropdown { position: absolute; top: calc(100% + 10px); right: 0; background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 4px 12px var(--shadow-dark); padding: 10px 0; min-width: 200px; z-index: 100; }
+        .user-menu-item, .guest-menu-item { display: block; padding: 10px 15px; color: var(--text-color); text-decoration: none; transition: background-color 0.2s ease, color 0.2s ease; text-align: left; }
+        .user-menu-item:hover, .guest-menu-item:hover { background-color: var(--input-bg); color: var(--primary-purple); }
+        .notice-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .notice-content { max-width: 90%; width: 500px; background-color: var(--card-bg); padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 0 30px var(--secondary-pink), 0 0 15px var(--primary-purple); border: 2px solid var(--secondary-pink); position: relative; text-align: center; padding-top: 2.5rem; color: var(--text-color); }
+        .close-button { position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--primary-purple); transition: color 0.2s ease-in-out; z-index: 10000; }
+        .close-button:hover { color: var(--secondary-pink); }
+        .notice-content h2 { color: var(--primary-purple); font-size: 2em; margin-bottom: 1rem; text-shadow: 1px 1px 3px rgba(0,0,0,0.6); }
+        .notice-content p { color: var(--text-color); margin-bottom: 1rem; }
+        .notice-content .text-purple-400 { color: var(--secondary-pink); font-weight: 700; font-size: 1.25em; }
+        .game-main { width: 100%; margin-top: 0; padding: 0; }
+        .game-content-wrapper { max-width: 900px; margin: 0 auto 40px auto; padding: 0 20px; box-sizing: border-box; }
+        .game-info-card, .recharge-form { background-color: var(--card-bg); border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: var(--box-shadow-card); color: var(--text-color); border: 2px solid var(--border-color-card); transition: box-shadow 0.3s ease-in-out; }
+        .game-info-card:hover, .recharge-form:hover { box-shadow: var(--box-shadow-card-hover); }
+        .game-info-card h2, .recharge-form h2 { color: var(--primary-purple); margin-top: 0; margin-bottom: 15px; font-size: 1.8em; text-align: center; }
+        .game-info-card p { margin-bottom: 10px; line-height: 1.6; text-align: center; }
+        .game-info-card span { font-weight: bold; color: var(--secondary-pink); }
+        .recharge-form { border-color: var(--primary-purple); }
+        .package-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+        .package-item { position: relative; background-color: var(--card-bg); border: 2px solid var(--border-color); border-radius: 10px; padding: 15px; cursor: pointer; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; box-shadow: 0 2px 8px var(--shadow-dark); min-height: 100px; box-sizing: border-box; }
+        .package-item:hover { border-color: var(--item-border-hover); transform: translateY(-5px); box-shadow: var(--item-shadow-hover); }
+        .package-item.selected { border-color: var(--secondary-pink); box-shadow: 0 0 10px rgba(var(--secondary-pink-rgb), 0.5), 0 0 20px rgba(var(--secondary-pink-rgb), 0.3); background: var(--card-bg); transform: translateY(-3px); }
+        .package-item.selected::after { content: '\f058'; font-family: "Font Awesome 6 Free"; font-weight: 900; position: absolute; top: 0.5rem; right: 0.5rem; color: #28a745; background-color: var(--card-bg); border-radius: 50%; font-size: 1.5rem; }
+        .package-item span:first-child { font-size: 1.05em; font-weight: 600; margin-bottom: 5px; }
+        .package-item .price { font-weight: 700; color: var(--secondary-pink); font-size: 1.25em; }
+        .package-item .fa-crown { color: var(--secondary-pink); margin-left: 5px; }
+        .btn-primary { background: var(--button-gradient); color: #ffffff; padding: 12px 25px; border: none; border-radius: 25px; cursor: pointer; font-size: 1.1em; font-weight: 700; transition: all 0.3s ease; box-shadow: 0 3px 10px var(--shadow-dark); display: block; margin: 20px auto; letter-spacing: 0.5px; }
+        .btn-primary:hover { background: var(--button-hover-gradient); transform: translateY(-2px); box-shadow: 0 5px 15px var(--shadow-dark); }
+        .btn-primary:disabled { background: var(--border-color); cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.6; }
+        footer { background-color: var(--card-bg); color: var(--secondary-text); padding: 20px; text-align: center; margin-top: 30px; border-top: 1px solid var(--border-color); box-shadow: 0 -2px 8px var(--shadow-dark); width: 100%; box-sizing: border-box; }
+        .footer-content { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 0 20px; box-sizing: border-box; }
+        footer p { margin-bottom: 0; font-size: 0.9em; }
+        .footer-links { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 500px; margin: 0 auto; }
+        .footer-links a { color: var(--secondary-text); text-decoration: none; transition: color 0.3s ease; font-size: 0.9em; }
+        .footer-links a:hover { color: var(--primary-purple); }
+        .whatsapp-link { display: inline-flex; align-items: center; gap: 8px; background-color: var(--success-green); color: #ffffff; padding: 10px 18px; border-radius: 20px; text-decoration: none; font-weight: 600; margin-top: 15px; font-size: 1em; transition: background-color 0.3s ease, transform 0.2s ease; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
+        .whatsapp-link:hover { background-color: #218838; transform: translateY(-1px); }
+        .whatsapp-link .fab.fa-whatsapp { font-size: 1.2em; }
+        @media (max-width: 768px) {
+            .header-right { flex-direction: column; width: 100%; max-width: 350px; margin: 0 auto; gap: 12px; }
+            .search-bar, .custom-currency-selector, .user-menu-container, .guest-menu-container { width: 100%; max-width: none; }
+            .search-bar input { width: 100%; padding: 10px 15px 10px 40px; box-sizing: border-box; }
+            .game-content-wrapper { padding: 0 15px; }
+            .game-info-card, .recharge-form { padding: 20px; margin-bottom: 25px; }
+            .game-info-card h2, .recharge-form h2 { font-size: 1.6em; }
+            .package-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+            .package-item { padding: 12px; min-height: 80px; }
+            .package-item span:first-child { font-size: 0.95em; }
+            .package-item .price { font-size: 1.1em; }
+            .footer-content { padding: 0 15px; }
+            .footer-links { flex-direction: column; gap: 8px; max-width: 250px; }
+            .whatsapp-link { padding: 8px 15px; }
+        }
+        @media (max-width: 480px) {
+            .footer-links { flex-direction: column; gap: 8px; max-width: 250px; }
+            .whatsapp-link { padding: 8px 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="horario-notice" class="notice-overlay hidden">
+        <div class="notice-content">
+            <button id="close-notice" class="close-button" aria-label="Cerrar aviso">
+                &times;
+            </button>
+            <h2 class="font-bold mb-4">¡Aviso Importante!</h2>
+            <p class="mb-3">
+                Nuestro horario de atención es:
+            </p>
+            <p class="text-purple-400 font-semibold mb-4">
+                Todos los días de 10:30 AM a 9:30 PM
+            </p>
+            <p>
+                En caso de realizar una recarga fuera de este horario, la recarga será efectiva el día siguiente a la hora de apertura.
+            </p>
+        </div>
+    </div>
+    
+    <header>
+        <div class="header-left">
+            <a href="index.html" class="logo-link">
+                <img src="images/gamingkings_logo.png" alt="GamingKings Logo" class="logo-img">
+            </a>
+        </div>
+        <div class="header-right">
+            <div class="search-bar">
+                <input type="text" placeholder="Buscar juego...">
+                <i class="fas fa-search"></i>
+            </div>
+            
+            <div class="custom-currency-selector" id="custom-currency-selector">
+                <div class="selected-currency" id="selected-currency">
+                    <img src="images/flag_ve.png" alt="Venezuela Flag"> <span>Bs. (VES)</span> <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="currency-options" id="currency-options">
+                    <div class="option" data-value="VES">
+                        <img src="images/flag_ve.png" alt="Venezuela Flag"> <span>Bs. (VES)</span>
+                    </div>
+                    <div class="option" data-value="USD">
+                        <img src="images/flag_us.png" alt="USA Flag"> <span>$ (USD)</span>
+                    </div>
+                </div>
+            </div>
+            <div class="user-menu-container hidden">
+                <button class="user-menu-button" aria-expanded="false" aria-label="Menú de usuario">
+                    <i class="fas fa-user-circle"></i>
+                </button>
+                <div class="user-menu-dropdown hidden">
+                    <a href="#" class="user-menu-item" id="user-display-name"></a>
+                    <a href="dashboard.html" class="user-menu-item">Dashboard</a>
+                    <a href="orders.html" class="user-menu-item">Pedidos</a>
+                    <a href="settings.html" class="user-menu-item">Configuración</a>
+                    <a href="#" class="user-menu-item" id="logout-button">Cerrar Sesión</a>
+                </div>
+            </div>
+            <div class="guest-menu-container">
+                <button class="guest-menu-button" aria-label="Menú de invitado">
+                    <i class="fas fa-user-circle"></i>
+                </button>
+                <div class="guest-menu-dropdown hidden">
+                    <a href="login.html" class="guest-menu-item">Iniciar Sesión</a>
+                    <a href="signup.html" class="guest-menu-item">Registrarse</a>
+                </div>
+            </div>
+        </div>
+    </header>
+    <main class="game-main">
+        <div class="game-content-wrapper">
+            <div class="game-info-card">
+                <h2>Comprar KingsCoins</h2>
+                <p>Moneda actual: <span id="currency-display">USD</span></p>
+                <p>Para comprar KingsCoins, debes haber iniciado sesión.</p>
+            </div>
+            <div class="recharge-form">
+                <h2>1. Selecciona tu paquete de KingsCoins</h2>
+                <div class="package-grid" id="package-list">
+                </div>
+                <form id="kingscoins-recharge-form" class="mt-8">
+                    <button type="submit" class="btn-primary w-full" id="confirm-recharge-btn" disabled>
+                        Proceder al Pago
+                    </button>
+                </form>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 GamingKings. Todos los derechos reservados.</p>
+            <div class="footer-links">
+                <a href="privacy.html">Políticas de Privacidad</a>
+                <a href="terms.html">Términos de Servicio</a>
+            </div>
+            <a href="https://wa.me/573021090841" target="_blank" class="whatsapp-link">
+                <i class="fab fa-whatsapp"></i> Contáctanos por WhatsApp
+            </a>
+        </div>
+    </footer>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script type="module" src="supabaseClient.js"></script>
+    <script type="module" src="auth-logic.js"></script>
+    <script type="module" src="menu-logic.js"></script>
+    
+    <script type="module">
+        import { supabase } from './supabaseClient.js';
+        import { kingscoinsPackages } from './precios.js';
+        
+        let selectedPackage = null;
+        let currentCurrency = localStorage.getItem('selectedCurrency') || 'VES';
+        const currencyDisplaySpan = document.getElementById('currency-display');
+        const packageListDiv = document.getElementById('package-list');
+        const confirmBtn = document.getElementById('confirm-recharge-btn');
+        const customCurrencySelector = document.getElementById('custom-currency-selector');
+        const currencyOptions = document.getElementById('currency-options');
+        const selectedCurrencyDisplay = document.querySelector('#selected-currency span');
+        const selectedCurrencyIcon = document.querySelector('#selected-currency img');
+        
+        function formatPrice(price, currency) {
+            return currency === 'VES' ? `Bs. ${price.toFixed(2)}` : `$${price.toFixed(2)}`;
+        }
+        
+        function updateCurrencyDisplay(currency) {
+            selectedCurrencyDisplay.textContent = currency === 'VES' ? 'Bs. (VES)' : '$ (USD)';
+            selectedCurrencyIcon.src = currency === 'VES' ? 'images/flag_ve.png' : 'images/flag_us.png';
+        }
+        
+        function updatePackages(currency) {
+            currencyDisplaySpan.textContent = currency;
+            packageListDiv.innerHTML = '';
+            kingscoinsPackages.forEach(pkg => {
+                const displayPrice = currency === 'VES' ? pkg.priceVES : pkg.priceUSD;
+                const packageItem = document.createElement('div');
+                packageItem.classList.add('package-item');
+                packageItem.dataset.id = pkg.id;
+                packageItem.dataset.priceUsd = pkg.priceUSD;
+                packageItem.dataset.priceVes = pkg.priceVES;
+                packageItem.innerHTML = `
+                    <span>${pkg.name}</span>
+                    <span class="price">${formatPrice(displayPrice, currency)}</span>
+                `;
+                packageItem.addEventListener('click', () => {
+                    if (selectedPackage) {
+                        selectedPackage.classList.remove('selected');
+                    }
+                    packageItem.classList.add('selected');
+                    selectedPackage = packageItem;
+                    checkFormValidity();
+                });
+                packageListDiv.appendChild(packageItem);
+            });
+            checkFormValidity();
+        }
+        
+        function checkFormValidity() {
+            confirmBtn.disabled = !selectedPackage;
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            updateCurrencyDisplay(currentCurrency);
+            updatePackages(currentCurrency);
+        });
+        
+        customCurrencySelector.addEventListener('click', () => {
+            customCurrencySelector.classList.toggle('show');
+        });
+        
+        currencyOptions.addEventListener('click', (e) => {
+            if (e.target.closest('.option')) {
+                const newCurrency = e.target.closest('.option').dataset.value;
+                if (newCurrency !== currentCurrency) {
+                    currentCurrency = newCurrency;
+                    localStorage.setItem('selectedCurrency', currentCurrency);
+                    updateCurrencyDisplay(currentCurrency);
+                    updatePackages(currentCurrency);
+                }
+                customCurrencySelector.classList.remove('show');
+            }
+        });
+        
+        window.addEventListener('click', (e) => {
+            if (!customCurrencySelector.contains(e.target)) {
+                customCurrencySelector.classList.remove('show');
+            }
+        });
+
+        document.getElementById('kingscoins-recharge-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!selectedPackage) {
+                alert('Por favor, selecciona un paquete de KingsCoins antes de continuar.');
+                return;
+            }
+
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                alert('Por favor, inicia sesión para continuar con la compra.');
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            const packageName = selectedPackage.querySelector('span:first-child').innerHTML;
+            const basePriceUSD = parseFloat(selectedPackage.dataset.priceUsd);
+            const basePriceVES = parseFloat(selectedPackage.dataset.priceVes);
+            let finalPrice;
+            
+            if (currentCurrency === 'VES') {
+                finalPrice = basePriceVES;
+            } else {
+                finalPrice = basePriceUSD;
+            }
+            
+            const transactionDetails = {
+                game: "KingsCoins",
+                playerId: user.id, 
+                package: packageName,
+                priceUSD: basePriceUSD.toFixed(2),
+                finalPrice: finalPrice.toFixed(2),
+                currency: currentCurrency
+            };
+
+            localStorage.setItem('transactionDetails', JSON.stringify(transactionDetails));
+            window.location.href = 'payment.html';
+        });
+    </script>
+</body>
+</html>
