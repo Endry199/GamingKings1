@@ -7,12 +7,12 @@ export const VALOR_KGC_USD = 0.07; // 1 KingCoin (KGC) equivale a 0.07 USD
 
 // Precios base en USD para PUBG Mobile - NO CAMBIAR ESTOS VALORES
 const pubgmobilePackagesUSD = [
-    { id: 1, name: '60 UC', priceUSD: 1.00 },
-    { id: 2, name: '300 + 25 UC', priceUSD: 5.00 },
-    { id: 3, name: '600 + 60 UC', priceUSD: 10.00 },
-    { id: 4, name: '1500 + 300 UC', priceUSD: 25.00 },
-    { id: 5, name: '3000 + 850 UC', priceUSD: 50.00 },
-    { id: 6, name: '6000 + 2100 UC', priceUSD: 100.00 }
+    { id: 1, name: '60 UC', priceUSD: 0.99 },
+    { id: 2, name: '300 + 25 UC', priceUSD: 5.04 },
+    { id: 3, name: '600 + 60 UC', priceUSD: 9.85 },
+    { id: 4, name: '1500 + 300 UC', priceUSD: 24.52 },
+    { id: 5, name: '3000 + 850 UC', priceUSD: 49.28 },
+    { id: 6, name: '6000 + 2100 UC', priceUSD: 98.56 }
 ];
 
 // Precios base en USD para Free Fire - NO CAMBIAR ESTOS VALORES
@@ -42,30 +42,29 @@ const kingscoinsPackagesUSD = [
 
 // Precios base en USD para Arena Breakout - NO CAMBIAR ESTOS VALORES
 const arenabreakoutPackagesUSD = [
-    { id: 1, name: '60 Bonds', priceUSD: 1.00 },
+    { id: 1, name: '60 Bonds', priceUSD: 1.01 },
     { id: 2, name: '335 Bonds', priceUSD: 5.00 },
-    { id: 3, name: '675 Bonds', priceUSD: 10.00 },
-    { id: 4, name: '1690 Bonds', priceUSD: 20.00 },
-    { id: 5, name: '3400 Bonds', priceUSD: 50.00 },
-    { id: 6, name: '6820 Bonds', priceUSD: 100.00 },
-    { id: 7, name: 'Elite De Prueba', priceUSD: 4.43 },
-    { id: 8, name: 'Maletín Compuesto', priceUSD: 8.70 },
-    { id: 9, name: 'Paquete Principiante', priceUSD: 1.00 },
-    { id: 10, name: 'Maletín Antibalas', priceUSD: 2.92 },
-    { id: 11, name: 'Pase Avanzado', priceUSD: 4.90 },
-    { id: 12, name: 'Pase Premium', priceUSD: 14.58 }
+    { id: 3, name: '675 Bonds', priceUSD: 9.92 },
+    { id: 4, name: '1690 Bonds', priceUSD: 24.57 },
+    { id: 5, name: '3400 Bonds', priceUSD: 49.06 },
+    { id: 6, name: '6820 Bonds', priceUSD: 98.07 },
+    { id: 8, name: 'Maletín Compuesto', priceUSD: 8.85 },
+    { id: 9, name: 'Paquete Principiante', priceUSD: 1.01 },
+    { id: 10, name: 'Maletín Antibalas', priceUSD: 2.97 },
+    { id: 11, name: 'Pase Avanzado', priceUSD: 5.00 },
+    { id: 12, name: 'Pase Premium', priceUSD: 14.85 }
 ];
 
 // Precios base en USD para Blood Strike - NO CAMBIAR ESTOS VALORES
 const bloodstrikePackagesUSD = [
-    { id: 1, name: '105 Gold', priceUSD: 1.00 },
-    { id: 2, name: '320 Gold', priceUSD: 3.00 },
-    { id: 3, name: '540 Gold', priceUSD: 4.90 },
-    { id: 4, name: '1100 Gold', priceUSD: 9.60 },
-    { id: 5, name: '2260 Gold', priceUSD: 18.60 },
-    { id: 6, name: '5800 Gold', priceUSD: 47.50 },
-    { id: 7, name: 'Pase Elite', priceUSD: 4.00 },
-    { id: 8, name: 'Pase Elite Plus', priceUSD: 9.30 }
+    { id: 1, name: '105 Gold', priceUSD: 0.92 },
+    { id: 2, name: '320 Gold', priceUSD: 2.80 },
+    { id: 3, name: '540 Gold', priceUSD: 4.56 },
+    { id: 4, name: '1100 Gold', priceUSD: 8.96 },
+    { id: 5, name: '2260 Gold', priceUSD: 17.36 },
+    { id: 6, name: '5800 Gold', priceUSD: 44.24 },
+    { id: 7, name: 'Pase Elite', priceUSD: 3.75 },
+    { id: 8, name: 'Pase Elite Plus', priceUSD: 8.70 }
 ];
 
 // Precios base en USD para Mobile Legends - NO CAMBIAR ESTOS VALORES
