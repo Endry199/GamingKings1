@@ -6,7 +6,7 @@
     <title>Recargar Blood Strike - GamingKings</title>
     <link rel="icon" href="images/favicon.ico" type="image/x-icon">
     <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary-purple: #8A2BE2;
@@ -456,15 +456,13 @@
             padding: 15px;
             cursor: pointer;
             transition: all 0.3s ease;
-            display: flex !important;
+            display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
             box-shadow: 0 2px 8px var(--shadow-dark);
             min-height: 100px;
-            visibility: visible !important;
-            opacity: 1 !important;
             box-sizing: border-box;
         }
 
@@ -610,7 +608,6 @@
             font-size: 1.2em;
         }
 
-        /* --- Nuevos estilos para KingCoins --- */
         .kingcoins-balance {
             display: flex;
             align-items: center;
@@ -625,7 +622,6 @@
         .kingcoins-balance .fa-crown {
             color: #FF69B4;
         }
-        /* --- Fin de nuevos estilos --- */
 
         @media (max-width: 768px) {
             header {
@@ -815,12 +811,11 @@
     </footer>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script type="module" src="supabaseClient.js"></script>
-    <script type="module" src="auth-logic.js"></script>
-    <script type="module" src="menu-logic.js"></script>
+    <script type="module" src="precios.js"></script>
     <script type="module">
         import { supabase } from './supabaseClient.js';
         import { bloodstrikePackages } from './precios.js';
-
+        
         const userMenuContainer = document.querySelector('.user-menu-container');
         const guestMenuContainer = document.querySelector('.guest-menu-container');
         const userDisplayName = document.getElementById('user-display-name');
@@ -845,7 +840,7 @@
                 kingcoinsBalanceContainer.classList.add('hidden');
             }
         }
-        
+
         async function fetchUserKingcoins(userId) {
             if (kingcoinsBalanceContainer && kingcoinsDisplay) {
                 kingcoinsBalanceContainer.classList.remove('hidden');
@@ -866,7 +861,7 @@
                 }
             }
         }
-        
+
         async function handleLogout() {
             const { error } = await supabase.auth.signOut();
             if (error) {
@@ -888,23 +883,34 @@
                 kingcoinsBalanceContainer.classList.add('hidden');
             }
         });
-        
+
         if (logoutButton) {
             logoutButton.addEventListener('click', handleLogout);
         }
-        
+
         if (userMenuButton) {
             userMenuButton.addEventListener('click', () => {
                 userMenuDropdown.classList.toggle('hidden');
+                guestMenuDropdown.classList.add('hidden');
             });
         }
-        
+
         if (guestMenuButton) {
             guestMenuButton.addEventListener('click', () => {
                 guestMenuDropdown.classList.toggle('hidden');
+                userMenuDropdown.classList.add('hidden');
             });
         }
         
+        window.addEventListener('click', (e) => {
+            if (userMenuButton && userMenuDropdown && !userMenuContainer.contains(e.target)) {
+                userMenuDropdown.classList.add('hidden');
+            }
+            if (guestMenuButton && guestMenuDropdown && !guestMenuContainer.contains(e.target)) {
+                guestMenuDropdown.classList.add('hidden');
+            }
+        });
+
         checkUserSession();
 
         const playerIdInput = document.getElementById('player-id');

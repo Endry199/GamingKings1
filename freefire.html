@@ -549,7 +549,7 @@
         .whatsapp-link .fab.fa-whatsapp {
             font-size: 1.2em;
         }
-        
+
         /* --- Nuevos estilos para KingCoins --- */
         .kingcoins-balance {
             display: flex;
@@ -760,13 +760,11 @@
         </div>
     </footer>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script src="precios.js"></script>
     <script type="module" src="supabaseClient.js"></script>
-    <script src="config.js"></script>
-    <script src="auth-logic.js"></script>
-    <script src="script.js"></script>
     <script type="module">
         import { supabase } from './supabaseClient.js';
+        import { freefirePackages } from './precios.js';
+        
         const userMenuContainer = document.querySelector('.user-menu-container');
         const guestMenuContainer = document.querySelector('.guest-menu-container');
         const userDisplayName = document.getElementById('user-display-name');
@@ -790,7 +788,7 @@
             } else {
                 userMenuContainer.classList.add('hidden');
                 guestMenuContainer.classList.remove('hidden');
-                kingcoinsBalanceContainer.classList.add('hidden'); // Ocultar si no hay sesión
+                kingcoinsBalanceContainer.classList.add('hidden');
             }
         }
         
@@ -864,17 +862,14 @@
             const currencyDisplaySpan = document.getElementById('currency-display');
             const customCurrencySelector = document.getElementById('custom-currency-selector');
             const currencyOptions = document.getElementById('currency-options');
-            const selectedCurrencyDisplay = document.querySelector('#selected-currency span');
-            const selectedCurrencyIcon = document.querySelector('#selected-currency img');
             let selectedPackage = null;
             let currentCurrency = localStorage.getItem('selectedCurrency') || 'VES';
 
-            // Formato de precios
-           function formatPrice(price, currency) {
-           if (currency === 'VES') return `Bs. ${price.toFixed(2)}`;
-            if (currency === 'USD') return `$${price.toFixed(2)}`;
-           if (currency === 'KGC') return `<i class="fas fa-crown" style="color: var(--secondary-pink);"></i> ${price.toFixed(2)}`;
-            return `${price.toFixed(2)}`;
+            function formatPrice(price, currency) {
+                if (currency === 'VES') return `Bs. ${price.toFixed(2)}`;
+                if (currency === 'USD') return `$${price.toFixed(2)}`;
+                if (currency === 'KGC') return `<i class="fas fa-crown" style="color: var(--secondary-pink);"></i> ${price.toFixed(2)}`;
+                return `${price.toFixed(2)}`;
             }
 
             function updatePackages(currency) {
@@ -882,19 +877,16 @@
                 packageListDiv.innerHTML = '';
                 freefirePackages.forEach(pkg => {
                     let displayPrice;
-                    if (currency === 'VES') {
-                        displayPrice = pkg.priceVES;
-                    } else if (currency === 'USD') {
-                        displayPrice = pkg.priceUSD;
-                    } else { // KGC
-                        displayPrice = pkg.priceKGC;
-                    }
+                    if (currency === 'VES') displayPrice = pkg.priceVES;
+                    else if (currency === 'USD') displayPrice = pkg.priceUSD;
+                    else if (currency === 'KGC') displayPrice = pkg.priceKGC;
+                    
                     const packageItem = document.createElement('div');
                     packageItem.classList.add('package-item');
                     packageItem.dataset.id = pkg.id;
                     packageItem.dataset.priceUsd = pkg.priceUSD;
                     packageItem.dataset.priceVes = pkg.priceVES;
-                    packageItem.dataset.priceKgc = pkg.priceKGC; // Nuevo precio KGC
+                    packageItem.dataset.priceKgc = pkg.priceKGC;
                     packageItem.innerHTML = `
                         <span>${pkg.name}</span>
                         <span class="price">${formatPrice(displayPrice, currency)}</span>
@@ -913,15 +905,13 @@
             }
 
             function updateCurrencyDisplay(currency) {
+                const selectedCurrencyElement = document.querySelector('#selected-currency');
                 if (currency === 'VES') {
-                    selectedCurrencyDisplay.textContent = 'Bs. (VES)';
-                    selectedCurrencyIcon.src = 'images/flag_ve.png';
+                    selectedCurrencyElement.innerHTML = `<img src="images/flag_ve.png" alt="Bandera de Venezuela"> <span>Bs. (VES)</span> <i class="fas fa-chevron-down"></i>`;
                 } else if (currency === 'USD') {
-                    selectedCurrencyDisplay.textContent = '$ (USD)';
-                    selectedCurrencyIcon.src = 'images/flag_us.png';
+                    selectedCurrencyElement.innerHTML = `<img src="images/flag_us.png" alt="Bandera de Estados Unidos"> <span>$ (USD)</span> <i class="fas fa-chevron-down"></i>`;
                 } else if (currency === 'KGC') {
-                    selectedCurrencyDisplay.innerHTML = `<span><i class="fas fa-crown"></i> (KGC)</span>`;
-                    selectedCurrencyIcon.src = 'images/gamingkings_logo.png';
+                    selectedCurrencyElement.innerHTML = `<img src="images/gamingkings_logo.png" alt="KingCoins"> <span><i class="fas fa-crown"></i> (KGC)</span> <i class="fas fa-chevron-down"></i>`;
                 }
             }
 
@@ -935,8 +925,9 @@
             });
 
             currencyOptions.addEventListener('click', (e) => {
-                if (e.target.closest('.option')) {
-                    const newCurrency = e.target.closest('.option').dataset.value;
+                const optionElement = e.target.closest('.option');
+                if (optionElement) {
+                    const newCurrency = optionElement.dataset.value;
                     if (newCurrency !== currentCurrency) {
                         currentCurrency = newCurrency;
                         localStorage.setItem('selectedCurrency', currentCurrency);
@@ -962,10 +953,11 @@
                 if (selectedPackage) {
                     const playerId = playerIdInput.value.trim();
                     const packageName = selectedPackage.querySelector('span:first-child').textContent;
+                    
                     const basePriceUSD = parseFloat(selectedPackage.dataset.priceUsd);
                     const basePriceVES = parseFloat(selectedPackage.dataset.priceVes);
-                    const basePriceKGC = parseFloat(selectedPackage.dataset.priceKgc); // Nuevo precio KGC
-                    
+                    const basePriceKGC = parseFloat(selectedPackage.dataset.priceKgc);
+
                     let finalPrice;
                     if (currentCurrency === 'VES') {
                         finalPrice = basePriceVES;
