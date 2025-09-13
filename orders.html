@@ -211,6 +211,17 @@
     <script type="module" src="auth-logic.js"></script>
     <script type="module" src="menu-logic.js"></script>
     <script type="module">
+        // La función se ejecuta cuando la página está cargada
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Obtiene la sesión de Supabase
+    const { data: { session } } = await supabase.auth.getSession();
+
+    // 2. Si no hay sesión, redirige al inicio.
+    //    Si quieres redirigir a la página de login, cambia 'index.html' por 'login.html'
+    if (!session) {
+        window.location.href = 'index.html'; 
+    }
+});
         import { supabase } from './supabaseClient.js';
 
         document.addEventListener('DOMContentLoaded', async () => {
