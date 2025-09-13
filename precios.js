@@ -1,7 +1,7 @@
 // =========================================================
 //  ACTUALIZA ESTOS VALORES DIARIAMENTE
 // =========================================================
-export const TASA_DOLAR_VES = 240.00; // Tasa de cambio de USD a Bolívares
+export const TASA_DOLAR_VES = 250.00; // Tasa de cambio de USD a Bolívares
 export const VALOR_KGC_USD = 0.07; // 1 KingCoin (KGC) equivale a 0.07 USD
 // =========================================================
 
@@ -17,14 +17,15 @@ const pubgmobilePackagesUSD = [
 
 // Precios base en USD para Free Fire - NO CAMBIAR ESTOS VALORES
 const freefirePackagesUSD = [
-    { id: 1, name: '100+10 Diamantes', priceUSD: 0.77 },
-    { id: 2, name: '310+31 Diamantes', priceUSD: 2.26 },
-    { id: 3, name: '520+52 Diamantes', priceUSD: 3.74 },
-    { id: 4, name: '1050+105 Diamantes', priceUSD: 9.50 },
-    { id: 5, name: '2180+218 Diamantes', priceUSD: 19.00 },
-    { id: 6, name: '5600+560 Diamantes', priceUSD: 47.50 },
-    { id: 7, name: 'Tarjeta Semanal', priceUSD: 2.00 },
-    { id: 8, name: 'Tarjeta Mensual', priceUSD: 9.93 }
+    { id: 1, name: '100+10 Diamantes', priceUSD: 0.70 },
+    { id: 2, name: '310+31 Diamantes', priceUSD: 2.21 },
+    { id: 3, name: '520+52 Diamantes', priceUSD: 3.58 },
+    { id: 4, name: '1050+105 Diamantes', priceUSD: 7.00 },
+    { id: 5, name: '2180+218 Diamantes', priceUSD: 13.77 },
+    { id: 6, name: '5600+560 Diamantes', priceUSD: 32.48 },
+    { id: 7, name: 'Tarjeta Basica', priceUSD: 0.42 },
+    { id: 7, name: 'Tarjeta Semanal', priceUSD: 1.50 },
+    { id: 8, name: 'Tarjeta Mensual', priceUSD: 7.00 }
 ];
 
 // Precios base en USD para KingsCoins - NO CAMBIAR ESTOS VALORES
