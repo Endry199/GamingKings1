@@ -341,7 +341,8 @@ main > section {
     padding-bottom: 20px;
     position: relative;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8);
-    height: auto; /* Mantenemos la altura automática por defecto */
+    /* Esta línea asegura que la altura de la tarjeta se adapte a su contenido */
+    height: auto; 
 }
 
 .game-card:hover {
@@ -351,8 +352,10 @@ main > section {
 
 .game-card img {
     width: 100%;
-    height: auto; /* La altura de la imagen se ajusta automáticamente */
-    object-fit: contain; /* Esta propiedad es clave para evitar que la imagen se estire */
+    /* `height: auto;` permite que la imagen mantenga su proporción y no se comprima */
+    height: auto; 
+    /* `object-fit: cover;` hace que la imagen cubra todo el espacio sin dejar espacios en blanco, recortando si es necesario */
+    object-fit: cover; 
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
 }
@@ -386,18 +389,6 @@ main > section {
     flex-direction: column;
     align-items: center;
     gap: 10px;
-}
-
-@media (max-width: 600px) {
-    .game-card {
-        /* Para teléfonos, forzamos la altura a ser lo que necesite la imagen */
-        height: auto; 
-    }
-    
-    .game-card img {
-        /* Y nos aseguramos de que la imagen se vea completa */
-        object-fit: contain;
-    }
 }
 
 .input-group label {
