@@ -142,6 +142,15 @@ export const bloodstrikePackages = bloodstrikePackagesUSD.map(pkg => {
     };
 });
 
+export const robloxPackages = robloxPackagesUSD.map(pkg => {
+    const priceVES = (pkg.priceUSD * TASA_DOLAR_VES).toFixed(2);
+    const priceKGC = (pkg.priceUSD / VALOR_KGC_USD).toFixed(2);
+    return {
+        ...pkg,
+        priceVES: parseFloat(priceVES),
+        priceKGC: parseFloat(priceKGC)
+    };
+});
 // Calcula y exporta el array final de Mobile Legends con todos los precios
 export const mobilelegendsPackages = mobilelegendsPackagesUSD.map(pkg => {
     const priceVES = (pkg.priceUSD * TASA_DOLAR_VES).toFixed(2);
