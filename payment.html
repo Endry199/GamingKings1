@@ -652,21 +652,25 @@ function loadPaymentDetails(methodId) {
     if (methodHtml) {
         paymentDetailsFormDiv.innerHTML = methodHtml;
 
-        // --- LÓGICA MODIFICADA ---
+        // Para Roblox, se muestra un campo de referencia y se oculta el botón de finalizar
         if (transactionDetails.game === "Roblox") {
-            // Para Roblox, se muestra un campo de referencia y se oculta el botón de finalizar
-            whatsappMessageContainer.style.display = 'block';
-            finalizeBtn.style.display = 'none';
-        } else {
-            // Para otros juegos (como TikTok), se mantiene el comportamiento anterior
             const fieldsContainer = paymentDetailsFormDiv.querySelector('.payment-fields-container');
             if (fieldsContainer) {
-                fieldsContainer.style.display = 'none';
+                fieldsContainer.style.display = 'block';
             }
-            whatsappMessageContainer.style.display = 'block';
-            finalizeBtn.style.display = 'none';
+        } else {
+            // Para otros juegos, se mantiene el comportamiento de comprobante
+            const fieldsContainer = paymentDetailsFormDiv.querySelector('.payment-fields-container');
+            if (fieldsContainer) {
+                fieldsContainer.innerHTML = `
+                    <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
+                    <label for="payment-receipt">Subir Comprobante de Pago:</label>
+                    <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,.pdf" required>
+                `;
+                fieldsContainer.style.display = 'block';
+            }
         }
-
+        
         const copyButton = paymentDetailsFormDiv.querySelector('.copy-button');
         if (copyButton) {
             copyButton.addEventListener('click', handleCopyButtonClick);
@@ -714,21 +718,21 @@ function checkFormValidity() {
     const selectedRadio = document.querySelector('input[name="paymentMethod"]:checked');
     const isMethodSelected = selectedRadio !== null;
     
-    // Aquí es donde se verifica la validez según el juego
+    // Lógica para verificar la validez del formulario y mostrar el botón de WhatsApp
+    let areDetailsFilled = false;
+    
     if (isMethodSelected) {
         if (transactionDetails.game === "Roblox") {
             const referenceInput = document.getElementById('payment-reference');
-            // Habilita el mensaje de WhatsApp solo si hay un método seleccionado Y se llenó la referencia.
-            whatsappMessageContainer.style.display = (referenceInput && referenceInput.value.trim() !== '') ? 'block' : 'none';
+            areDetailsFilled = referenceInput && referenceInput.value.trim() !== '';
         } else {
             const fileInput = document.getElementById('payment-receipt');
-            // Mantiene la lógica anterior de requerir un comprobante
-            whatsappMessageContainer.style.display = (fileInput && fileInput.files.length > 0) ? 'block' : 'none';
+            areDetailsFilled = fileInput && fileInput.files.length > 0;
         }
-    } else {
-        // Si no hay método seleccionado, oculta todo
-        whatsappMessageContainer.style.display = 'none';
     }
+    
+    // Muestra el contenedor de WhatsApp solo si los detalles requeridos están llenos
+    whatsappMessageContainer.style.display = areDetailsFilled ? 'block' : 'none';
     
     // Se asegura de que el botón de Finalizar Recarga siempre esté oculto para Roblox.
     finalizeBtn.style.display = 'none';
@@ -873,31 +877,45 @@ function handleFormSubmission() {
         payWithKGCBtn.addEventListener('click', handleKGCPayment);
     }
     
-    // --- LÓGICA MODIFICADA PARA LA CREACIÓN DEL MENSAJE DE WHATSAPP ---
     if (whatsappMessageContainer) {
-        whatsappMessageContainer.innerHTML = ''; // Limpia el contenedor para generar el nuevo botón
+        whatsappMessageContainer.innerHTML = ''; 
         const whatsappLinkBtn = document.createElement('a');
         whatsappLinkBtn.classList.add('whatsapp-link');
         whatsappLinkBtn.classList.add('btn-primary');
         whatsappLinkBtn.innerHTML = '<i class="fab fa-whatsapp"></i> Enviar a WhatsApp';
-        whatsappLinkBtn.style.display = 'none'; // Se oculta por defecto
+        whatsappLinkBtn.style.display = 'none'; 
 
         const message = document.createElement('p');
         message.innerHTML = `Una vez realizado el pago, por favor, envía tus datos por WhatsApp para procesar tu recarga.`;
-        message.style.display = 'none'; // Se oculta por defecto
+        message.style.display = 'none'; 
 
         whatsappMessageContainer.appendChild(message);
         whatsappMessageContainer.appendChild(whatsappLinkBtn);
 
         paymentForm.addEventListener('submit', (e) => {
-            e.preventDefault(); // Previene el envío del formulario tradicional
+            e.preventDefault(); 
         });
 
         const checkAndUpdateWhatsappLink = () => {
             const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked');
             const referenceInput = document.getElementById('payment-reference');
+            const fileInput = document.getElementById('payment-receipt');
+            
+            let shouldShowWhatsapp = false;
+            
+            if (selectedMethod) {
+                if (transactionDetails.game === 'Roblox') {
+                    if (referenceInput && referenceInput.value.trim() !== '') {
+                        shouldShowWhatsapp = true;
+                    }
+                } else {
+                    if (fileInput && fileInput.files.length > 0) {
+                        shouldShowWhatsapp = true;
+                    }
+                }
+            }
 
-            if (selectedMethod && referenceInput && referenceInput.value.trim() !== '' && transactionDetails.game === 'Roblox') {
+            if (shouldShowWhatsapp) {
                 const messageText = encodeURIComponent(
                     `Hola, buenos días. Acabo de generar la siguiente solicitud de recarga:\n\n` +
                     `Juego: ${transactionDetails.game}\n` +
@@ -905,7 +923,7 @@ function handleFormSubmission() {
                     `Paquete: ${transactionDetails.package}\n` +
                     `Monto: ${parseFloat(transactionDetails.finalPrice).toFixed(2)} ${transactionDetails.currency}\n` +
                     `Método de pago: ${selectedMethod.name}\n` +
-                    `Referencia de pago: ${referenceInput.value.trim()}`
+                    `Referencia de pago: ${referenceInput ? referenceInput.value.trim() : 'N/A'}`
                 );
                 whatsappLinkBtn.href = `https://wa.me/573021090841?text=${messageText}`;
                 whatsappLinkBtn.style.display = 'inline-block';
@@ -924,7 +942,9 @@ function handleFormSubmission() {
             referenceInput.addEventListener('input', checkAndUpdateWhatsappLink);
         }
         
-        checkAndUpdateWhatsappLink(); // Ejecutar al cargar para validar el estado inicial
+        document.addEventListener('change', checkAndUpdateWhatsappLink);
+
+        checkAndUpdateWhatsappLink();
     }
 }
 
@@ -945,10 +965,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 paymentForm.style.display = 'block';
 
-                if (transactionDetails.game === "TikTok") {
-                    whatsappMessageContainer.style.display = 'block';
-                } else if (transactionDetails.game === "Roblox") {
-                    whatsappMessageContainer.style.display = 'block';
+                if (transactionDetails.game === "TikTok" || transactionDetails.game === "Roblox") {
+                    whatsappMessageContainer.style.display = 'none'; // Se oculta por defecto hasta la validación
                 } else {
                     whatsappMessageContainer.style.display = 'none';
                 }
