@@ -341,8 +341,8 @@ main > section {
     padding-bottom: 20px;
     position: relative;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8);
-    /* Esta línea asegura que la altura de la tarjeta se adapte a su contenido */
-    height: auto; 
+    /* Se añade una altura mínima para que la imagen no se comprima */
+    min-height: 400px; /* Ajusta este valor si tus imágenes son más altas */
 }
 
 .game-card:hover {
@@ -352,10 +352,8 @@ main > section {
 
 .game-card img {
     width: 100%;
-    /* `height: auto;` permite que la imagen mantenga su proporción y no se comprima */
-    height: auto; 
-    /* `object-fit: cover;` hace que la imagen cubra todo el espacio sin dejar espacios en blanco, recortando si es necesario */
-    object-fit: cover; 
+    /* Se elimina object-fit y se asegura que la altura se ajuste automáticamente */
+    height: auto;
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
 }
