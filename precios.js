@@ -5,8 +5,8 @@ export const TASA_DOLAR_VES = 295.00; // Tasa de cambio de USD a Bolívares
 export const VALOR_KGC_USD = 0.07; // 1 KingCoin (KGC) equivale a 0.07 USD
 // =========================================================
 const robloxPackagesUSD = [
-    { id: 1, name: '60 UC', priceUSD: 0.99 },
-    { id: 2, name: '300 + 25 UC', priceUSD: 5.04 },
+    { id: 1, name: '40 Robux', priceUSD: 0.99 },
+    { id: 2, name: '80 Robux', priceUSD: 5.04 },
     { id: 3, name: '600 + 60 UC', priceUSD: 9.85 },
     { id: 4, name: '1500 + 300 UC', priceUSD: 24.52 },
     { id: 5, name: '3000 + 850 UC', priceUSD: 49.28 },

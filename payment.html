@@ -714,25 +714,20 @@ function checkFormValidity() {
     const selectedRadio = document.querySelector('input[name="paymentMethod"]:checked');
     const isMethodSelected = selectedRadio !== null;
     
-    let areDetailsFilled = false;
-    
+    // Aquí es donde se verifica la validez según el juego
     if (isMethodSelected) {
         if (transactionDetails.game === "Roblox") {
             const referenceInput = document.getElementById('payment-reference');
-            areDetailsFilled = referenceInput && referenceInput.value.trim() !== '';
+            // Habilita el mensaje de WhatsApp solo si hay un método seleccionado Y se llenó la referencia.
+            whatsappMessageContainer.style.display = (referenceInput && referenceInput.value.trim() !== '') ? 'block' : 'none';
         } else {
             const fileInput = document.getElementById('payment-receipt');
-            areDetailsFilled = fileInput && fileInput.files.length > 0;
+            // Mantiene la lógica anterior de requerir un comprobante
+            whatsappMessageContainer.style.display = (fileInput && fileInput.files.length > 0) ? 'block' : 'none';
         }
-    }
-
-    if (transactionDetails.game === "Roblox") {
-        const referenceInput = document.getElementById('payment-reference');
-        // Se habilita el mensaje de WhatsApp si hay un método seleccionado Y se llenó la referencia.
-        whatsappMessageContainer.style.display = (isMethodSelected && referenceInput && referenceInput.value.trim() !== '') ? 'block' : 'none';
     } else {
-        const fileInput = document.getElementById('payment-receipt');
-        whatsappMessageContainer.style.display = (isMethodSelected && fileInput && fileInput.files.length > 0) ? 'block' : 'none';
+        // Si no hay método seleccionado, oculta todo
+        whatsappMessageContainer.style.display = 'none';
     }
     
     // Se asegura de que el botón de Finalizar Recarga siempre esté oculto para Roblox.
