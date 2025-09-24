@@ -6,11 +6,12 @@ export const VALOR_KGC_USD = 0.07; // 1 KingCoin (KGC) equivale a 0.07 USD
 // =========================================================
 const robloxPackagesUSD = [
     { id: 1, name: '40 Robux', priceUSD: 0.61 },
-    { id: 2, name: '80 Robux', priceUSD: 5.04 },
-    { id: 3, name: '600 + 60 UC', priceUSD: 9.85 },
-    { id: 4, name: '1500 + 300 UC', priceUSD: 24.52 },
-    { id: 5, name: '3000 + 850 UC', priceUSD: 49.28 },
-    { id: 6, name: '6000 + 2100 UC', priceUSD: 98.56 }
+    { id: 2, name: '80 Robux', priceUSD: 1.24 },
+    { id: 3, name: '400 Robux', priceUSD: 6.24 },
+    { id: 4, name: '800 Robux:', priceUSD: 12.49 },
+    { id: 5, name: '1700 Robux:', priceUSD: 24.99 },
+    { id: 6, name: '4,500 Robux:', priceUSD: 62.49 },
+    { id: 6, name: '10,000 Robux:', priceUSD: 124.99 }
 ];
 
 // Precios base en USD para PUBG Mobile - NO CAMBIAR ESTOS VALORES
