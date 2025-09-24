@@ -54,7 +54,7 @@
             font-weight: bold;
             color: var(--text-color);
         }
-        .input-group input[type="email"] {
+        .input-group input[type="email"], .input-group input[type="text"] {
             width: 100%;
             padding: 10px;
             border: 1px solid var(--border-color);
@@ -286,7 +286,7 @@
                 </div>
 
                 <div id="payment-details-step" class="form-section-step">
-                    <h3>Paso 2: Realiza el Pago y Sube tu Comprobante</h3>
+                    <h3>Paso 2: Realiza el Pago y Obtén tu Referencia</h3>
                     <div id="payment-details-form" class="payment-details-form">
                     </div>
                 </div>
@@ -295,29 +295,15 @@
                     <button type="button" class="btn-primary" id="pay-with-kgc-btn">Pagar con mi Wallet (KGC)</button>
                 </div>
 
-                <div id="whatsapp-message-container" class="payment-confirmation-message" style="margin-top: 30px; margin-bottom: 20px; text-align: center; display: none;">
+                <div id="whatsapp-message-container" class="payment-confirmation-message" style="margin-top: 30px; margin-bottom: 20px; text-align: center;">
                     <p style="font-size: 1.1em; color: var(--text-color); margin-bottom: 15px;">
-                        ¡Importante! Una vez realizado el pago con el método seleccionado, <strong>envía la captura de tu comprobante y tus datos de TikTok</strong> al siguiente número de WhatsApp para que tu recarga sea procesada rápidamente:
+                        ¡Importante! Una vez realizado el pago, <strong>haz clic en el botón para enviar tus datos y código de referencia</strong> para que tu recarga sea procesada rápidamente.
                     </p>
-                    <a href="https://wa.me/573021090841?text=Hola%2C%20acabo%20de%20realizar%20un%20pago%20para%20recarga%20de%20TikTok.%20Mis%20datos%20de%20TikTok%20son%3A%20%5BAQUI_TUS_DATOS%5D."
-                        class="whatsapp-link"
-                        target="_blank"
-                        style="font-size: 1.1em; padding: 12px 25px;">
-                        <i class="fab fa-whatsapp"></i> Enviar Captura al WhatsApp
-                    </a>
-                    <p class="small-text" style="margin-top: 15px;">
-                        (Por favor, no olvides incluir tus datos de TikTok en el mensaje de WhatsApp).
-                    </p>
+                    <button type="button" id="finalize-recharge-btn" class="btn-primary" style="font-size: 1.1em; padding: 12px 25px;">
+                        <i class="fab fa-whatsapp"></i> Enviar Solicitud de Recarga
+                    </button>
                 </div>
-
-                <button type="submit" class="btn-primary" id="finalize-recharge-btn" style="display: none;" disabled>Finalizar Recarga</button>
             </form>
-
-            <div id="success-message-display" class="payment-success-message" style="display: none;">
-                <h2>🎉 ¡Notificación Enviada! 🎉</h2>
-                <p>Hemos recibido tu solicitud de recarga. Te enviaremos un correo de confirmación y la factura virtual una vez que tu recarga sea procesada.</p>
-                <p>¡Gracias por usar GamingKings!</p>
-            </div>
         </div>
     </main>
 
@@ -364,6 +350,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let transactionDetails = null;
     let userSession = null;
 
+    // Se modifican los templates para pedir un código de referencia en lugar de un archivo
     const paymentDetailsTemplates = {
         'pago-movil': `
             <p><strong>Paso 1:</strong> Realiza el Pago Móvil a los siguientes datos:</p>
@@ -373,9 +360,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <li><strong>Teléfono:</strong> 0412-7123391</li>
             </ul>
             <div class="payment-fields-container">
-                <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
-                <label for="payment-receipt">Subir Comprobante de Pago:</label>
-                <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
+                <p><strong>Paso 2:</strong> Introduce tu código de referencia de pago.</p>
+                <label for="payment-reference">Código de Referencia de Pago:</label>
+                <input type="text" id="payment-reference" name="paymentReference" required>
             </div>
         `,
         'binance': `
@@ -395,9 +382,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <li><strong>ID Binance Pay:</strong> 909792776</li>
             </ul>
             <div class="payment-fields-container">
-                <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
-                <label for="payment-receipt">Subir Comprobante de Pago:</label>
-                <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
+                <p><strong>Paso 2:</strong> Introduce tu código de referencia de pago.</p>
+                <label for="payment-reference">Código de Referencia de Pago:</label>
+                <input type="text" id="payment-reference" name="paymentReference" required>
             </div>
         `,
         'zinli': `
@@ -406,9 +393,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <li><strong>Usuario Zinli:</strong> endryreyes199@gmail.com</li>
             </ul>
             <div class="payment-fields-container">
-                <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
-                <label for="payment-receipt">Subir Comprobante de Pago:</label>
-                <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
+                <p><strong>Paso 2:</strong> Introduce tu código de referencia de pago.</p>
+                <label for="payment-reference">Código de Referencia de Pago:</label>
+                <input type="text" id="payment-reference" name="paymentReference" required>
             </div>
         `
     };
@@ -429,7 +416,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const payWithKGCBtn = document.getElementById('pay-with-kgc-btn');
     const whatsappMessageContainer = document.getElementById('whatsapp-message-container');
     const finalizeBtn = document.getElementById('finalize-recharge-btn');
-    const successMessageDisplay = document.getElementById('success-message-display'); 
     const gamePaymentHeader = document.getElementById('game-payment-header');
     const gameBannerDisplay = document.getElementById('gameBannerDisplay');
     const gameTitleDisplay = document.getElementById('gameTitleDisplay');
@@ -468,8 +454,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (logoutButton) {
             logoutButton.addEventListener('click', handleLogout);
         }
-
-        // Se elimina el evento de click directo del botón, ahora se maneja en el form submit
     }
 
     async function fetchUserProfile(userId) {
@@ -546,7 +530,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- FUNCIÓN MODIFICADA ---
     function updateTransactionSummary() {
         if (!transactionDetails) {
             transactionSummaryDiv.innerHTML = '<p>No se encontraron detalles de la transacción.</p>';
@@ -567,19 +550,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const playerIdHtml = transactionDetails.playerId ? `<p><strong>ID de Jugador:</strong> ${transactionDetails.playerId}</p>` : '';
         
-        // Lógica para cambiar el mensaje de saludo
         let greeting = '';
         if (displayCurrency === 'KGC') {
             greeting = 'Por favor, realiza tu pago con KingCoins a continuación.';
         } else {
-            greeting = 'Por favor, selecciona tu método a continuación y realiza el pago por el monto exacto.';
+            greeting = 'Por favor, selecciona tu método a continuación y realiza el pago por el monto exacto. Luego, introduce tu código de referencia de pago.';
         }
 
         if (userProfileData && userProfileData.name) {
             if (displayCurrency === 'KGC') {
                 greeting = `Hola ${userProfileData.name} ${userProfileData.last_name || ''}, por favor, realiza tu pago con KingCoins a continuación.`;
             } else {
-                greeting = `Hola ${userProfileData.name} ${userProfileData.last_name || ''}, por favor, selecciona tu método a continuación y realiza el pago por el monto exacto.`;
+                greeting = `Hola ${userProfileData.name} ${userProfileData.last_name || ''}, por favor, selecciona tu método a continuación y realiza el pago por el monto exacto. Luego, introduce tu código de referencia de pago.`;
             }
         }
 
@@ -591,7 +573,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             <p>${greeting}</p>
         `;
     }
-    // --- FIN FUNCIÓN MODIFICADA ---
 
     function updatePaymentMethods() {
         const paymentMethodsDiv = document.getElementById('payment-methods');
@@ -602,7 +583,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         paymentMethodStep.style.display = 'none';
         paymentDetailsStep.style.display = 'none';
         kingcoinsPaymentContainer.style.display = 'none';
-        finalizeBtn.style.display = 'none';
 
         if (currentCurrency === 'KGC') {
             if (userSession) {
@@ -616,7 +596,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         paymentMethodStep.style.display = 'block';
         paymentDetailsStep.style.display = 'block';
-        finalizeBtn.style.display = 'block';
 
         let methods = [];
         if (currentCurrency === 'VES') {
@@ -654,18 +633,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (methodHtml) {
             paymentDetailsFormDiv.innerHTML = methodHtml;
-
-            if (transactionDetails.game === "TikTok") {
-                const fieldsContainer = paymentDetailsFormDiv.querySelector('.payment-fields-container');
-                if (fieldsContainer) {
-                    fieldsContainer.style.display = 'none';
-                }
-            } else {
-                const fileInput = document.getElementById('payment-receipt');
-                if (fileInput) {
-                    fileInput.addEventListener('change', checkFormValidity);
-                    fileInput.required = true; 
-                }
+            
+            const referenceInput = document.getElementById('payment-reference');
+            if (referenceInput) {
+                referenceInput.addEventListener('input', checkFormValidity);
+                referenceInput.required = true; 
             }
 
             const copyButton = paymentDetailsFormDiv.querySelector('.copy-button');
@@ -717,16 +689,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         let areDetailsFilled = false;
         if (isMethodSelected) {
-            if (transactionDetails.game === "TikTok") {
-                areDetailsFilled = true;
-            } else {
-                const fileInput = document.getElementById('payment-receipt');
-                areDetailsFilled = fileInput && fileInput.files.length > 0;
-            }
+            const referenceInput = document.getElementById('payment-reference');
+            areDetailsFilled = referenceInput && referenceInput.value.trim() !== '';
         }
         
         finalizeBtn.disabled = !areDetailsFilled;
-        finalizeBtn.style.display = areDetailsFilled ? 'block' : 'none';
     }
 
     async function handleKGCPayment() {
@@ -747,134 +714,44 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        await submitKingcoinsRequest();
+        // Logic for KingCoins payment for Roblox. The `payment.html` logic for this part could be a placeholder if it sends a server-side notification. For this new page, we will just send the user to the WhatsApp link with the KGC details.
+        const encodedMessage = encodeURIComponent(`Hola, acabo de generar esta solicitud. Paquete seleccionado: ${transactionDetails.package}, Monto: ${transactionDetails.finalPrice} KGC, Método de pago: KINGCOINS.`);
+        const whatsappLink = `https://wa.me/573021090841?text=${encodedMessage}`;
+        window.location.href = whatsappLink;
     }
     
-    async function submitKingcoinsRequest() {
-        const buttonToDisable = payWithKGCBtn;
-        const originalButtonText = buttonToDisable.textContent;
-        buttonToDisable.disabled = true;
-        buttonToDisable.textContent = 'Procesando...';
+    // Nueva función para manejar la redirección a WhatsApp
+    function redirectToWhatsApp() {
+        const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked');
+        const referenceInput = document.getElementById('payment-reference');
 
-        const formData = new FormData();
-        for (const key in transactionDetails) {
-            if (key !== 'userEmail' && key !== 'email') { 
-                formData.append(key, transactionDetails[key]);
-            }
-        }
-        formData.append('email', userSession.user.email);
-        formData.append('paymentMethod', 'KINGCOINS');
-
-        try {
-            // Paso 1: Deducción de KingCoins
-            const deductResponse = await fetch('/.netlify/functions/deduct-kingcoins', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!deductResponse.ok) {
-                const errorData = await deductResponse.json();
-                throw new Error(errorData.message || 'Error desconocido al deducir KingCoins.');
-            }
-
-            // Paso 2: Notificación a Telegram a través de process-payment.js
-            const processPaymentResponse = await fetch('/.netlify/functions/process-payment', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (processPaymentResponse.ok) {
-                alert('¡Pago con KingCoins realizado con éxito! La recarga ha sido acreditada y el equipo de soporte ha sido notificado.');
-                localStorage.removeItem('transactionDetails');
-                window.location.href = 'index.html'; 
-            } else {
-                const errorData = await processPaymentResponse.json();
-                console.error('Error al notificar el pago a través de process-payment:', errorData);
-                alert(`¡El pago se procesó, pero hubo un error al notificarlo! El saldo se ha deducido. Por favor, toma una captura de pantalla de este mensaje y contacta a soporte para verificar tu recarga. Error: ${errorData.message}`);
-            }
-
-        } catch (error) {
-            alert('Hubo un problema: ' + error.message);
-            console.error('Error durante el proceso de pago con KingCoins:', error);
-        } finally {
-            buttonToDisable.disabled = false;
-            buttonToDisable.textContent = originalButtonText;
-        }
-    }
-
-    async function submitPaymentRequest(paymentMethod) {
-        if (!userSession) {
-            alert('Debes iniciar sesión para finalizar el pago.');
-            window.location.href = 'login.html';
+        if (!selectedMethod || !referenceInput || referenceInput.value.trim() === '') {
+            alert('Por favor, selecciona un método de pago e introduce el código de referencia.');
             return;
         }
+
+        const referenceCode = referenceInput.value.trim();
+        const paymentMethodName = selectedMethod.labels[0].querySelector('span').textContent;
+        const totalAmount = parseFloat(transactionDetails.finalPrice).toFixed(2);
+        const currencySymbol = transactionDetails.currency === 'VES' ? 'Bs.' : '$';
+        const currencyCode = transactionDetails.currency;
+        const packageName = transactionDetails.package;
+        const gameName = transactionDetails.game;
+
+        const message = `Hola, acabo de generar esta solicitud.\nJuego: ${gameName}\nPaquete seleccionado: ${packageName}\nMonto: ${currencySymbol}${totalAmount} ${currencyCode}\nMétodo de pago: ${paymentMethodName}\nCódigo de Referencia: ${referenceCode}\n\nGracias!`;
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappLink = `https://wa.me/573021090841?text=${encodedMessage}`;
         
-        let formData = new FormData();
-        formData.append('paymentMethod', paymentMethod);
-        formData.append('email', userSession.user.email);
-        formData.append('userEmail', userSession.user.email);
-
-        if (transactionDetails.game !== "TikTok") {
-            const paymentReceipt = document.getElementById('payment-receipt');
-            if (!paymentReceipt || paymentReceipt.files.length === 0) {
-                alert('Por favor, sube tu comprobante de pago para continuar.');
-                return;
-            }
-            formData.append('paymentReceipt', paymentReceipt.files[0]);
-        }
-        
-        for (const key in transactionDetails) {
-            formData.append(key, transactionDetails[key]);
-        }
-
-        const buttonToDisable = finalizeBtn;
-        const originalButtonText = buttonToDisable.textContent;
-        buttonToDisable.disabled = true;
-        buttonToDisable.textContent = 'Procesando...';
-
-        try {
-            const response = await fetch('/.netlify/functions/process-payment', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (response.ok) {
-                paymentForm.style.display = 'none';
-                whatsappMessageContainer.style.display = 'none';
-                successMessageDisplay.style.display = 'block';
-                gamePaymentHeader.style.display = 'none';
-
-                localStorage.removeItem('transactionDetails');
-
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 5000);
-            } else {
-                const errorData = await response.json();
-                alert(`Ocurrió un error: ${errorData.message || response.statusText}. Por favor, verifica tus datos e inténtalo de nuevo.`);
-                console.error('Server error:', errorData);
-                buttonToDisable.disabled = false;
-                buttonToDisable.textContent = originalButtonText;
-            }
-        } catch (error) {
-            alert('Hubo un problema de conexión. Por favor, inténtalo de nuevo más tarde.');
-            console.error('Network or client error:', error);
-            buttonToDisable.disabled = false;
-            buttonToDisable.textContent = originalButtonText;
-        }
+        window.location.href = whatsappLink;
     }
-    
+
     function handleFormSubmission() {
         if (payWithKGCBtn) {
             payWithKGCBtn.addEventListener('click', handleKGCPayment);
         }
-        paymentForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked');
-            if (selectedMethod) {
-                submitPaymentRequest(selectedMethod.value);
-            }
-        });
+        if (finalizeBtn) {
+            finalizeBtn.addEventListener('click', redirectToWhatsApp);
+        }
     }
     
     // Lógica principal
@@ -893,12 +770,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     updateTransactionSummary();
 
                     paymentForm.style.display = 'block';
-
-                    if (transactionDetails.game === "TikTok") {
-                        whatsappMessageContainer.style.display = 'block';
-                    } else {
-                        whatsappMessageContainer.style.display = 'none';
-                    }
+                    whatsappMessageContainer.style.display = 'block'; // Asegura que el contenedor de WhatsApp se muestre
                     
                     handleFormSubmission();
                 } else {
