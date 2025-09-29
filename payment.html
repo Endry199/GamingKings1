@@ -336,19 +336,10 @@
     
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script type="module">
-        // La función se ejecuta cuando la página está cargada
-document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Obtiene la sesión de Supabase
-    const { data: { session } } = await supabase.auth.getSession();
-
-    // 2. Si no hay sesión, redirige al inicio.
-    //    Si quieres redirigir a la página de login, cambia 'index.html' por 'login.html'
-    if (!session) {
-        window.location.href = 'index.html'; 
-    }
-});
+    // 1. EL IMPORT DEBE SER LO PRIMERO EN UN MÓDULO.
     import { supabase } from './supabaseClient.js';
-    
+
+    // 2. DECLARACIÓN DE VARIABLES
     const userMenuContainer = document.querySelector('.user-menu-container');
     const guestMenuContainer = document.querySelector('.guest-menu-container');
     const userDisplayName = document.getElementById('user-display-name');
@@ -421,7 +412,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         { id: 'binance', name: 'Binance', type: 'usd', icon: 'fab fa-bitcoin' },
         { id: 'zinli', name: 'Zinli', type: 'usd', icon: 'fas fa-wallet' }
     ];
-    
+
+    // Nuevo array para el método KingCoins (separado para la lógica)
+    const paymentMethodsKGC = [
+        { id: 'kingcoins', name: 'Mi Wallet KingCoins', type: 'kgc', icon: 'fas fa-crown' }
+    ];
+
     const paymentForm = document.getElementById('payment-form');
     const paymentMethodStep = document.getElementById('payment-method-step');
     const paymentDetailsStep = document.getElementById('payment-details-step');
@@ -429,12 +425,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const payWithKGCBtn = document.getElementById('pay-with-kgc-btn');
     const whatsappMessageContainer = document.getElementById('whatsapp-message-container');
     const finalizeBtn = document.getElementById('finalize-recharge-btn');
-    const successMessageDisplay = document.getElementById('success-message-display'); 
+    const successMessageDisplay = document.getElementById('success-message-display');
     const gamePaymentHeader = document.getElementById('game-payment-header');
     const gameBannerDisplay = document.getElementById('gameBannerDisplay');
     const gameTitleDisplay = document.getElementById('gameTitleDisplay');
     const transactionSummaryDiv = document.getElementById('transaction-summary');
 
+    // 3. FUNCIONES
     function toggleDropdown(dropdown) {
         dropdown.classList.toggle('hidden');
     }
@@ -469,7 +466,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             logoutButton.addEventListener('click', handleLogout);
         }
 
-        // Se elimina el evento de click directo del botón, ahora se maneja en el form submit
+        if (payWithKGCBtn) { // Asegúrate de que el evento esté aquí
+            payWithKGCBtn.addEventListener('click', handleKGCPayment);
+        }
     }
 
     async function fetchUserProfile(userId) {
@@ -485,15 +484,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             .eq('user_id', userId)
             .single();
 
-        if (profileError || walletError) {
-            console.error('Error fetching user data:', profileError?.message || walletError?.message);
-            return null;
+        if (profileError && profileError.code !== 'PGRST116') { // Ignorar 'no rows found' para profile
+            console.error('Error fetching user profile:', profileError.message);
+        }
+        if (walletError && walletError.code !== 'PGRST116') { // Ignorar 'no rows found' para wallet
+            console.error('Error fetching user wallet:', walletError.message);
         }
         
         return {
-            name: profile.name,
-            last_name: profile.last_name,
-            kingcoins_balance: wallet.balance
+            name: profile?.name || 'Usuario',
+            last_name: profile?.last_name || '',
+            kingcoins_balance: wallet?.balance || 0
         };
     }
 
@@ -546,7 +547,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- FUNCIÓN MODIFICADA ---
     function updateTransactionSummary() {
         if (!transactionDetails) {
             transactionSummaryDiv.innerHTML = '<p>No se encontraron detalles de la transacción.</p>';
@@ -591,8 +591,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             <p>${greeting}</p>
         `;
     }
-    // --- FIN FUNCIÓN MODIFICADA ---
 
+    // --- FUNCIÓN DE MÉTODOS DE PAGO CORREGIDA ---
     function updatePaymentMethods() {
         const paymentMethodsDiv = document.getElementById('payment-methods');
         paymentMethodsDiv.innerHTML = '';
@@ -604,9 +604,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         kingcoinsPaymentContainer.style.display = 'none';
         finalizeBtn.style.display = 'none';
 
+        // Lógica: Si el pago es en KGC, o si el juego es KingsCoins, muestra el paso de KGC.
+        const isBuyingKingCoins = transactionDetails.game === "KingsCoins"; // Nueva variable para distinguir la compra de la moneda
+        
+        // Si la moneda de pago seleccionada es KGC (cuando el cliente usa KingCoins para pagar un producto)
         if (currentCurrency === 'KGC') {
             if (userSession) {
                 kingcoinsPaymentContainer.style.display = 'block';
+                // Si el botón ya tiene el listener, no necesitamos añadirlo de nuevo aquí, solo asegurarnos que se vea.
             } else {
                 kingcoinsPaymentContainer.innerHTML = '<p>Debes <a href="login.html">iniciar sesión</a> para pagar con KingCoins.</p>';
                 kingcoinsPaymentContainer.style.display = 'block';
@@ -614,10 +619,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         
-        paymentMethodStep.style.display = 'block';
-        paymentDetailsStep.style.display = 'block';
-        finalizeBtn.style.display = 'block';
+        // Si el juego es KingsCoins, forzamos la no-visualización de métodos KGC
+        if (isBuyingKingCoins) {
+            // El cliente está comprando KingCoins con dinero real, por lo que NUNCA debe ver la opción de pagar con KingCoins.
+            // Continuamos con el flujo normal de pago (VES/USD)
+        } else {
+            // Si el juego NO es KingsCoins, y la moneda actual NO es KGC, mostramos el paso de selección de pago (VES/USD)
+            // Y luego permitimos la opción de pago con KGC como método de pago.
 
+            // Nota: Con tu lógica actual, si el cliente seleccionó USD/VES, el botón de KGC aparece al final.
+            // Para mantener la consistencia de tu UI (USD/VES en la primera caja, KGC en la segunda):
+            // Si el juego NO es KingCoins, podemos mantener el flujo actual de radio buttons (VES/USD) y el botón de Pagar con KGC al final.
+            // PERO la forma más limpia es hacer que la opción de KingCoins aparezca como un botón de pago MÁS.
+
+            // Aquí vamos a forzar la lógica de pago normal (USD/VES) si no es KGC.
+            paymentMethodStep.style.display = 'block';
+            paymentDetailsStep.style.display = 'block';
+            finalizeBtn.style.display = 'block';
+        }
+        
         let methods = [];
         if (currentCurrency === 'VES') {
             methods = paymentMethodsVES;
@@ -625,6 +645,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             methods = paymentMethodsUSD;
         }
 
+        // Si NO está comprando KingCoins, añade la opción KingCoins como radio button (método de pago alternativo)
+        // Ya que la lógica de tu HTML lo maneja con un botón aparte (<div id="kingcoins-payment-container">),
+        // solo nos enfocaremos en los radio buttons (VES/USD).
+        
         methods.forEach(method => {
             const methodItem = document.createElement('div');
             methodItem.classList.add('payment-method-option');
@@ -645,8 +669,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 checkFormValidity();
             });
         });
+        
+        // MOSTRAR CONTENEDOR DE PAGO CON KGC si NO está comprando KingCoins y hay sesión
+        if (!isBuyingKingCoins && userSession) {
+            kingcoinsPaymentContainer.style.display = 'block';
+        } else {
+            kingcoinsPaymentContainer.style.display = 'none';
+        }
+        
         checkFormValidity();
     }
+    // --- FIN FUNCIÓN DE MÉTODOS DE PAGO CORREGIDA ---
 
     function loadPaymentDetails(methodId) {
         const paymentDetailsFormDiv = document.getElementById('payment-details-form');
@@ -726,7 +759,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         finalizeBtn.disabled = !areDetailsFilled;
-        finalizeBtn.style.display = areDetailsFilled ? 'block' : 'none';
+        // Solo muestra el botón si está habilitado y si NO es un pago con KGC
+        if (!isMethodSelected || transactionDetails.currency === 'KGC') {
+            finalizeBtn.style.display = 'none';
+        } else {
+            finalizeBtn.style.display = areDetailsFilled ? 'block' : 'none';
+        }
     }
 
     async function handleKGCPayment() {
@@ -736,6 +774,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
+        // Recarga el perfil para obtener el saldo más reciente
+        await checkUserSession(); 
+        
         if (!userProfileData || userProfileData.kingcoins_balance === undefined) {
             alert('No se pudo obtener el saldo de tu billetera. Por favor, intenta recargar la página.');
             return;
@@ -763,7 +804,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
         formData.append('email', userSession.user.email);
-        formData.append('paymentMethod', 'KINGCOINS');
+        formData.append('paymentMethod', 'kingcoins'); // Usamos 'kingcoins' en minúsculas para la consistencia con el backend
 
         try {
             // Paso 1: Deducción de KingCoins
@@ -790,6 +831,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 const errorData = await processPaymentResponse.json();
                 console.error('Error al notificar el pago a través de process-payment:', errorData);
+                // NOTA: No hacemos rollback, solo advertimos al cliente.
                 alert(`¡El pago se procesó, pero hubo un error al notificarlo! El saldo se ha deducido. Por favor, toma una captura de pantalla de este mensaje y contacta a soporte para verificar tu recarga. Error: ${errorData.message}`);
             }
 
@@ -877,8 +919,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     
-    // Lógica principal
+    // 4. LÓGICA PRINCIPAL - Reordenada
     document.addEventListener('DOMContentLoaded', async () => {
+        // Validación de sesión inicial (Mantenida por si acaso)
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        if (!initialSession) {
+            window.location.href = 'index.html'; 
+            return;
+        }
+
         setupEventListeners();
         
         const storedDetails = localStorage.getItem('transactionDetails');
@@ -889,7 +938,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     await checkUserSession();
                     
                     updateGameHeader();
-                    updatePaymentMethods();
+                    // ESTA ES LA FUNCIÓN CLAVE CORREGIDA
+                    updatePaymentMethods(); 
                     updateTransactionSummary();
 
                     paymentForm.style.display = 'block';
