@@ -102,8 +102,15 @@ exports.handler = async function(event, context) {
                     return { statusCode: 200, body: "Status not changed" };
                 }
 
-                // Procesar la lógica de KingCoins si la transacción fue 'realizada'
-                if (status === 'realizada' && transaction.payment_method && transaction.payment_method.toLowerCase().includes('kingcoins')) {
+                // Determinar si es una transacción de COMPRA de KingCoins para acreditar
+                // Será una compra si: el estado final es 'realizada', el método de pago NO es KingCoins (usado como pago), y el paquete es de KingCoins.
+                const isKingCoinPurchaseToAcredit = status === 'realizada' && 
+                                                    transaction.payment_method && 
+                                                    !transaction.payment_method.toLowerCase().includes('kingcoins') && 
+                                                    transaction.package_name && 
+                                                    (transaction.package_name.toLowerCase().includes('kingcoins') || transaction.package_name.includes('<i class="fas fa-crown"></i>'));
+
+                if (isKingCoinPurchaseToAcredit) {
                     await answerCallbackQuery(callbackQueryId, `Acreditando KingCoins para la transacción ${transactionId}...`, false);
                 } else {
                     await answerCallbackQuery(callbackQueryId, `Marcando la transacción ${transactionId} como '${status}'...`, false);
@@ -111,7 +118,7 @@ exports.handler = async function(event, context) {
 
                 let kingcoinsCreditedMessage = '';
 
-                if (status === 'realizada' && transaction.payment_method && transaction.payment_method.toLowerCase().includes('kingcoins')) {
+                if (isKingCoinPurchaseToAcredit) {
                     console.log(`DEBUG: Procesando acreditación de KingCoins para transacción ${transactionId}.`);
                     const cleanedPackageName = transaction.package_name.includes('<i class="fas fa-crown"></i>')
                         ? transaction.package_name.replace('<i class="fas fa-crown"></i>', ' KingCoins')
@@ -210,7 +217,7 @@ exports.handler = async function(event, context) {
 *Paquete:* ${escapeMarkdownV2(cleanedPackageName || 'N/A')}
 *Monto:* ${escapeMarkdownV2(transaction.final_price || 'N/A')} ${escapeMarkdownV2(transaction.currency || 'N/A')}
 *Método de Pago:* ${escapeMarkdownV2(transaction.payment_method.replace(/-/g, ' ').toUpperCase() || 'N/A')}
-\\-\\-\\-\n
+\\-\\-\\- \n
 *Estado:* ${statusText} ${statusEmoji}
 _Marcada por:_ *${escapeMarkdownV2(userName)}* \\(${escapeMarkdownV2(formattedTime)} ${escapeMarkdownV2(formattedDate)}\\)
 `.trim();

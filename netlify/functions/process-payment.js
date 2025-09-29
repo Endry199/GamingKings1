@@ -202,36 +202,43 @@ exports.handler = async function(event, context) {
     let inlineKeyboard = [];
 
     // Lógica para los botones de acción en Telegram
-    const isKingCoinsPurchase = paymentMethod.toLowerCase() === 'kingcoins';
+    const isKingCoinsPurchase = packageName && packageName.includes('KingCoins') && paymentMethod.toLowerCase() !== 'kingcoins';
+    const isKingCoinsUsedAsPayment = paymentMethod.toLowerCase() === 'kingcoins';
     const isFreeFireRecarga = game && game.toLowerCase() === 'free fire';
 
     if (isKingCoinsPurchase) {
-        // Solo el botón para liberar KingCoins
+        // Escenario 2: Compra de KingCoins (paquete es KingCoins, pero el pago es otro)
         inlineKeyboard.push([
             { text: "👑 Liberar KingCoins", callback_data: `update_transaction:${newTransactionData.id_transaccion}:realizada` }
         ]);
-    } else {
-        // Botones de estado general para cualquier otra transacción
+    } else if (isKingCoinsUsedAsPayment) {
+        // Escenario 1: Uso de KingCoins como pago (transacción normal)
         inlineKeyboard.push([
             { text: "✅ Recarga Realizada", callback_data: `update_transaction:${newTransactionData.id_transaccion}:realizada` },
             { text: "❌ Recarga Rechazada", callback_data: `update_transaction:${newTransactionData.id_transaccion}:rechazada` }
         ]);
-        
-        // Botón de WhatsApp para el recargador, si el juego es Free Fire
-        if (isFreeFireRecarga && WHATSAPP_NUMBER_RECARGADOR) {
-            const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
-            const cleanedPackageNameForWhatsappRecargador = (cleanedDisplayPackageName || 'N/A').replace(/\+/g, '%2B');
+    } else {
+        // Escenario 3: Transacción normal (pago con USD, VES, etc.)
+        inlineKeyboard.push([
+            { text: "✅ Recarga Realizada", callback_data: `update_transaction:${newTransactionData.id_transaccion}:realizada` },
+            { text: "❌ Recarga Rechazada", callback_data: `update_transaction:${newTransactionData.id_transaccion}:rechazada` }
+        ]);
+    }
     
-            let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
-            whatsappMessageRecargador += `*ID de Jugador:* ${playerId || 'N/A'}\n`;
-            whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageNameForWhatsappRecargador}\n`;
-    
-            const whatsappLinkRecargadorButton = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
-    
-            inlineKeyboard.push([
-                { text: "📲 WhatsApp Recargador", url: whatsappLinkRecargadorButton }
-            ]);
-        }
+    // Botón de WhatsApp para el recargador, si el juego es Free Fire y no es una compra de KingCoins
+    if (isFreeFireRecarga && WHATSAPP_NUMBER_RECARGADOR && !isKingCoinsPurchase) { // Añadir !isKingCoinsPurchase para evitar el botón en compras de KingCoins
+        const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
+        const cleanedPackageNameForWhatsappRecargador = (cleanedDisplayPackageName || 'N/A').replace(/\+/g, '%2B');
+
+        let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
+        whatsappMessageRecargador += `*ID de Jugador:* ${playerId || 'N/A'}\n`;
+        whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageNameForWhatsappRecargador}\n`;
+
+        const whatsappLinkRecargadorButton = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
+
+        inlineKeyboard.push([
+            { text: "📲 WhatsApp Recargador", url: whatsappLinkRecargadorButton }
+        ]);
     }
 
     const replyMarkup = {
