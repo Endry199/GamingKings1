@@ -413,11 +413,6 @@
         { id: 'zinli', name: 'Zinli', type: 'usd', icon: 'fas fa-wallet' }
     ];
 
-    // Nuevo array para el método KingCoins (separado para la lógica)
-    const paymentMethodsKGC = [
-        { id: 'kingcoins', name: 'Mi Wallet KingCoins', type: 'kgc', icon: 'fas fa-crown' }
-    ];
-
     const paymentForm = document.getElementById('payment-form');
     const paymentMethodStep = document.getElementById('payment-method-step');
     const paymentDetailsStep = document.getElementById('payment-details-step');
@@ -466,7 +461,7 @@
             logoutButton.addEventListener('click', handleLogout);
         }
 
-        if (payWithKGCBtn) { // Asegúrate de que el evento esté aquí
+        if (payWithKGCBtn) {
             payWithKGCBtn.addEventListener('click', handleKGCPayment);
         }
     }
@@ -484,10 +479,10 @@
             .eq('user_id', userId)
             .single();
 
-        if (profileError && profileError.code !== 'PGRST116') { // Ignorar 'no rows found' para profile
+        if (profileError && profileError.code !== 'PGRST116') {
             console.error('Error fetching user profile:', profileError.message);
         }
-        if (walletError && walletError.code !== 'PGRST116') { // Ignorar 'no rows found' para wallet
+        if (walletError && walletError.code !== 'PGRST116') {
             console.error('Error fetching user wallet:', walletError.message);
         }
         
@@ -547,6 +542,7 @@
         }
     }
 
+    // --- FUNCIÓN MODIFICADA: Asegura el mensaje correcto al comprar KingCoins ---
     function updateTransactionSummary() {
         if (!transactionDetails) {
             transactionSummaryDiv.innerHTML = '<p>No se encontraron detalles de la transacción.</p>';
@@ -555,6 +551,7 @@
         
         const displayAmount = parseFloat(transactionDetails.finalPrice);
         const displayCurrency = transactionDetails.currency;
+        const isBuyingKingCoins = transactionDetails.game === "KingsCoins"; // Variable clave
         
         let otherCurrencyDisplay = '';
         if (transactionDetails.priceUSD && transactionDetails.priceVES) {
@@ -569,14 +566,20 @@
         
         // Lógica para cambiar el mensaje de saludo
         let greeting = '';
-        if (displayCurrency === 'KGC') {
+        
+        // Si se está comprando KingCoins, la moneda de pago debe ser real
+        if (isBuyingKingCoins) {
+            greeting = 'Por favor, selecciona tu método a continuación y realiza el pago por el monto exacto.';
+        } else if (displayCurrency === 'KGC') {
             greeting = 'Por favor, realiza tu pago con KingCoins a continuación.';
         } else {
             greeting = 'Por favor, selecciona tu método a continuación y realiza el pago por el monto exacto.';
         }
 
         if (userProfileData && userProfileData.name) {
-            if (displayCurrency === 'KGC') {
+             if (isBuyingKingCoins) {
+                greeting = `Hola ${userProfileData.name} ${userProfileData.last_name || ''}, por favor, selecciona tu método a continuación y realiza el pago por el monto exacto.`;
+            } else if (displayCurrency === 'KGC') {
                 greeting = `Hola ${userProfileData.name} ${userProfileData.last_name || ''}, por favor, realiza tu pago con KingCoins a continuación.`;
             } else {
                 greeting = `Hola ${userProfileData.name} ${userProfileData.last_name || ''}, por favor, selecciona tu método a continuación y realiza el pago por el monto exacto.`;
@@ -591,64 +594,55 @@
             <p>${greeting}</p>
         `;
     }
+    // --- FIN FUNCIÓN MODIFICADA ---
 
-    // --- FUNCIÓN DE MÉTODOS DE PAGO CORREGIDA ---
+    // --- FUNCIÓN MODIFICADA: Evita el botón KGC al comprar KGC ---
     function updatePaymentMethods() {
         const paymentMethodsDiv = document.getElementById('payment-methods');
         paymentMethodsDiv.innerHTML = '';
         if (!transactionDetails) return;
         const currentCurrency = transactionDetails.currency;
+        const isBuyingKingCoins = transactionDetails.game === "KingsCoins"; // Variable clave
         
         paymentMethodStep.style.display = 'none';
         paymentDetailsStep.style.display = 'none';
-        kingcoinsPaymentContainer.style.display = 'none';
+        kingcoinsPaymentContainer.style.display = 'none'; // Inicialmente oculto
         finalizeBtn.style.display = 'none';
 
-        // Lógica: Si el pago es en KGC, o si el juego es KingsCoins, muestra el paso de KGC.
-        const isBuyingKingCoins = transactionDetails.game === "KingsCoins"; // Nueva variable para distinguir la compra de la moneda
-        
-        // Si la moneda de pago seleccionada es KGC (cuando el cliente usa KingCoins para pagar un producto)
-        if (currentCurrency === 'KGC') {
+        // 1. Lógica para Pago ÚNICO con KingCoins
+        // Solo permitimos esta vía si NO se está comprando KingCoins
+        if (currentCurrency === 'KGC' && !isBuyingKingCoins) {
             if (userSession) {
                 kingcoinsPaymentContainer.style.display = 'block';
-                // Si el botón ya tiene el listener, no necesitamos añadirlo de nuevo aquí, solo asegurarnos que se vea.
             } else {
                 kingcoinsPaymentContainer.innerHTML = '<p>Debes <a href="login.html">iniciar sesión</a> para pagar con KingCoins.</p>';
                 kingcoinsPaymentContainer.style.display = 'block';
             }
-            return;
+            return; // Sale, ya que no se deben mostrar métodos USD/VES
         }
         
-        // Si el juego es KingsCoins, forzamos la no-visualización de métodos KGC
-        if (isBuyingKingCoins) {
-            // El cliente está comprando KingCoins con dinero real, por lo que NUNCA debe ver la opción de pagar con KingCoins.
-            // Continuamos con el flujo normal de pago (VES/USD)
-        } else {
-            // Si el juego NO es KingsCoins, y la moneda actual NO es KGC, mostramos el paso de selección de pago (VES/USD)
-            // Y luego permitimos la opción de pago con KGC como método de pago.
-
-            // Nota: Con tu lógica actual, si el cliente seleccionó USD/VES, el botón de KGC aparece al final.
-            // Para mantener la consistencia de tu UI (USD/VES en la primera caja, KGC en la segunda):
-            // Si el juego NO es KingCoins, podemos mantener el flujo actual de radio buttons (VES/USD) y el botón de Pagar con KGC al final.
-            // PERO la forma más limpia es hacer que la opción de KingCoins aparezca como un botón de pago MÁS.
-
-            // Aquí vamos a forzar la lógica de pago normal (USD/VES) si no es KGC.
-            paymentMethodStep.style.display = 'block';
-            paymentDetailsStep.style.display = 'block';
-            finalizeBtn.style.display = 'block';
-        }
+        // 2. Lógica para pagos en USD/VES (Métodos de Dinero Real)
         
+        paymentMethodStep.style.display = 'block';
+        paymentDetailsStep.style.display = 'block';
+        finalizeBtn.style.display = 'block';
+
         let methods = [];
-        if (currentCurrency === 'VES') {
+        
+        // Usamos la moneda real. Si la moneda es KGC pero es compra de KingCoins (el caso de error), 
+        // asumimos USD para poder mostrar los métodos disponibles.
+        let methodCurrency = currentCurrency;
+        if (isBuyingKingCoins && currentCurrency === 'KGC') {
+            methodCurrency = 'USD'; // Forzamos a USD/VES para que muestre métodos de dinero real.
+        }
+
+
+        if (methodCurrency === 'VES') {
             methods = paymentMethodsVES;
-        } else if (currentCurrency === 'USD') {
+        } else if (methodCurrency === 'USD') {
             methods = paymentMethodsUSD;
         }
 
-        // Si NO está comprando KingCoins, añade la opción KingCoins como radio button (método de pago alternativo)
-        // Ya que la lógica de tu HTML lo maneja con un botón aparte (<div id="kingcoins-payment-container">),
-        // solo nos enfocaremos en los radio buttons (VES/USD).
-        
         methods.forEach(method => {
             const methodItem = document.createElement('div');
             methodItem.classList.add('payment-method-option');
@@ -670,16 +664,14 @@
             });
         });
         
-        // MOSTRAR CONTENEDOR DE PAGO CON KGC si NO está comprando KingCoins y hay sesión
+        // 3. Mostrar KGC Alternative button SOLO si NO se está comprando KingCoins y el usuario tiene sesión
         if (!isBuyingKingCoins && userSession) {
             kingcoinsPaymentContainer.style.display = 'block';
-        } else {
-            kingcoinsPaymentContainer.style.display = 'none';
         }
         
         checkFormValidity();
     }
-    // --- FIN FUNCIÓN DE MÉTODOS DE PAGO CORREGIDA ---
+    // --- FIN FUNCIÓN MODIFICADA ---
 
     function loadPaymentDetails(methodId) {
         const paymentDetailsFormDiv = document.getElementById('payment-details-form');
@@ -759,7 +751,7 @@
         }
         
         finalizeBtn.disabled = !areDetailsFilled;
-        // Solo muestra el botón si está habilitado y si NO es un pago con KGC
+        // Solo muestra el botón si está habilitado y si el pago no es KGC único.
         if (!isMethodSelected || transactionDetails.currency === 'KGC') {
             finalizeBtn.style.display = 'none';
         } else {
@@ -804,7 +796,7 @@
             }
         }
         formData.append('email', userSession.user.email);
-        formData.append('paymentMethod', 'kingcoins'); // Usamos 'kingcoins' en minúsculas para la consistencia con el backend
+        formData.append('paymentMethod', 'kingcoins'); // Usamos 'kingcoins' en minúsculas
 
         try {
             // Paso 1: Deducción de KingCoins
@@ -831,7 +823,6 @@
             } else {
                 const errorData = await processPaymentResponse.json();
                 console.error('Error al notificar el pago a través de process-payment:', errorData);
-                // NOTA: No hacemos rollback, solo advertimos al cliente.
                 alert(`¡El pago se procesó, pero hubo un error al notificarlo! El saldo se ha deducido. Por favor, toma una captura de pantalla de este mensaje y contacta a soporte para verificar tu recarga. Error: ${errorData.message}`);
             }
 
