@@ -335,11 +335,20 @@
     </footer>
     
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<script type="module">
-    // 1. EL IMPORT DEBE SER LO PRIMERO EN UN MÓDULO.
-    import { supabase } from './supabaseClient.js';
+    <script type="module">
+        // La función se ejecuta cuando la página está cargada
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Obtiene la sesión de Supabase
+    const { data: { session } } = await supabase.auth.getSession();
 
-    // 2. DECLARACIÓN DE VARIABLES
+    // 2. Si no hay sesión, redirige al inicio.
+    //    Si quieres redirigir a la página de login, cambia 'index.html' por 'login.html'
+    if (!session) {
+        window.location.href = 'index.html'; 
+    }
+});
+    import { supabase } from './supabaseClient.js';
+    
     const userMenuContainer = document.querySelector('.user-menu-container');
     const guestMenuContainer = document.querySelector('.guest-menu-container');
     const userDisplayName = document.getElementById('user-display-name');
@@ -412,7 +421,7 @@
         { id: 'binance', name: 'Binance', type: 'usd', icon: 'fab fa-bitcoin' },
         { id: 'zinli', name: 'Zinli', type: 'usd', icon: 'fas fa-wallet' }
     ];
-
+    
     const paymentForm = document.getElementById('payment-form');
     const paymentMethodStep = document.getElementById('payment-method-step');
     const paymentDetailsStep = document.getElementById('payment-details-step');
@@ -420,13 +429,12 @@
     const payWithKGCBtn = document.getElementById('pay-with-kgc-btn');
     const whatsappMessageContainer = document.getElementById('whatsapp-message-container');
     const finalizeBtn = document.getElementById('finalize-recharge-btn');
-    const successMessageDisplay = document.getElementById('success-message-display');
+    const successMessageDisplay = document.getElementById('success-message-display'); 
     const gamePaymentHeader = document.getElementById('game-payment-header');
     const gameBannerDisplay = document.getElementById('gameBannerDisplay');
     const gameTitleDisplay = document.getElementById('gameTitleDisplay');
     const transactionSummaryDiv = document.getElementById('transaction-summary');
 
-    // 3. FUNCIONES
     function toggleDropdown(dropdown) {
         dropdown.classList.toggle('hidden');
     }
@@ -461,9 +469,7 @@
             logoutButton.addEventListener('click', handleLogout);
         }
 
-        if (payWithKGCBtn) {
-            payWithKGCBtn.addEventListener('click', handleKGCPayment);
-        }
+        // Se elimina el evento de click directo del botón, ahora se maneja en el form submit
     }
 
     async function fetchUserProfile(userId) {
@@ -479,17 +485,15 @@
             .eq('user_id', userId)
             .single();
 
-        if (profileError && profileError.code !== 'PGRST116') {
-            console.error('Error fetching user profile:', profileError.message);
-        }
-        if (walletError && walletError.code !== 'PGRST116') {
-            console.error('Error fetching user wallet:', walletError.message);
+        if (profileError || walletError) {
+            console.error('Error fetching user data:', profileError?.message || walletError?.message);
+            return null;
         }
         
         return {
-            name: profile?.name || 'Usuario',
-            last_name: profile?.last_name || '',
-            kingcoins_balance: wallet?.balance || 0
+            name: profile.name,
+            last_name: profile.last_name,
+            kingcoins_balance: wallet.balance
         };
     }
 
@@ -542,6 +546,7 @@
         }
     }
 
+    // --- FUNCIÓN MODIFICADA ---
     function updateTransactionSummary() {
         if (!transactionDetails) {
             transactionSummaryDiv.innerHTML = '<p>No se encontraron detalles de la transacción.</p>';
@@ -550,7 +555,6 @@
         
         const displayAmount = parseFloat(transactionDetails.finalPrice);
         const displayCurrency = transactionDetails.currency;
-        const isBuyingKingCoins = transactionDetails.game === "KingsCoins"; 
         
         let otherCurrencyDisplay = '';
         if (transactionDetails.priceUSD && transactionDetails.priceVES) {
@@ -563,20 +567,19 @@
 
         const playerIdHtml = transactionDetails.playerId ? `<p><strong>ID de Jugador:</strong> ${transactionDetails.playerId}</p>` : '';
         
+        // Lógica para cambiar el mensaje de saludo
         let greeting = '';
-        
-        // Si se está comprando KingCoins, la moneda de pago debe ser real
-        if (isBuyingKingCoins || displayCurrency !== 'KGC') {
-            greeting = 'Por favor, selecciona tu método a continuación y realiza el pago por el monto exacto.';
-        } else if (displayCurrency === 'KGC') {
+        if (displayCurrency === 'KGC') {
             greeting = 'Por favor, realiza tu pago con KingCoins a continuación.';
+        } else {
+            greeting = 'Por favor, selecciona tu método a continuación y realiza el pago por el monto exacto.';
         }
 
         if (userProfileData && userProfileData.name) {
-             if (isBuyingKingCoins || displayCurrency !== 'KGC') {
-                greeting = `Hola ${userProfileData.name} ${userProfileData.last_name || ''}, por favor, selecciona tu método a continuación y realiza el pago por el monto exacto.`;
-            } else if (displayCurrency === 'KGC') {
+            if (displayCurrency === 'KGC') {
                 greeting = `Hola ${userProfileData.name} ${userProfileData.last_name || ''}, por favor, realiza tu pago con KingCoins a continuación.`;
+            } else {
+                greeting = `Hola ${userProfileData.name} ${userProfileData.last_name || ''}, por favor, selecciona tu método a continuación y realiza el pago por el monto exacto.`;
             }
         }
 
@@ -588,84 +591,62 @@
             <p>${greeting}</p>
         `;
     }
+    // --- FIN FUNCIÓN MODIFICADA ---
 
-    // --- FUNCIÓN CORREGIDA para mostrar USD/VES en todos los casos ---
     function updatePaymentMethods() {
         const paymentMethodsDiv = document.getElementById('payment-methods');
         paymentMethodsDiv.innerHTML = '';
         if (!transactionDetails) return;
         const currentCurrency = transactionDetails.currency;
-        const isBuyingKingCoins = transactionDetails.game === "KingsCoins"; 
         
         paymentMethodStep.style.display = 'none';
         paymentDetailsStep.style.display = 'none';
-        kingcoinsPaymentContainer.style.display = 'none'; // Inicialmente oculto
+        kingcoinsPaymentContainer.style.display = 'none';
         finalizeBtn.style.display = 'none';
 
-        // 1. Lógica para Pago ÚNICO con KingCoins
-        // Si la moneda es KGC (y NO es KingsCoins), mostramos el botón, pero NO salimos.
-        if (currentCurrency === 'KGC' && !isBuyingKingCoins) {
+        if (currentCurrency === 'KGC') {
             if (userSession) {
                 kingcoinsPaymentContainer.style.display = 'block';
             } else {
                 kingcoinsPaymentContainer.innerHTML = '<p>Debes <a href="login.html">iniciar sesión</a> para pagar con KingCoins.</p>';
                 kingcoinsPaymentContainer.style.display = 'block';
             }
-            // Eliminamos 'return;' aquí para solucionar el Error 1 (ocultar métodos USD/VES en otros juegos)
+            return;
         }
         
-        // 2. Lógica para pagos en USD/VES (Métodos de Dinero Real)
-        
-        // Mostramos métodos USD/VES siempre que no sea un pago KGC ÚNICO y el usuario quiera ver otras opciones.
-        // Dado el error, asumiremos que si hay precio USD/VES disponible, el usuario debe ver los métodos.
-        const hasRealPrice = parseFloat(transactionDetails.priceUSD) > 0 || parseFloat(transactionDetails.priceVES) > 0;
-        
-        if (hasRealPrice || isBuyingKingCoins || currentCurrency !== 'KGC') {
-            paymentMethodStep.style.display = 'block';
-            paymentDetailsStep.style.display = 'block';
-            
-            let methods = [];
-            let methodCurrency = currentCurrency;
+        paymentMethodStep.style.display = 'block';
+        paymentDetailsStep.style.display = 'block';
+        finalizeBtn.style.display = 'block';
 
-            // Si es compra de KingsCoins, o si la moneda es KGC (buggy), forzamos USD/VES para mostrar métodos reales.
-            if (isBuyingKingCoins || methodCurrency === 'USD') {
-                methods = paymentMethodsUSD;
-                methodCurrency = 'USD';
-            } else if (methodCurrency === 'VES') {
-                methods = paymentMethodsVES;
-            }
+        let methods = [];
+        if (currentCurrency === 'VES') {
+            methods = paymentMethodsVES;
+        } else if (currentCurrency === 'USD') {
+            methods = paymentMethodsUSD;
+        }
 
-            methods.forEach(method => {
-                const methodItem = document.createElement('div');
-                methodItem.classList.add('payment-method-option');
-                methodItem.innerHTML = `
-                    <input type="radio" id="method-${method.id}" name="paymentMethod" value="${method.id}" data-type="${method.type}">
-                    <label for="method-${method.id}">
-                        <i class="${method.icon}"></i>
-                        <span>${method.name}</span>
-                    </label>
-                `;
-                paymentMethodsDiv.appendChild(methodItem);
+        methods.forEach(method => {
+            const methodItem = document.createElement('div');
+            methodItem.classList.add('payment-method-option');
+            methodItem.innerHTML = `
+                <input type="radio" id="method-${method.id}" name="paymentMethod" value="${method.id}" data-type="${method.type}">
+                <label for="method-${method.id}">
+                    <i class="${method.icon}"></i>
+                    <span>${method.name}</span>
+                </label>
+            `;
+            paymentMethodsDiv.appendChild(methodItem);
+        });
+
+        paymentMethodsDiv.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
+            radio.addEventListener('change', (event) => {
+                const selectedMethodId = event.target.value;
+                loadPaymentDetails(selectedMethodId);
+                checkFormValidity();
             });
-
-            paymentMethodsDiv.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
-                radio.addEventListener('change', (event) => {
-                    const selectedMethodId = event.target.value;
-                    loadPaymentDetails(selectedMethodId);
-                    checkFormValidity();
-                });
-            });
-        }
-        
-        // 3. Mostrar KGC Alternative button 
-        // Si ya se mostró en el punto 1, no pasa nada. Si no, lo mostramos como alternativa si el usuario tiene sesión.
-        if (!isBuyingKingCoins && userSession && kingcoinsPaymentContainer.style.display !== 'block') {
-             kingcoinsPaymentContainer.style.display = 'block';
-        }
-        
+        });
         checkFormValidity();
     }
-    // --- FIN FUNCIÓN CORREGIDA updatePaymentMethods ---
 
     function loadPaymentDetails(methodId) {
         const paymentDetailsFormDiv = document.getElementById('payment-details-form');
@@ -730,7 +711,6 @@
         }
     }
 
-    // --- FUNCIÓN CORREGIDA para permitir el botón de Enviar ---
     function checkFormValidity() {
         const selectedRadio = document.querySelector('input[name="paymentMethod"]:checked');
         const isMethodSelected = selectedRadio !== null;
@@ -741,23 +721,13 @@
                 areDetailsFilled = true;
             } else {
                 const fileInput = document.getElementById('payment-receipt');
-                // Se considera lleno si el juego es TikTok o si hay un archivo subido
                 areDetailsFilled = fileInput && fileInput.files.length > 0;
             }
         }
         
         finalizeBtn.disabled = !areDetailsFilled;
-        
-        // Ahora, el botón solo se oculta si no hay un método seleccionado.
-        // Se eliminó la condición 'transactionDetails.currency === 'KGC'' que causaba el Error 2 y el Error 1.
-        if (!isMethodSelected) {
-            finalizeBtn.style.display = 'none';
-        } else {
-            // Se muestra si hay método seleccionado Y los detalles están llenos.
-            finalizeBtn.style.display = areDetailsFilled ? 'block' : 'none';
-        }
+        finalizeBtn.style.display = areDetailsFilled ? 'block' : 'none';
     }
-    // --- FIN FUNCIÓN CORREGIDA checkFormValidity ---
 
     async function handleKGCPayment() {
         if (!userSession) {
@@ -766,9 +736,6 @@
             return;
         }
 
-        // Recarga el perfil para obtener el saldo más reciente
-        await checkUserSession(); 
-        
         if (!userProfileData || userProfileData.kingcoins_balance === undefined) {
             alert('No se pudo obtener el saldo de tu billetera. Por favor, intenta recargar la página.');
             return;
@@ -796,7 +763,7 @@
             }
         }
         formData.append('email', userSession.user.email);
-        formData.append('paymentMethod', 'kingcoins'); // Usamos 'kingcoins' en minúsculas
+        formData.append('paymentMethod', 'KINGCOINS');
 
         try {
             // Paso 1: Deducción de KingCoins
@@ -910,15 +877,8 @@
         });
     }
     
-    // 4. LÓGICA PRINCIPAL - Reordenada
+    // Lógica principal
     document.addEventListener('DOMContentLoaded', async () => {
-        // Validación de sesión inicial (Mantenida por si acaso)
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        if (!initialSession) {
-            window.location.href = 'index.html'; 
-            return;
-        }
-
         setupEventListeners();
         
         const storedDetails = localStorage.getItem('transactionDetails');
@@ -929,7 +889,7 @@
                     await checkUserSession();
                     
                     updateGameHeader();
-                    updatePaymentMethods(); 
+                    updatePaymentMethods();
                     updateTransactionSummary();
 
                     paymentForm.style.display = 'block';
