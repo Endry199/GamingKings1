@@ -640,7 +640,7 @@
             try {
                 // Usaremos un endpoint específico para compras de KingsCoins si existe,
                 // sino, usamos el genérico y el backend diferenciará por game: "KingsCoins"
-                const response = await fetch('/.netlify/functions/process-kingcoins-purchase', {
+                const response = await fetch('/.netlify/functions/process-payment', {
                     method: 'POST',
                     body: formData
                 });
