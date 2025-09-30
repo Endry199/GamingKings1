@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pago de KingsCoins - GamingKings</title>
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Estilos para el botón de copiar y el mensaje */
+        .copy-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .copy-container .wallet-address {
+            display: none; /* Oculta la dirección real */
+        }
+        .copy-button {
+            background-color: var(--primary-color);
+            color: var(--button-text-color);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.3s ease;
+        }
+        .copy-button:hover {
+            background-color: #0056b3;
+        }
+        .copy-feedback {
+            display: none;
+            margin-left: 10px;
+            color: #28a745;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        /* Estilo para la etiqueta de la dirección */
+        .address-label {
+            font-weight: bold;
+            color: var(--text-color);
+        }
+        /* Estilo para el mensaje de éxito */
+        .payment-success-message {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: var(--accent-green-light); /* Un color de fondo suave para el éxito */
+            border: 1px solid var(--accent-green);
+            border-radius: 8px;
+            text-align: center;
+            color: var(--accent-green); /* Color del texto */
+        }
+        .payment-success-message h2 {
+            margin-top: 0;
+            color: var(--accent-green);
+        }
+        .payment-success-message p {
+            margin-bottom: 0;
+        }
+        /* Estilos para los pasos */
+        .form-section-step {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+        .form-section-step h3 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            text-align: center;
+        }
+        /* Nuevo estilo para el header del juego en la página de pago */
+        .game-payment-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .game-payment-header img {
+            width: 100%;
+            max-height: 200px; /* Ajusta la altura máxima para banners */
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none; /* Ocultamos la imagen de banner ya que es para KingsCoins */
+        }
+        .game-payment-header h2 {
+            margin-top: 0;
+            color: var(--heading-color);
+            font-size: 2em;
+        }
+        /* Estilos del menú de usuario/invitado */
+        .hidden {
+            display: none !important;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .user-menu-container, .guest-menu-container {
+            position: relative;
+        }
+        .user-menu-button, .guest-menu-button {
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 24px;
+            color: #fff;
+            padding: 10px;
+        }
+        .user-menu-dropdown, .guest-menu-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: #333;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 100;
+            border-radius: 5px;
+            padding: 10px 0;
+        }
+        .user-menu-item, .guest-menu-item {
+            color: white;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            text-align: left;
+        }
+        .user-menu-item:hover, .guest-menu-item:hover {
+            background-color: #575757;
+        }
+        .kingcoins-balance {
+            color: #FF69B4; /* Color de texto */
+            font-weight: 600;
+            padding: 10px 15px;
+            background-color: #2C2C2E; /* Fondo oscuro */
+            border-radius: 20px; /* Borde ovalado */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); /* Sombra suave */
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .kingcoins-balance .fa-crown {
+            color: var(--accent-gold); /* Color de la corona, como el morado principal */
+        }
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px;
+                justify-content: center;
+            }
+            .header-right {
+                flex-direction: column;
+                width: 100%;
+                max-width: 350px;
+                margin: 0 auto;
+                gap: 12px;
+            }
+            .search-bar, .custom-currency-selector, .user-menu-container, .guest-menu-container {
+                width: 100%;
+                max-width: none;
+            }
+            .search-bar input {
+                width: 100%;
+                padding: 10px 15px 10px 40px;
+                box-sizing: border-box;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <a href="index.html" class="logo-link">
+                <img src="images/gamingkings_logo.png" alt="GamingKings Logo" class="logo-img">
+            </a>
+        </div>
+        <div class="header-right">
+            <div class="kingcoins-balance hidden">
+                <i class="fas fa-crown"></i>
+                <span id="kingcoins-balance-display">Cargando...</span>
+            </div>
+            <div class="user-menu-container hidden">
+                <button class="user-menu-button" aria-expanded="false" aria-label="Menú de usuario"><i class="fas fa-user-circle"></i></button>
+                <div class="user-menu-dropdown hidden">
+                    <a href="#" class="user-menu-item" id="user-display-name"></a>
+                    <a href="dashboard.html" class="user-menu-item">Dashboard</a>
+                    <a href="orders.html" class="user-menu-item">Pedidos</a>
+                    <a href="settings.html" class="user-menu-item">Configuración</a>
+                    <a href="#" class="user-menu-item" id="logout-button">Cerrar Sesión</a>
+                </div>
+            </div>
+            <div class="guest-menu-container">
+                <button class="guest-menu-button" aria-label="Menú de invitado"><i class="fas fa-user-circle"></i></button>
+                <div class="guest-menu-dropdown hidden">
+                    <a href="login.html" class="guest-menu-item">Iniciar Sesión</a>
+                    <a href="signup.html" class="guest-menu-item">Registrarse</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="payment-main">
+        <div class="form-container">
+            <div id="game-payment-header" class="game-payment-header">
+                <img id="gameBannerDisplay" src="" alt="Game Banner" style="display: none;">
+                <h2 id="gameTitleDisplay">Confirmar Compra de KingsCoins</h2>
+            </div>
+
+            <div id="transaction-summary" class="transaction-summary">
+                <p>Cargando detalles de la transacción...</p>
+            </div>
+
+            <form id="payment-form" style="display: none;">
+                <div id="payment-method-step" class="form-section-step">
+                    <h3>Paso 1: Selecciona tu Método de Pago</h3>
+                    <div class="form-group">
+                        <label>Método de Pago:</label>
+                        <div class="payment-methods" id="payment-methods">
+                            </div>
+                    </div>
+                </div>
+
+                <div id="payment-details-step" class="form-section-step">
+                    <h3>Paso 2: Realiza el Pago y Sube tu Comprobante</h3>
+                    <div id="payment-details-form" class="payment-details-form">
+                        </div>
+                </div>
+                
+                <button type="submit" class="btn-primary" id="finalize-recharge-btn" style="display: none;" disabled>
+                    Finalizar Compra y Notificar Pago
+                </button>
+            </form>
+
+            <div id="success-message-display" class="payment-success-message" style="display: none;">
+                <h2>🎉 ¡Notificación Enviada! 🎉</h2>
+                <p>Hemos recibido tu solicitud de compra de KingsCoins. Te enviaremos un correo de confirmación y acreditaremos las monedas una vez que tu pago sea verificado.</p>
+                <p>¡Gracias por usar GamingKings!</p>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 GamingKings. Todos los derechos reservados.</p>
+            <div class="footer-links">
+                <a href="privacy.html">Políticas de Privacidad</a>
+                <a href="terms.html">Términos de Servicio</a>
+            </div>
+            <a href="https://wa.me/573021090841" target="_blank" class="whatsapp-link">
+                <i class="fab fa-whatsapp"></i> Contáctanos por WhatsApp
+            </a>
+        </div>
+    </footer>
+    
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script type="module">
+        // Redirección si no hay sesión
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Asumiendo que 'supabase' está accesible globalmente o importado en el scope superior
+            // Como este es un archivo de pago, debe requerir sesión
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) {
+                    window.location.href = 'index.html'; 
+                }
+            } catch (e) {
+                console.error("Supabase not loaded or error checking session:", e);
+                // Opcional: Redirigir si hay un error crítico
+                // window.location.href = 'index.html'; 
+            }
+        });
+        
+        import { supabase } from './supabaseClient.js';
+        
+        const userMenuContainer = document.querySelector('.user-menu-container');
+        const guestMenuContainer = document.querySelector('.guest-menu-container');
+        const userDisplayName = document.getElementById('user-display-name');
+        const kingcoinsBalanceDisplay = document.getElementById('kingcoins-balance-display');
+        const kingcoinsBalanceHeader = document.querySelector('.kingcoins-balance');
+        const logoutButton = document.getElementById('logout-button');
+        const userMenuButton = document.querySelector('.user-menu-button');
+        const userMenuDropdown = document.querySelector('.user-menu-dropdown');
+        const guestMenuButton = document.querySelector('.guest-menu-button');
+        const guestMenuDropdown = document.querySelector('.guest-menu-dropdown');
+
+        let userProfileData = null;
+        let transactionDetails = null;
+        let userSession = null;
+
+        // --- Plantillas de Pago ---
+        const paymentDetailsTemplates = {
+            'pago-movil': `
+                <p><strong>Paso 1:</strong> Realiza el Pago Móvil a los siguientes datos:</p>
+                <ul>
+                    <li><strong>Banco:</strong> Banco de Venezuela (0102)</li>
+                    <li><strong>Cédula/RIF:</strong> V-31605458</li>
+                    <li><strong>Teléfono:</strong> 0412-7123391</li>
+                </ul>
+                <div class="payment-fields-container">
+                    <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
+                    <label for="payment-receipt">Subir Comprobante de Pago:</label>
+                    <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
+                </div>
+            `,
+            'binance': `
+                <p><strong>Paso 1:</strong> Realiza la transferencia a nuestra cuenta Binance (USDT BEP20) O (Binance Pay).</p>
+                <ul>
+                    <p><strong>USDT (BEP20):</strong></p>
+                    <li>
+                        <div class="copy-container">
+                            <span class="address-label">Dirección de Billetera BEP20:</span>
+                            <span class="wallet-address" id="binance-address">0x9ebe5fe682123c531408944236a99754886a46dd</span>
+                            <button type="button" class="copy-button" data-copy-target="binance-address">Copiar</button>
+                            <span class="copy-feedback" id="binance-copy-feedback">¡Copiado!</span>
+                        </div>
+                    </li>
+                    <li><strong>Moneda:</strong> USDT (BEP20)</li>
+                    <p><strong>Binance Pay:</strong></p>
+                    <li><strong>ID Binance Pay:</strong> 909792776</li>
+                </ul>
+                <div class="payment-fields-container">
+                    <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
+                    <label for="payment-receipt">Subir Comprobante de Pago:</label>
+                    <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
+                </div>
+            `,
+            'zinli': `
+                <p><strong>Paso 1:</strong> Transfiere el monto exacto a nuestra cuenta Zinli.</p>
+                <ul>
+                    <li><strong>Usuario Zinli:</strong> endryreyes199@gmail.com</li>
+                </ul>
+                <div class="payment-fields-container">
+                    <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
+                    <label for="payment-receipt">Subir Comprobante de Pago:</label>
+                    <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
+                </div>
+            `
+        };
+
+        const paymentMethodsVES = [
+            { id: 'pago-movil', name: 'Pago Móvil', type: 'ves', icon: 'fas fa-mobile-alt' }
+        ];
+
+        const paymentMethodsUSD = [
+            { id: 'binance', name: 'Binance', type: 'usd', icon: 'fab fa-bitcoin' },
+            { id: 'zinli', name: 'Zinli', type: 'usd', icon: 'fas fa-wallet' }
+        ];
+        
+        const paymentForm = document.getElementById('payment-form');
+        const paymentMethodStep = document.getElementById('payment-method-step');
+        const paymentDetailsStep = document.getElementById('payment-details-step');
+        const finalizeBtn = document.getElementById('finalize-recharge-btn');
+        const successMessageDisplay = document.getElementById('success-message-display'); 
+        const gamePaymentHeader = document.getElementById('game-payment-header');
+        const gameBannerDisplay = document.getElementById('gameBannerDisplay');
+        const gameTitleDisplay = document.getElementById('gameTitleDisplay');
+        const transactionSummaryDiv = document.getElementById('transaction-summary');
+
+        // --- Funciones de Menú y Sesión (Mantenidas) ---
+        function toggleDropdown(dropdown) {
+            dropdown.classList.toggle('hidden');
+        }
+
+        function setupEventListeners() {
+            userMenuButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleDropdown(userMenuDropdown);
+                if (!guestMenuDropdown.classList.contains('hidden')) {
+                    toggleDropdown(guestMenuDropdown);
+                }
+            });
+
+            guestMenuButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleDropdown(guestMenuDropdown);
+                if (!userMenuDropdown.classList.contains('hidden')) {
+                    toggleDropdown(userMenuDropdown);
+                }
+            });
+
+            document.addEventListener('click', () => {
+                if (!userMenuDropdown.classList.contains('hidden')) {
+                    toggleDropdown(userMenuDropdown);
+                }
+                if (!guestMenuDropdown.classList.contains('hidden')) {
+                    toggleDropdown(guestMenuDropdown);
+                }
+            });
+
+            if (logoutButton) {
+                logoutButton.addEventListener('click', handleLogout);
+            }
+        }
+
+        async function fetchUserProfile(userId) {
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('name, last_name')
+                .eq('id', userId)
+                .single();
+
+            const { data: wallet, error: walletError } = await supabase
+                .from('user_wallets')
+                .select('balance')
+                .eq('user_id', userId)
+                .single();
+
+            if (profileError || walletError) {
+                console.error('Error fetching user data:', profileError?.message || walletError?.message);
+                return null;
+            }
+            
+            return {
+                name: profile.name,
+                last_name: profile.last_name,
+                kingcoins_balance: wallet.balance
+            };
+        }
+
+        async function checkUserSession() {
+            const { data: { session } } = await supabase.auth.getSession();
+            userSession = session;
+            if (userSession) {
+                userMenuContainer.classList.remove('hidden');
+                guestMenuContainer.classList.add('hidden');
+                
+                userProfileData = await fetchUserProfile(userSession.user.id);
+                if (userProfileData) {
+                    userDisplayName.textContent = `${userProfileData.name} ${userProfileData.last_name || ''}`;
+                    if (userProfileData.kingcoins_balance !== undefined) {
+                        kingcoinsBalanceDisplay.textContent = `${userProfileData.kingcoins_balance.toFixed(2)}`;
+                        kingcoinsBalanceHeader.classList.remove('hidden');
+                    }
+                } else {
+                    userDisplayName.textContent = userSession.user.email || 'Usuario';
+                }
+            } else {
+                userMenuContainer.classList.add('hidden');
+                guestMenuContainer.classList.remove('hidden');
+                kingcoinsBalanceHeader.classList.add('hidden');
+            }
+            return userProfileData;
+        }
+
+        async function handleLogout() {
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+                console.error('Error al cerrar sesión:', error.message);
+            } else {
+                window.location.href = 'index.html';
+            }
+        }
+        
+        // --- Funciones Específicas de la Página de Pago ---
+
+        function updateGameHeader() {
+            gamePaymentHeader.style.display = 'block';
+            gameBannerDisplay.style.display = 'none'; // Se oculta la imagen del banner para KingsCoins
+            gameTitleDisplay.textContent = `Confirmar Compra de KingsCoins`;
+        }
+
+        function updateTransactionSummary() {
+            if (!transactionDetails) {
+                transactionSummaryDiv.innerHTML = '<p>No se encontraron detalles de la transacción.</p>';
+                return;
+            }
+            
+            const displayAmount = parseFloat(transactionDetails.finalPrice);
+            const displayCurrency = transactionDetails.currency;
+            
+            let otherCurrencyDisplay = '';
+            // Calculamos la conversión si tenemos ambas monedas
+            if (transactionDetails.priceUSD && transactionDetails.priceVES) {
+                if (displayCurrency === 'VES') {
+                    otherCurrencyDisplay = ` (~ $${parseFloat(transactionDetails.priceUSD).toFixed(2)} USD)`;
+                } else if (displayCurrency === 'USD') {
+                    otherCurrencyDisplay = ` (~ Bs. ${parseFloat(transactionDetails.priceVES).toFixed(2)} VES)`;
+                }
+            }
+
+            // Mensaje de bienvenida
+            let greeting = 'Por favor, selecciona tu método de pago y realiza la transferencia por el monto exacto.';
+            if (userProfileData && userProfileData.name) {
+                greeting = `Hola ${userProfileData.name} ${userProfileData.last_name || ''}, por favor, selecciona tu método de pago y realiza la transferencia por el monto exacto.`;
+            }
+
+            transactionSummaryDiv.innerHTML = `
+                <p><strong>Producto:</strong> Compra de KingsCoins</p>
+                <p><strong>Paquete Seleccionado:</strong> ${transactionDetails.package}</p>
+                <p><strong>Total a Pagar:</strong> <span class="amount">${displayCurrency === 'VES' ? 'Bs.' : '$'} ${displayAmount.toFixed(2)} ${displayCurrency}</span>${otherCurrencyDisplay}</p>
+                <p>${greeting}</p>
+            `;
+        }
+
+        function updatePaymentMethods() {
+            const paymentMethodsDiv = document.getElementById('payment-methods');
+            paymentMethodsDiv.innerHTML = '';
+            if (!transactionDetails) return;
+            const currentCurrency = transactionDetails.currency;
+            
+            // Siempre mostramos los pasos de selección y detalles de pago
+            paymentMethodStep.style.display = 'block';
+            paymentDetailsStep.style.display = 'block';
+            finalizeBtn.style.display = 'block';
+
+            let methods = [];
+            if (currentCurrency === 'VES') {
+                methods = paymentMethodsVES;
+            } else if (currentCurrency === 'USD') {
+                methods = paymentMethodsUSD;
+            }
+
+            methods.forEach(method => {
+                const methodItem = document.createElement('div');
+                methodItem.classList.add('payment-method-option');
+                methodItem.innerHTML = `
+                    <input type="radio" id="method-${method.id}" name="paymentMethod" value="${method.id}" data-type="${method.type}" required>
+                    <label for="method-${method.id}">
+                        <i class="${method.icon}"></i>
+                        <span>${method.name}</span>
+                    </label>
+                `;
+                paymentMethodsDiv.appendChild(methodItem);
+            });
+
+            paymentMethodsDiv.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
+                radio.addEventListener('change', (event) => {
+                    const selectedMethodId = event.target.value;
+                    loadPaymentDetails(selectedMethodId);
+                });
+            });
+            checkFormValidity();
+        }
+
+        function loadPaymentDetails(methodId) {
+            const paymentDetailsFormDiv = document.getElementById('payment-details-form');
+            let methodHtml = paymentDetailsTemplates[methodId];
+
+            if (methodHtml) {
+                paymentDetailsFormDiv.innerHTML = methodHtml;
+                
+                // Asegurar que el input de comprobante se añade y se escucha
+                const fileInput = document.getElementById('payment-receipt');
+                if (fileInput) {
+                    fileInput.addEventListener('change', checkFormValidity);
+                    fileInput.required = true; 
+                }
+
+                const copyButton = paymentDetailsFormDiv.querySelector('.copy-button');
+                if (copyButton) {
+                    copyButton.addEventListener('click', handleCopyButtonClick);
+                }
+
+            } else {
+                paymentDetailsFormDiv.innerHTML = '<p>Selecciona un método de pago para ver los detalles.</p>';
+            }
+            checkFormValidity();
+        }
+
+        async function handleCopyButtonClick(event) {
+            const button = event.currentTarget;
+            const targetId = button.dataset.copyTarget;
+            const textToCopyElement = document.getElementById(targetId);
+            const feedbackElement = document.getElementById(`${targetId}-copy-feedback`);
+
+            if (textToCopyElement && navigator.clipboard) {
+                try {
+                    await navigator.clipboard.writeText(textToCopyElement.textContent);
+                    if (feedbackElement) {
+                        feedbackElement.textContent = '¡Copiado!';
+                        feedbackElement.style.display = 'inline-block';
+                        setTimeout(() => {
+                            feedbackElement.style.display = 'none';
+                        }, 1500);
+                    }
+                } catch (err) {
+                    console.error('Error al copiar: ', err);
+                    if (feedbackElement) {
+                        feedbackElement.textContent = 'Error al copiar';
+                        feedbackElement.style.display = 'inline-block';
+                        setTimeout(() => {
+                            feedbackElement.style.display = 'none';
+                        }, 1500);
+                    }
+                    alert('No se pudo copiar el texto. Por favor, cópialo manualmente.');
+                }
+            } else {
+                alert('Tu navegador no soporta la copia automática o no se encontró el elemento. Por favor, selecciona y copia la dirección manualmente.');
+            }
+        }
+
+        function checkFormValidity() {
+            const selectedRadio = document.querySelector('input[name="paymentMethod"]:checked');
+            const isMethodSelected = selectedRadio !== null;
+            
+            let areDetailsFilled = false;
+            if (isMethodSelected) {
+                const fileInput = document.getElementById('payment-receipt');
+                areDetailsFilled = fileInput && fileInput.files.length > 0;
+            }
+            
+            finalizeBtn.disabled = !areDetailsFilled;
+            finalizeBtn.style.display = !areDetailsFilled ? 'none' : 'block';
+        }
+
+        // --- Función Modificada: Envía la notificación de pago ---
+        async function submitPaymentRequest(paymentMethod) {
+            if (!userSession) {
+                alert('Debes iniciar sesión para finalizar el pago.');
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            let formData = new FormData();
+            formData.append('paymentMethod', paymentMethod);
+            formData.append('email', userSession.user.email);
+            formData.append('userEmail', userSession.user.email);
+
+            const paymentReceipt = document.getElementById('payment-receipt');
+            if (!paymentReceipt || paymentReceipt.files.length === 0) {
+                alert('Por favor, sube tu comprobante de pago para continuar.');
+                return;
+            }
+            formData.append('paymentReceipt', paymentReceipt.files[0]);
+            
+            for (const key in transactionDetails) {
+                formData.append(key, transactionDetails[key]);
+            }
+
+            const buttonToDisable = finalizeBtn;
+            const originalButtonText = buttonToDisable.textContent;
+            buttonToDisable.disabled = true;
+            buttonToDisable.textContent = 'Procesando...';
+
+            try {
+                // Usaremos un endpoint específico para compras de KingsCoins si existe,
+                // sino, usamos el genérico y el backend diferenciará por game: "KingsCoins"
+                const response = await fetch('/.netlify/functions/process-kingcoins-purchase', {
+                    method: 'POST',
+                    body: formData
+                });
+                // Si el endpoint no existe, se podría usar el genérico:
+                // const response = await fetch('/.netlify/functions/process-payment', { ... });
+
+
+                if (response.ok) {
+                    paymentForm.style.display = 'none';
+                    successMessageDisplay.style.display = 'block';
+                    gamePaymentHeader.style.display = 'none';
+
+                    localStorage.removeItem('transactionDetails');
+
+                    // Redirigir después de 5 segundos
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 5000);
+                } else {
+                    const errorData = await response.json();
+                    alert(`Ocurrió un error: ${errorData.message || response.statusText}. Por favor, verifica tus datos e inténtalo de nuevo.`);
+                    console.error('Server error:', errorData);
+                    buttonToDisable.disabled = false;
+                    buttonToDisable.textContent = originalButtonText;
+                }
+            } catch (error) {
+                alert('Hubo un problema de conexión. Por favor, inténtalo de nuevo más tarde.');
+                console.error('Network or client error:', error);
+                buttonToDisable.disabled = false;
+                buttonToDisable.textContent = originalButtonText;
+            }
+        }
+        
+        function handleFormSubmission() {
+            // El botón de KGC fue eliminado, solo queda el submit del formulario
+            paymentForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked');
+                if (selectedMethod) {
+                    submitPaymentRequest(selectedMethod.value);
+                } else {
+                    alert('Por favor, selecciona un método de pago.');
+                }
+            });
+        }
+        
+        // Lógica principal
+        document.addEventListener('DOMContentLoaded', async () => {
+            setupEventListeners();
+            
+            const storedDetails = localStorage.getItem('transactionDetails');
+            if (storedDetails) {
+                try {
+                    transactionDetails = JSON.parse(storedDetails);
+                    // Verificación estricta: debe ser para KingsCoins
+                    if (transactionDetails.game !== "KingsCoins" || !transactionDetails.package || !transactionDetails.finalPrice) {
+                        throw new Error('Transaction details are invalid for KingsCoins purchase.');
+                    }
+                    
+                    await checkUserSession();
+                    
+                    updateGameHeader();
+                    updatePaymentMethods();
+                    updateTransactionSummary();
+
+                    paymentForm.style.display = 'block';
+                    
+                    handleFormSubmission();
+                } catch (e) {
+                    console.error("Error al cargar los detalles de la transacción:", e);
+                    transactionSummaryDiv.innerHTML = '<p>Error al cargar los detalles de la compra de KingsCoins. Por favor, regresa a la página de compra.</p>';
+                    paymentForm.style.display = 'none';
+                    gamePaymentHeader.style.display = 'none';
+                }
+            } else {
+                transactionSummaryDiv.innerHTML = '<p>No se encontraron detalles de la transacción. Por favor, regresa a la página de compra de KingsCoins.</p>';
+                paymentForm.style.display = 'none';
+                gamePaymentHeader.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
