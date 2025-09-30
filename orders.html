@@ -207,74 +207,74 @@
     <script type="module" src="auth-logic.js"></script>
     <script type="module" src="menu-logic.js"></script>
     <script type="module">
-        // La función se ejecuta cuando la página está cargada
+        // La función se ejecuta cuando la página está cargada
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Obtiene la sesión de Supabase
-    const { data: { session } } = await supabase.auth.getSession();
+    // 1. Obtiene la sesión de Supabase
+    const { data: { session } } = await supabase.auth.getSession();
 
-    // 2. Si no hay sesión, redirige al inicio.
-    //    Si quieres redirigir a la página de login, cambia 'index.html' por 'login.html'
-    if (!session) {
-        window.location.href = 'index.html'; 
-    }
+    // 2. Si no hay sesión, redirige al inicio.
+    //    Si quieres redirigir a la página de login, cambia 'index.html' por 'login.html'
+    if (!session) {
+        window.location.href = 'index.html'; 
+    }
 });
-        import { supabase } from './supabaseClient.js';
+        import { supabase } from './supabaseClient.js';
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            const ordersList = document.getElementById('orders-list');
-            const loadingMessage = document.getElementById('loading-message');
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            const ordersList = document.getElementById('orders-list');
+            const loadingMessage = document.getElementById('loading-message');
 
-            if (!user) {
-                ordersList.innerHTML = '<p>Debes iniciar sesión para ver tus pedidos. <a href="login.html">Iniciar sesión</a></p>';
-                loadingMessage.style.display = 'none';
-                return;
-            }
+            if (!user) {
+                ordersList.innerHTML = '<p>Debes iniciar sesión para ver tus pedidos. <a href="login.html">Iniciar sesión</a></p>';
+                loadingMessage.style.display = 'none';
+                return;
+            }
 
-            const { data: transactions, error } = await supabase
-                .from('transactions')
-                .select('*')
-                .eq('email', user.email)
-                .order('created_at', { ascending: false });
+            const { data: transactions, error } = await supabase
+                .from('transactions')
+                .select('*')
+                .eq('email', user.email)
+                .order('created_at', { ascending: false });
 
-            if (error) {
-                console.error('Error al cargar los pedidos:', error);
-                ordersList.innerHTML = '<p>Hubo un problema al cargar tus pedidos. Inténtalo de nuevo más tarde.</p>';
-                return;
-            }
+            if (error) {
+                console.error('Error al cargar los pedidos:', error);
+                ordersList.innerHTML = '<p>Hubo un problema al cargar tus pedidos. Inténtalo de nuevo más tarde.</p>';
+                return;
+            }
 
-            loadingMessage.style.display = 'none';
+            loadingMessage.style.display = 'none';
 
-            if (transactions.length === 0) {
-                ordersList.innerHTML = '<p>Aún no has realizado ningún pedido.</p>';
-                return;
-            }
+            if (transactions.length === 0) {
+                ordersList.innerHTML = '<p>Aún no has realizado ningún pedido.</p>';
+                return;
+            }
 
-            transactions.forEach(transaction => {
-                const orderDate = new Date(transaction.created_at).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
-                let statusClass = '';
-                if (transaction.status === 'realizada') {
-                    statusClass = 'status-completed';
-                } else if (transaction.status === 'rechazada') {
-                    statusClass = 'status-rejected';
-                } else {
-                    statusClass = 'status-pending';
-                }
+            transactions.forEach(transaction => {
+                const orderDate = new Date(transaction.created_at).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+                let statusClass = '';
+                if (transaction.status === 'realizada') {
+                    statusClass = 'status-completed';
+                } else if (transaction.status === 'rechazada') {
+                    statusClass = 'status-rejected';
+                } else {
+                    statusClass = 'status-pending';
+                }
 
-                const orderHtml = `
-                    <div class="order-card">
-                        <h3>Orden #${transaction.id}</h3>
-                        <p><strong>Fecha:</strong> ${orderDate}</p>
-                        <p><strong>Juego:</strong> ${transaction.game}</p>
-                        <p><strong>Plan:</strong> ${transaction.package_name}</p>
-                        <p><strong>Monto:</strong> ${transaction.final_price.toFixed(2)} ${transaction.currency}</p>
-                        <p><strong>Método de Pago:</strong> ${transaction.payment_method}</p>
-                        <p><strong>Estado:</strong> <span class="status-badge ${statusClass}">${transaction.status}</span></p>
-                    </div>
-                `;
-                ordersList.innerHTML += orderHtml;
-            });
-        });
-    </script>
+                const orderHtml = `
+                    <div class="order-card">
+                        <h3>Orden #${transaction.id_transaccion}</h3> 
+                        <p><strong>Fecha:</strong> ${orderDate}</p>
+                        <p><strong>Juego:</strong> ${transaction.game}</p>
+                        <p><strong>Plan:</strong> ${transaction.package_name}</p>
+                        <p><strong>Monto:</strong> ${transaction.final_price.toFixed(2)} ${transaction.currency}</p>
+                        <p><strong>Método de Pago:</strong> ${transaction.payment_method}</p>
+                        <p><strong>Estado:</strong> <span class="status-badge ${statusClass}">${transaction.status}</span></p>
+                    </div>
+                `;
+                ordersList.innerHTML += orderHtml;
+            });
+        });
+    </script>
 </body>
 </html>
