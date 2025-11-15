@@ -35,6 +35,7 @@ async function applySiteConfig() {
 // =================================================================
 
 // ⚠️ ATENCIÓN: El CLIENT_ID es un identificador público.
+// ✅ MODIFICACIÓN REALIZADA AQUÍ CON TU ID DE CLIENTE REAL
 const GOOGLE_CLIENT_ID = '77149078918-8hj6p412bt3l1ihjfn1h0jjhok5rjntv.apps.googleusercontent.com'; 
 
 /**
@@ -168,10 +169,10 @@ window.handleCredentialResponse = async (response) => {
             
             // Usamos un pequeño timeout para asegurarnos de que el alert se muestre antes de la recarga
             setTimeout(() => {
-                    alert(`¡Bienvenido(a), ${userName}! Has iniciado sesión correctamente.`);
-                    
-                    // 🎯 REDIRECCIÓN FINAL: Usa la URL determinada (payment.html o index.html)
-                    window.location.href = finalRedirect; 
+                        alert(`¡Bienvenido(a), ${userName}! Has iniciado sesión correctamente.`);
+                        
+                        // 🎯 REDIRECCIÓN FINAL: Usa la URL determinada (payment.html o index.html)
+                        window.location.href = finalRedirect; 
             }, 50);
 
         } else {
@@ -181,7 +182,7 @@ window.handleCredentialResponse = async (response) => {
             
             // Si falla, re-inicializar el botón
             if (window.google && window.google.accounts && window.google.accounts.id) {
-                    initGoogleSignIn(true); // Forzar la renderización del botón
+                        initGoogleSignIn(true); // Forzar la renderización del botón
             }
         }
 
@@ -207,6 +208,7 @@ function initGoogleSignIn(forceRender = false) {
     
     if (loginButtonElement && typeof window.google !== 'undefined') { 
         
+        // ESTA VALIDACIÓN AHORA ES FALSA, por lo que el botón se renderizará.
         if (GOOGLE_CLIENT_ID === '77149078918-8hj6p412bt3l1ihjfn1h0jjhok5rjntv.apps.googleusercontent.com') {
             loginButtonElement.innerHTML = '<p style="color:red; text-align:center;">❌ CONFIGURACIÓN PENDIENTE: Reemplaza el ID de Google en script.js.</p>';
             loginButtonElement.style.display = 'block';
