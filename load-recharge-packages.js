@@ -36,12 +36,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Paquetes de saldo (Hardcodeados para el ejemplo, idealmente desde Supabase)
     const RECHARGE_PACKAGES = [
-        { name: 'Saldo $5 USD', usd: '5.00' },
-        { name: 'Saldo $10 USD', usd: '10.00' }, 
-        { name: 'Saldo $20 USD', usd: '20.00' },
-        { name: 'Saldo $50 USD', usd: '50.00' },
-        { name: 'Saldo $100 USD', usd: '100.00' },
-        { name: 'Saldo $200 USD', usd: '200.00' }
+        { name: 'Saldo $5 GKUSD', usd: '5.00' },
+        { name: 'Saldo $10 GKUSD', usd: '10.00' }, 
+        { name: 'Saldo $20 GKUSD', usd: '20.00' },
+        { name: 'Saldo $50 GKUSD', usd: '50.00' },
+        { name: 'Saldo $100 GKUSD', usd: '100.00' },
+        { name: 'Saldo $200 GKUSD', usd: '200.00' }
     ];
 
     /**

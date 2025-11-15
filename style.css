@@ -1,28 +1,34 @@
 /* Variables de Colores para Malok Recargas (Estilo Moderno y Limpio) */
 :root {
-    --primary-blue: #007bff; /* Azul estándar */
-    --bg-color: #1a1a1a; /* Fondo principal muy oscuro */
-    --card-bg: #2a2a2a; /* Fondo para tarjetas y elementos */
-    --text-color: #e0e0e0; /* Texto claro */
-    --secondary-text: #b0b0b0; /* Texto secundario gris */
-    --accent-green: #28a745; /* Verde para acentos de éxito/WhatsApp */
-    --border-color: #444444; /* Borde sutil */
-    --hover-blue: #0056b3; /* Azul más oscuro para hover */
-    --shadow-dark: rgba(0, 0, 0, 0.4); /* Sombra oscura */
-    --shadow-light: rgba(0, 123, 255, 0.2); /* Sombra de brillo azul */
+    /* Colores base: Negro y Morado Oscuro */
+    --primary-purple: #9c27b0; /* Morado Vibrante (Principal) */
+    --bg-color: #0d001a; /* Fondo principal muy oscuro (casi negro con un toque morado) */
+    --card-bg: #1a0033; /* Fondo para tarjetas y elementos (Morado Oscuro) */
+    --text-color: #f0f0f0; /* Texto muy claro */
+    --secondary-text: #c0a0d0; /* Texto secundario (Morado claro) */
+
+    /* Colores de Acento: Rosa Neón */
+    --accent-pink: #ff1493; /* Rosa Neón/Fucsia (Para éxito/WhatsApp, etc.) */
+
+    /* Bordes y Sombras */
+    --border-color: #4a148c; /* Borde sutil (Morado Oscuro) */
+    --hover-purple: #7b1fa2; /* Morado más oscuro para hover */
+    --shadow-dark: rgba(0, 0, 0, 0.6); /* Sombra oscura */
+    --shadow-light: rgba(255, 20, 147, 0.3); /* Sombra de brillo Rosa Neón */
+
     /* Nuevas variables para un diseño más profundo y distintivo */
-    --input-bg: #1f1f1f; /* Fondo más oscuro para inputs */
-    --selected-item-gradient: linear-gradient(90deg, #007bff, #0056b3); /* Gradiente para elementos seleccionados */
-    --button-gradient: linear-gradient(45deg, #007bff, #0056b3); /* Gradiente para botones */
-    --button-hover-gradient: linear-gradient(45deg, #0056b3, #004085); /* Gradiente de hover para botones */
+    --input-bg: #120025; /* Fondo más oscuro para inputs */
+    --selected-item-gradient: linear-gradient(90deg, var(--primary-purple), #7b1fa2); /* Gradiente para elementos seleccionados */
+    --button-gradient: linear-gradient(45deg, var(--primary-purple), var(--accent-pink)); /* Gradiente para botones (Morado a Rosa) */
+    --button-hover-gradient: linear-gradient(45deg, #7b1fa2, #c2185b); /* Gradiente de hover más oscuro */
 
     /* Colores para los nuevos diseños de paquetes/pagos */
-    --item-border-hover: var(--primary-blue);
-    --item-shadow-hover: 0 4px 15px rgba(0, 123, 255, 0.4);
-    --item-selected-bg: var(--primary-blue);
+    --item-border-hover: var(--accent-pink);
+    --item-shadow-hover: 0 4px 15px rgba(255, 20, 147, 0.6);
+    --item-selected-bg: var(--accent-pink);
     --item-selected-text: #ffffff; /* Aseguramos blanco para texto seleccionado */
-    --item-selected-border: var(--primary-blue);
-    --item-selected-shadow: 0 0 20px rgba(0, 123, 255, 0.6);
+    --item-selected-border: var(--accent-pink);
+    --item-selected-shadow: 0 0 20px rgba(255, 20, 147, 0.8);
 
     --white: #ffffff; /* Añadida para el check del package-item */
 }
