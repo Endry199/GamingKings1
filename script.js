@@ -35,7 +35,7 @@ async function applySiteConfig() {
 // =================================================================
 
 // ⚠️ ATENCIÓN: El CLIENT_ID es un identificador público.
-const GOOGLE_CLIENT_ID = '321583559900-b5kvkoleqdrpsup60n00ugls9ujg9jak.apps.googleusercontent.com'; 
+const GOOGLE_CLIENT_ID = '77149078918-8hj6p412bt3l1ihjfn1h0jjhok5rjntv.apps.googleusercontent.com'; 
 
 /**
  * Función CLAVE para verificar la sesión en localStorage y actualizar la UI.
@@ -207,7 +207,7 @@ function initGoogleSignIn(forceRender = false) {
     
     if (loginButtonElement && typeof window.google !== 'undefined') { 
         
-        if (GOOGLE_CLIENT_ID === 'TU_GOOGLE_CLIENT_ID_AQUÍ') {
+        if (GOOGLE_CLIENT_ID === '77149078918-8hj6p412bt3l1ihjfn1h0jjhok5rjntv.apps.googleusercontent.com') {
             loginButtonElement.innerHTML = '<p style="color:red; text-align:center;">❌ CONFIGURACIÓN PENDIENTE: Reemplaza el ID de Google en script.js.</p>';
             loginButtonElement.style.display = 'block';
             return;
