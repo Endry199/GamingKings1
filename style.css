@@ -54,6 +54,7 @@ main {
     margin: 25px auto;
     width: 100%;
     box-sizing: border-box; /* Asegurar que el padding no desborde el 100% de width */
+    margin-top: 100px;
 }
 
 h1, h2, h3 {
