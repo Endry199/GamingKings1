@@ -1,8 +1,8 @@
-// netlify/functions/get-site-config.js (VERSIÓN FINAL CON COLORES, TASA E IMÁGENES)
+// netlify/functions/get-site-config.js (CORRECCIÓN FINAL + LOGS DETALLADOS)
 
 const { createClient } = require('@supabase/supabase-js');
 
-// 🟢 MAPEO: Definimos la relación entre la columna de la DB y la variable/clave de retorno (CSS o nombre de imagen)
+// 🟢 MAPEO: Definimos la relación entre la columna de la DB y la variable CSS
 const DB_TO_CSS_MAP = {
     'dark_bg': '--bg-color', 
     'card_bg': '--card-bg',
@@ -18,14 +18,8 @@ const DB_TO_CSS_MAP = {
     'border_color': '--border-color',
     'shadow_light': '--shadow-light',
     'button_text_color': '--button-text-color', 
-    // Tasa de cambio
-    'tasa_dolar': '--tasa-dolar', 
-    
-    // 🎯 NUEVO: Claves para las URLs de las imágenes (se mapean a sí mismas)
-    'img1': 'img1', 
-    'img2': 'img2', 
-    'img3': 'img3', 
-    'img4': 'img4', 
+    // 🎯 CAMBIO CLAVE: Agregado el mapeo para la tasa de cambio
+    'tasa_dolar': '--tasa-dolar', 
     // Asegúrate de que esta lista sea idéntica a las columnas de tu tabla
 };
 
@@ -38,15 +32,16 @@ exports.handler = async function(event, context) {
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseAnonKey = process.env.SUPABASE_ANON_KEY; 
     
-    // Nota: El chequeo de credenciales debe ir aquí si se requiere
-    
+    // ... (omito el chequeo de credenciales por brevedad, asumiendo que ya funciona) ...
+
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
     try {
         // --- 2. Consulta a Supabase ---
+        // 🟢 CORRECCIÓN CLAVE: Quitamos .single() y usamos .limit(1)
         const { data: rows, error } = await supabase
             .from('configuracion_sitio') 
-            .select('*') // Consulta todas las columnas (incluyendo las nuevas img)
+            .select('*') 
             .eq('id', 1) 
             .limit(1); // Traeremos 0 o 1 fila
         
@@ -55,7 +50,7 @@ exports.handler = async function(event, context) {
             throw new Error(error.message); 
         }
         
-        // Extraemos la fila de la matriz si existe.
+        // 🟢 COMPROBACIÓN CLAVE: Extraemos la fila de la matriz si existe.
         const config = (rows && rows.length > 0) ? rows[0] : null;
         
         console.log("[NETLIFY] LOG: Array de filas retornado por Supabase:", JSON.stringify(rows));
@@ -63,6 +58,7 @@ exports.handler = async function(event, context) {
             
         // --- 3. Manejo de la No Existencia (0 Filas) ---
         if (!config) {
+            // El log anterior mostró que config era 'null' porque rows.length era 0.
             console.warn(`[NETLIFY] Advertencia: No se encontró la fila con ID=1. Devolviendo configuración vacía.`);
 
             return {
@@ -72,28 +68,28 @@ exports.handler = async function(event, context) {
             };
         }
 
-        // --- 4. Mapeo de Claves (Deg DB a JSON/CSS) ---
-        const siteConfig = {};
+        // --- 4. Mapeo de Claves (Deg DB a CSS) ---
+        const cssConfig = {};
         // Usamos Object.entries para iterar sobre las columnas de la DB y sus valores
         for (const [dbKey, value] of Object.entries(config)) {
-            // La clave de salida puede ser una variable CSS (ej: '--bg-color') o la clave de imagen (ej: 'img1')
-            const outputKey = DB_TO_CSS_MAP[dbKey]; 
+            const cssKey = DB_TO_CSS_MAP[dbKey];
             
-            if (outputKey) {
-                // Solo incluimos valores que no son null o undefined
-                if (value !== null && value !== undefined) { 
-                    siteConfig[outputKey] = value;
-                }
+            if (cssKey) {
+                // Si el valor es null/undefined en la DB, no lo incluimos, 
+                // ya que el front-end debe usar el valor CSS por defecto.
+                if (value !== null && value !== undefined) { 
+                    cssConfig[cssKey] = value;
+                }
             }
         }
         
-        console.log("[NETLIFY] LOG: Datos finales (incluyendo imágenes) enviados:", JSON.stringify(siteConfig));
+        console.log("[NETLIFY] LOG: Datos finales (CSS names) enviados:", JSON.stringify(cssConfig));
 
         // --- 5. Éxito ---
         return {
             statusCode: 200,
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(siteConfig),
+            body: JSON.stringify(cssConfig),
         };
 
     } catch (error) {
