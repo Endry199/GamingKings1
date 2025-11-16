@@ -11,89 +11,109 @@
     <link rel="preload" href="images/flag_us.png" as="image">
     <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
 
-    <style>
-        /* La sección .hero ahora solo contiene el carrusel */
-        .hero {
-            padding: 0;
-            margin-bottom: 30px; 
-            position: relative;
-            overflow: hidden; 
-            background: none; 
-            box-shadow: none; 
-            border: none;
-        }
-        /* Ocultar el texto antiguo del Hero */
-        .hero h1, .hero p {
-            display: none; 
-        }
-        .carousel-container {
-            max-width: 1200px; 
-            margin: 0 auto;
-            position: relative;
-            overflow: hidden; 
-            border-radius: 15px;
-            /* Se asume que estas variables existen en style.css o se inyectan */
-            box-shadow: 0 4px 20px var(--shadow-dark), 0 0 25px var(--shadow-light);
-        }
-        .carousel-track {
-            display: flex;
-            transition: transform 0.5s ease-in-out;
-        }
+<style>
+    /* La sección .hero ahora solo contiene el carrusel */
+    .hero {
+        padding: 0;
+        margin-bottom: 30px; 
+        position: relative;
+        overflow: hidden; 
+        background: none; 
+        box-shadow: none; 
+        border: none;
+    }
+    /* Ocultar el texto antiguo del Hero */
+    .hero h1, .hero p {
+        display: none; 
+    }
+    .carousel-container {
+        max-width: 1200px; 
+        margin: 0 auto;
+        position: relative;
+        overflow: hidden; 
+        border-radius: 15px;
+        /* Se asume que estas variables existen en style.css o se inyectan */
+        box-shadow: 0 4px 20px var(--shadow-dark), 0 0 25px var(--shadow-light);
+    }
+    .carousel-track {
+        display: flex;
+        transition: transform 0.5s ease-in-out;
+    }
+    .carousel-slide {
+        min-width: 100%;
+        height: 400px; /* Altura deseada en desktop/tablet */
+        /* Eliminamos background-size: cover; de aquí */
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+    /* Aplicamos 'cover' solo para pantallas grandes (desktop) */
+    @media (min-width: 769px) { 
         .carousel-slide {
-            min-width: 100%;
-            height: 400px; /* Altura deseada */
             background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
         }
-        /* Aplicación de las URLs de las imágenes inyectadas por get-site-config.js */
-        #slide-1 { background-image: var(--carousel-img1); }
-        #slide-2 { background-image: var(--carousel-img2); }
-        #slide-3 { background-image: var(--carousel-img3); }
-        #slide-4 { background-image: var(--carousel-img4); }
-        
-        .carousel-btn {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background-color: rgba(0, 0, 0, 0.5);
-            color: white;
-            border: none;
-            padding: 15px;
-            cursor: pointer;
-            z-index: 10;
-            font-size: 1.5em;
-            border-radius: 50%;
-            transition: background-color 0.3s;
-        }
-        .carousel-btn:hover { background-color: var(--primary-purple); }
-        .prev-btn { left: 10px; }
-        .next-btn { right: 10px; }
-        .carousel-dots {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 8px;
-            z-index: 10;
-        }
-        .dot {
-            height: 10px;
-            width: 10px;
-            background-color: rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
-            display: inline-block;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.3s;
-        }
-        .dot.active {
-            background-color: var(--accent-pink);
-            transform: scale(1.2);
-        }
-        @media (max-width: 768px) { .carousel-slide { height: 300px; } }
-        @media (max-width: 480px) { .carousel-slide { height: 200px; } }
-    </style>
+    }
+    /* Aplicación de las URLs de las imágenes inyectadas por get-site-config.js */
+    #slide-1 { background-image: var(--carousel-img1); }
+    #slide-2 { background-image: var(--carousel-img2); }
+    #slide-3 { background-image: var(--carousel-img3); }
+    #slide-4 { background-image: var(--carousel-img4); }
+    
+    .carousel-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background-color: rgba(0, 0, 0, 0.5);
+        color: white;
+        border: none;
+        padding: 15px;
+        cursor: pointer;
+        z-index: 10;
+        font-size: 1.5em;
+        border-radius: 50%;
+        transition: background-color 0.3s;
+    }
+    .carousel-btn:hover { background-color: var(--primary-purple); }
+    .prev-btn { left: 10px; }
+    .next-btn { right: 10px; }
+    .carousel-dots {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 8px;
+        z-index: 10;
+    }
+    .dot {
+        height: 10px;
+        width: 10px;
+        background-color: rgba(255, 255, 255, 0.5);
+        border-radius: 50%;
+        display: inline-block;
+        cursor: pointer;
+        transition: background-color 0.3s, transform 0.3s;
+    }
+    .dot.active {
+        background-color: var(--accent-pink);
+        transform: scale(1.2);
+    }
+
+    /* Media Queries para Teléfonos */
+    @media (max-width: 768px) { 
+        .carousel-slide { 
+            height: 300px; 
+            /* Esto estira la imagen para llenar el ancho y el alto */
+            background-size: 100% 100%; 
+        } 
+    }
+    @media (max-width: 480px) { 
+        .carousel-slide { 
+            height: 200px; 
+            /* Esto estira la imagen para llenar el ancho y el alto */
+            background-size: 100% 100%; 
+        } 
+    }
+</style>
 </head>
 <body>
 
