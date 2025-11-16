@@ -10,6 +10,90 @@
     <link rel="preload" href="images/flag_ve.png" as="image">
     <link rel="preload" href="images/flag_us.png" as="image">
     <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
+
+    <style>
+        /* La sección .hero ahora solo contiene el carrusel */
+        .hero {
+            padding: 0;
+            margin-bottom: 30px; 
+            position: relative;
+            overflow: hidden; 
+            background: none; 
+            box-shadow: none; 
+            border: none;
+        }
+        /* Ocultar el texto antiguo del Hero */
+        .hero h1, .hero p {
+            display: none; 
+        }
+        .carousel-container {
+            max-width: 1200px; 
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden; 
+            border-radius: 15px;
+            /* Se asume que estas variables existen en style.css o se inyectan */
+            box-shadow: 0 4px 20px var(--shadow-dark), 0 0 25px var(--shadow-light);
+        }
+        .carousel-track {
+            display: flex;
+            transition: transform 0.5s ease-in-out;
+        }
+        .carousel-slide {
+            min-width: 100%;
+            height: 400px; /* Altura deseada */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        /* Aplicación de las URLs de las imágenes inyectadas por get-site-config.js */
+        #slide-1 { background-image: var(--carousel-img1); }
+        #slide-2 { background-image: var(--carousel-img2); }
+        #slide-3 { background-image: var(--carousel-img3); }
+        #slide-4 { background-image: var(--carousel-img4); }
+        
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            padding: 15px;
+            cursor: pointer;
+            z-index: 10;
+            font-size: 1.5em;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        .carousel-btn:hover { background-color: var(--primary-purple); }
+        .prev-btn { left: 10px; }
+        .next-btn { right: 10px; }
+        .carousel-dots {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+        .dot {
+            height: 10px;
+            width: 10px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            display: inline-block;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .dot.active {
+            background-color: var(--accent-pink);
+            transform: scale(1.2);
+        }
+        @media (max-width: 768px) { .carousel-slide { height: 300px; } }
+        @media (max-width: 480px) { .carousel-slide { height: 200px; } }
+    </style>
 </head>
 <body>
 
@@ -79,9 +163,23 @@
 </header>
     <main class="home-main">
         <section class="hero">
-            <h1>¡Recarga tus Juegos Favoritos al Mejor Precio!</h1>
-            <p>Diamantes, monedas, saldo y más para Free Fire, TikTok y Blood Strike. Rápido, seguro y al instante.</p>
-        </section>
+            <div class="carousel-container">
+                <div class="carousel-track" id="carousel-track">
+                    <div class="carousel-slide" id="slide-1"></div>
+                    <div class="carousel-slide" id="slide-2"></div>
+                    <div class="carousel-slide" id="slide-3"></div>
+                    <div class="carousel-slide" id="slide-4"></div>
+                </div>
+                <button class="carousel-btn prev-btn" aria-label="Anterior"><i class="fas fa-chevron-left"></i></button>
+                <button class="carousel-btn next-btn" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></button>
+                <div class="carousel-dots" id="carousel-dots">
+                    <span class="dot active"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+            </div>
+            </section>
 
         <section>
             <h2>Juegos Disponibles</h2>
@@ -121,7 +219,92 @@
             <button class="btn-primary checkout-btn" id="checkout-btn" disabled>Proceder al Pago</button>
         </div>
     </div>
+
     <script src="script.js"></script>
     <script src="load-products.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const track = document.getElementById('carousel-track');
+            const slides = Array.from(document.querySelectorAll('.carousel-slide'));
+            const nextBtn = document.querySelector('.next-btn');
+            const prevBtn = document.querySelector('.prev-btn');
+            const dotsContainer = document.getElementById('carousel-dots');
+            const dots = Array.from(document.querySelectorAll('.dot'));
+            
+            if (!track || slides.length === 0) return; // Salir si los elementos no existen
+
+            let currentSlide = 0;
+            
+            // Función para obtener el ancho de un slide de manera dinámica
+            const getSlideWidth = () => slides[0].clientWidth;
+
+            // Función para mover el carrusel
+            const moveToSlide = (index) => {
+                const slideWidth = getSlideWidth();
+                track.style.transform = `translateX(-${slideWidth * index}px)`;
+                currentSlide = index;
+                updateDots();
+            };
+
+            // Función para actualizar los indicadores (dots)
+            const updateDots = () => {
+                dots.forEach((dot, index) => {
+                    if (index === currentSlide) {
+                        dot.classList.add('active');
+                    } else {
+                        dot.classList.remove('active');
+                    }
+                });
+            };
+
+            // Event Listeners para botones
+            nextBtn.addEventListener('click', () => {
+                let nextIndex = (currentSlide + 1) % slides.length;
+                moveToSlide(nextIndex);
+            });
+
+            prevBtn.addEventListener('click', () => {
+                // Asegura un índice positivo usando (x + n) % n
+                let prevIndex = (currentSlide - 1 + slides.length) % slides.length;
+                moveToSlide(prevIndex);
+            });
+
+            // Event Listeners para puntos
+            dots.forEach((dot, index) => {
+                dot.addEventListener('click', () => {
+                    moveToSlide(index);
+                });
+            });
+
+            // Auto-avance (opcional)
+            let autoSlideInterval = setInterval(() => {
+                let nextIndex = (currentSlide + 1) % slides.length;
+                moveToSlide(nextIndex);
+            }, 5000); // Cambia cada 5 segundos
+            
+            // Pausar auto-avance al pasar el ratón o tocar
+            const carouselContainer = document.querySelector('.carousel-container');
+            carouselContainer.addEventListener('mouseover', () => clearInterval(autoSlideInterval));
+            carouselContainer.addEventListener('mouseleave', () => {
+                autoSlideInterval = setInterval(() => {
+                    let nextIndex = (currentSlide + 1) % slides.length;
+                    moveToSlide(nextIndex);
+                }, 5000);
+            });
+
+
+            // Recalcular el ancho en resize (importante para responsividad)
+            window.addEventListener('resize', () => {
+                // Forzamos la posición inicial al redimensionar para evitar errores visuales
+                moveToSlide(currentSlide);
+            });
+
+            // Inicialización
+            updateDots();
+            moveToSlide(0);
+        });
+    </script>
+
 </body>
 </html>

@@ -20,6 +20,11 @@ const DB_TO_CSS_MAP = {
     'button_text_color': '--button-text-color', 
     // 🎯 CAMBIO CLAVE: Agregado el mapeo para la tasa de cambio
     'tasa_dolar': '--tasa-dolar', 
+    // 🎯 NUEVAS CLAVES: Mapeo de URLs para el carrusel de imágenes
+    'img1': '--carousel-img1', 
+    'img2': '--carousel-img2', 
+    'img3': '--carousel-img3', 
+    'img4': '--carousel-img4',
     // Asegúrate de que esta lista sea idéntica a las columnas de tu tabla
 };
 
@@ -76,10 +81,10 @@ exports.handler = async function(event, context) {
             
             if (cssKey) {
                 // Si el valor es null/undefined en la DB, no lo incluimos, 
-                // ya que el front-end debe usar el valor CSS por defecto.
-                if (value !== null && value !== undefined) { 
-                    cssConfig[cssKey] = value;
-                }
+                // ya que el front-end debe usar el valor CSS por defecto.
+                if (value !== null && value !== undefined) { 
+                    cssConfig[cssKey] = value;
+                }
             }
         }
         
