@@ -6,10 +6,9 @@
     --card-bg: #1a0033; /* Fondo para tarjetas y elementos (Morado Oscuro) */
     --text-color: #f0f0f0; /* Texto muy claro */
     --secondary-text: #c0a0d0; /* Texto secundario (Morado claro) */
-
     /* Colores de Acento: Rosa Neón */
     --accent-pink: #ff1493; /* Rosa Neón/Fucsia (Para éxito/WhatsApp, etc.) */
-
+    --carousel-arrow-color: var(--accent-blue-neon);
     /* Bordes y Sombras */
     --border-color: #4a148c; /* Borde sutil (Morado Oscuro) */
     --hover-purple: #7b1fa2; /* Morado más oscuro para hover */
@@ -319,32 +318,101 @@ section {
     border: 1px solid var(--border-color);
 }
 
-/* ESTILO ESPECÍFICO PARA EL HERO SECTION EN INDEX.HTML */
-.hero {
-    /* 💡 COLOR ÚNICO: Usamos un gradiente único (Morado Oscuro a Morado Principal) */
-    background: var(--hero-bg-gradient); 
-    padding: 60px 25px;
-    border-radius: 15px;
+/* El contenedor principal que reemplaza la sección .hero */
+.carousel-wrapper {
+    /* Quitamos el padding interno de la sección hero para que el carrusel ocupe todo */
+    padding: 0 !important; 
+    overflow: hidden; /* Esto es CLAVE para que las imágenes se deslicen */
+    position: relative;
+    height: 300px; /* Altura fija para el carrusel (ajusta a tu gusto) */
+    width: 100%;
     margin-bottom: 30px;
-    color: #ffffff; /* Aseguramos blanco */
-    /* 💡 SOMBRA ÚNICA: Usamos la sombra de brillo Rosa Neón */
-    box-shadow: 0 0 25px var(--shadow-light); 
-    border: none; /* Eliminar borde si el gradiente es el foco */
+    background-color: var(--card-bg); /* Fondo de la tarjeta */
 }
 
-.hero h1 {
-    font-size: 2.8em;
-    color: #ffffff; /* Aseguramos blanco */
-    margin-bottom: 12px;
-    line-height: 1.2;
-    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
+/* La pista del carrusel donde van las imágenes */
+.carousel-track {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    transition: transform 0.5s ease-in-out; /* Transición suave para el deslizamiento */
 }
 
-.hero p {
-    font-size: 1.2em;
-    color: rgba(255, 255, 255, 0.9);
-    max-width: 700px;
-    margin: 0 auto;
+/* Cada imagen individual */
+.carousel-slide {
+    min-width: 100%; /* Cada slide ocupa el 100% del contenedor */
+    height: 100%;
+    flex-shrink: 0; /* Evita que el slide se encoja */
+}
+
+.carousel-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Asegura que la imagen cubra el área sin distorsión */
+}
+
+/* Flechas de Navegación */
+.carousel-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--carousel-arrow-color);
+    border: none;
+    padding: 15px 10px;
+    cursor: pointer;
+    font-size: 1.5em;
+    z-index: 10;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.carousel-arrow:hover {
+    background: rgba(0, 0, 0, 0.7);
+    color: var(--accent-pink); /* Rosa Neón en hover */
+}
+
+.carousel-arrow.prev {
+    left: 0;
+    border-radius: 0 5px 5px 0;
+}
+
+.carousel-arrow.next {
+    right: 0;
+    border-radius: 5px 0 0 5px;
+}
+
+/* Puntos de Navegación */
+.carousel-dots {
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.5); /* Blanco semi-transparente */
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.3s;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.dot.active {
+    background-color: var(--accent-pink); /* Rosa Neón para el punto activo */
+    transform: scale(1.2);
+    border-color: var(--accent-pink);
+}
+
+/* Ajuste Responsivo */
+@media (max-width: 768px) {
+    .carousel-wrapper {
+        height: 200px; /* Reducir la altura en móviles */
+    }
 }
 
 /* Tarjetas de Juegos - DISEÑO COMPLETAMENTE NUEVO (Home Page) */
@@ -1007,17 +1075,6 @@ footer p {
     
     /* *** FIN DE LA CORRECCIÓN PARA REDUCIR LA BARRA SUPERIOR EN MÓVIL *** */
 
-    .hero {
-        padding: 40px 15px;
-    }
-
-    .hero h1 {
-        font-size: 2.2em;
-    }
-
-    .hero p {
-        font-size: 1em;
-    }
 
     .home-main h1 {
         font-size: 1.8em;
@@ -1083,14 +1140,6 @@ footer p {
         max-height: 60px; /* Logo más pequeño en móviles muy pequeños */
     }
 
-    .hero h1 {
-        font-size: 1.8em;
-        margin-bottom: 10px;
-    }
-
-    .hero p {
-        font-size: 0.95em;
-    }
 
     .home-main h1 {
         font-size: 1.6em;
