@@ -341,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initialText = '$ (USD)';
         initialImgSrc = 'images/flag_us.png';
     } else if (savedCurrency === 'USDM') { 
-        initialText = '$ (Usd Malok)';
+        initialText = '$ (GKUSD)';
         initialImgSrc = 'images/favicon.ico';
     }
     updateCurrencyDisplay(savedCurrency, initialText, initialImgSrc);
