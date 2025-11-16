@@ -6,42 +6,42 @@ const nodemailer = require('nodemailer');
 
 // ⭐️ INICIO: FUNCIÓN DE NORMALIZACIÓN DEL NÚMERO DE WHATSAPP ⭐️
 function normalizeWhatsappNumber(number) {
-    if (!number) return null;
+    if (!number) return null;
 
-    // 1. Eliminar todos los caracteres no numéricos
-    let cleanedNumber = number.replace(/[^\d]/g, '');
+    // 1. Eliminar todos los caracteres no numéricos
+    let cleanedNumber = number.replace(/[^\d]/g, '');
 
-    // 2. Manejar prefijos comunes de Venezuela
-    
-    // Si empieza con '0412', '0414', etc. (Formato local con 0)
-    // Se asume que el código de país (58) está implícito si el número tiene 11 dígitos.
-    if (cleanedNumber.length === 11 && cleanedNumber.startsWith('0')) {
-        // Quita el 0 y añade el 58. Ej: 04121234567 -> 584121234567
-        return '58' + cleanedNumber.substring(1);
-    }
+    // 2. Manejar prefijos comunes de Venezuela
+    
+    // Si empieza con '0412', '0414', etc. (Formato local con 0)
+    // Se asume que el código de país (58) está implícito si el número tiene 11 dígitos.
+    if (cleanedNumber.length === 11 && cleanedNumber.startsWith('0')) {
+        // Quita el 0 y añade el 58. Ej: 04121234567 -> 584121234567
+        return '58' + cleanedNumber.substring(1);
+    }
 
-    // Si empieza con '580412', '580414', etc. (Formato +58 con el 0 del código de área)
-    if (cleanedNumber.length === 13 && cleanedNumber.startsWith('580')) {
-        // Quita el 0 después del 58. Ej: 5804121234567 -> 584121234567
-        return '58' + cleanedNumber.substring(3);
-    }
-    
-    // Si ya empieza con '58' y tiene 12 dígitos, ya está correcto. Ej: 584121234567
-    if (cleanedNumber.length === 12 && cleanedNumber.startsWith('58')) {
-        return cleanedNumber;
-    }
-    
-    // Si empieza con el código de área sin el 58. (Asumiendo 10 dígitos)
-    if (cleanedNumber.length === 10 && (cleanedNumber.startsWith('412') || cleanedNumber.startsWith('424') || cleanedNumber.startsWith('414') || cleanedNumber.startsWith('416') || cleanedNumber.startsWith('426'))) {
-        return '58' + cleanedNumber;
-    }
+    // Si empieza con '580412', '580414', etc. (Formato +58 con el 0 del código de área)
+    if (cleanedNumber.length === 13 && cleanedNumber.startsWith('580')) {
+        // Quita el 0 después del 58. Ej: 5804121234567 -> 584121234567
+        return '58' + cleanedNumber.substring(3);
+    }
+    
+    // Si ya empieza con '58' y tiene 12 dígitos, ya está correcto. Ej: 584121234567
+    if (cleanedNumber.length === 12 && cleanedNumber.startsWith('58')) {
+        return cleanedNumber;
+    }
+    
+    // Si empieza con el código de área sin el 58. (Asumiendo 10 dígitos)
+    if (cleanedNumber.length === 10 && (cleanedNumber.startsWith('412') || cleanedNumber.startsWith('424') || cleanedNumber.startsWith('414') || cleanedNumber.startsWith('416') || cleanedNumber.startsWith('426'))) {
+        return '58' + cleanedNumber;
+    }
 
-    // Fallback: si no cumple el formato 58... pero está limpio y tiene al menos 10 dígitos
-    if (cleanedNumber.length >= 10) {
-        return cleanedNumber; 
-    }
+    // Fallback: si no cumple el formato 58... pero está limpio y tiene al menos 10 dígitos
+    if (cleanedNumber.length >= 10) {
+        return cleanedNumber; 
+    }
 
-    return null; // Devuelve null si no es un número de teléfono válido/esperado
+    return null; // Devuelve null si no es un número de teléfono válido/esperado
 }
 // ⭐️ FIN: FUNCIÓN DE NORMALIZACIÓN DEL NÚMERO DE WHATSAPP ⭐️
 
@@ -96,7 +96,10 @@ exports.handler = async (event, context) => {
 
     // --- OBTENCIÓN DE DATOS CRÍTICOS ---
     const receivedHash = body.verify_hash; 
-    const invoiceID = body.order_number; // Usar order_number (MALOK-XXXXX) para buscar la transacción.
+    // Se mantiene 'order_number' como la variable que contiene el ID de la transacción.
+    // ASUMIMOS: Que si el order_number viene con un prefijo tipo MALOK-XXXXX, este prefijo está bien y solo es necesario cambiarlo en el front-end o en la generación de este ID. 
+    // Aquí sólo lo usamos como una llave de búsqueda.
+    const invoiceID = body.order_number; 
     const plisioTxnId = body.txn_id; // Guardar el ID interno de Plisio.
     const status = body.status;
 
@@ -171,7 +174,7 @@ exports.handler = async (event, context) => {
     
     let transactionData;
     let injectionMessage = "";
-    let normalizedWhatsapp = null; // Inicializar la variable
+    let normalizedWhatsapp = null; // Inicializar la variable
 
     try {
         const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
@@ -210,13 +213,14 @@ exports.handler = async (event, context) => {
         }
         
         transactionData = transactions;
-        // ⭐️ NUEVO: Normalizar el número de WhatsApp ⭐️
-        normalizedWhatsapp = normalizeWhatsappNumber(transactionData.whatsappNumber);
+        // ⭐️ NUEVO: Normalizar el número de WhatsApp ⭐️
+        normalizedWhatsapp = normalizeWhatsappNumber(transactionData.whatsappNumber);
 
         // Destructuramos la nueva variable y mantenemos las viejas por si acaso
         const { google_id, game, "finalPrice": finalPrice, currency, base_amount } = transactionData;
         
         // 🔑 PASO A1: LÓGICA DE INYECCIÓN AUTOMÁTICA
+        // Se mantiene 'Recarga de Saldo' ya que es un valor almacenado en la DB y cambiarlo rompería la lógica
         const IS_WALLET_RECHARGE = game === 'Recarga de Saldo';
         
         // Determinar el monto a inyectar
@@ -228,14 +232,14 @@ exports.handler = async (event, context) => {
         }
 
         console.log(`TRAZA 11: Transacción encontrada. Game: ${game}, Google ID: ${google_id}`);
-        console.log(`TRAZA 11.0: Monto base (sin comisión): ${base_amount} USD. Monto a inyectar: ${amountToInject} USD.`);
+        console.log(`TRAZA 11.0: Monto base (sin comisión): ${base_amount} USD. Monto a inyectar: ${amountToInject} USD.`);
         
         let newStatus = 'CONFIRMADO'; // Estado por defecto
 
         if (IS_WALLET_RECHARGE) {
              
             if (!google_id || isNaN(amountToInject) || amountToInject <= 0) {
-                 injectionMessage = `\n\n❌ **ERROR DE INYECCIÓN DE SALDO:** Datos incompletos (Google ID: ${google_id}, Monto: ${amountToInject}). **¡REVISIÓN MANUAL REQUERIDA!**`;
+                 injectionMessage = `\n\n❌ **ERROR DE INYECCIÓN DE SALDO (GamingKings):** Datos incompletos (Google ID: ${google_id}, Monto: ${amountToInject}). **¡REVISIÓN MANUAL REQUERIDA!**`;
                  newStatus = 'CONFIRMADO (ERROR SALDO)'; // Marcar con advertencia
 
             } else {
@@ -249,22 +253,22 @@ exports.handler = async (event, context) => {
                          
                      if (balanceUpdateError) {
                          console.error(`TRAZA 11.1: Fallo al inyectar saldo a ${google_id}. Msg: ${balanceUpdateError.message}.`);
-                         injectionMessage = `\n\n❌ **ERROR CRÍTICO AL INYECTAR SALDO:** No se pudo actualizar la billetera del cliente. \n\n${balanceUpdateError.message}`;
+                         injectionMessage = `\n\n❌ **ERROR CRÍTICO AL INYECTAR SALDO (GamingKings):** No se pudo actualizar la billetera del cliente. \n\n${balanceUpdateError.message}`;
                          newStatus = 'CONFIRMADO (ERROR SALDO)'; // Marcar con advertencia
                      } else {
                          console.log(`TRAZA 11.2: Inyección de saldo exitosa: $${amountToInject.toFixed(2)} USD para ${google_id}.`);
-                         injectionMessage = `\n\n💰 **INYECCIÓN DE SALDO EXITOSA:** Se inyectaron **$${amountToInject.toFixed(2)} USD** a la billetera del cliente (\`${google_id}\`).`;
+                         injectionMessage = `\n\n💰 **INYECCIÓN DE SALDO EXITOSA (GamingKings):** Se inyectaron **$${amountToInject.toFixed(2)} USD** a la billetera del cliente (\`${google_id}\`).`;
                          newStatus = 'REALIZADA'; // Completar automáticamente
                      }
                  } catch (e) {
                      console.error("TRAZA 11.3: Falló la llamada RPC para inyección de saldo.", e.message);
-                     injectionMessage = `\n\n❌ **ERROR CRÍTICO AL INYECTAR SALDO:** Falló la RPC. Msg: ${e.message}`;
+                     injectionMessage = `\n\n❌ **ERROR CRÍTICO AL INYECTAR SALDO (GamingKings):** Falló la RPC. Msg: ${e.message}`;
                      newStatus = 'CONFIRMADO (ERROR SALDO)'; // Marcar con advertencia
                  }
             }
         } else {
             // Si NO es recarga de saldo (es un producto), lo marcamos como CONFIRMADO
-            injectionMessage = `\n\n🛒 **PRODUCTO PENDIENTE DE ENTREGA:** Transacción de **${game}**. El operador debe procesar el pedido.`;
+            injectionMessage = `\n\n🛒 **PRODUCTO PENDIENTE DE ENTREGA (GamingKings):** Transacción de **${game}**. El operador debe procesar el pedido.`;
             newStatus = 'CONFIRMADO';
         }
         
@@ -287,7 +291,7 @@ exports.handler = async (event, context) => {
 
         if (updateError) {
              console.error("TRAZA 12.1: Error al actualizar el estado de la transacción:", updateError.message);
-             injectionMessage += `\n\n⚠️ **ADVERTENCIA:** Fallo al actualizar estado final en DB: ${updateError.message}`;
+             injectionMessage += `\n\n⚠️ **ADVERTENCIA (GamingKings):** Fallo al actualizar estado final en DB: ${updateError.message}`;
              newStatus = 'CONFIRMADO (ERROR DB)';
         }
 
@@ -316,7 +320,8 @@ exports.handler = async (event, context) => {
         
         // 💡 CAMBIO 1: Determinar el emoji según el estado final
         const emoji = newStatus === 'REALIZADA' ? '✅' : '🔔';
-        let messageText = `${emoji} *¡PAGO CONFIRMADO!* (Plisio) ${emoji}\n\n`; // Título más neutral
+        // Reemplazo de Malok Recargas por GamingKings en el título del mensaje
+        let messageText = `${emoji} *¡PAGO CONFIRMADO!* (GamingKings - Plisio) ${emoji}\n\n`; 
         messageText += `*ID de Transacción:* \`${invoiceID || 'N/A'}\`\n`;
         messageText += `*Estado Final:* \`${newStatus}\`\n`; // <--- Estado final
         messageText += `------------------------------------------------\n`;
@@ -371,43 +376,43 @@ exports.handler = async (event, context) => {
         messageText += `\n*DETALLE DE PROCESAMIENTO*\n`;
         messageText += injectionMessage; // <--- Mensaje de inyección/alerta
         
-        messageText += `\n*DATOS DEL CLIENTE*\n`;
+        messageText += `\n*DATOS DEL CLIENTE (GamingKings)*\n`;
         messageText += `📧 Correo Cliente: ${transactionData.email || 'N/A'}\n`;
         if (transactionData.whatsappNumber) { 
              messageText += `📱 WhatsApp Cliente: ${transactionData.whatsappNumber}\n`;
-             if (normalizedWhatsapp && normalizedWhatsapp !== transactionData.whatsappNumber) {
-                 messageText += `(Número normalizado: ${normalizedWhatsapp})\n`;
-             }
+             if (normalizedWhatsapp && normalizedWhatsapp !== transactionData.whatsappNumber) {
+                 messageText += `(Número normalizado: ${normalizedWhatsapp})\n`;
+             }
         }
 
 
-        // 💡 CAMBIO 2: Lógica de generación del botón
-        let replyMarkup = {};
-        const inlineKeyboard = []; // Usaremos un array para construir los botones
+        // 💡 CAMBIO 2: Lógica de generación del botón
+        let replyMarkup = {};
+        const inlineKeyboard = []; // Usaremos un array para construir los botones
 
-        // 1. Botón de Marcar como REALIZADA (Solo si no fue automática)
-        if (newStatus === 'CONFIRMADO') {
-            console.log("TRAZA 13.5: Creando botón 'Marcar como REALIZADA' para producto pendiente.");
-            inlineKeyboard.push([{ 
-                text: '✅ Marcar como REALIZADA', 
-                callback_data: `mark_done_${invoiceID}` 
-            }]);
-        }
-        
-        // 2. Botón de WhatsApp (Si el número se normalizó correctamente)
-        if (normalizedWhatsapp) {
-            console.log("TRAZA 13.6: Creando botón de WhatsApp con número normalizado.");
-            const whatsappLink = `https://wa.me/${normalizedWhatsapp}`;
-            // Agregamos este botón en una nueva fila
-            inlineKeyboard.push([{ text: "💬 Contactar Cliente por WhatsApp", url: whatsappLink }]);
-        }
+        // 1. Botón de Marcar como REALIZADA (Solo si no fue automática)
+        if (newStatus === 'CONFIRMADO') {
+            console.log("TRAZA 13.5: Creando botón 'Marcar como REALIZADA' para producto pendiente.");
+            inlineKeyboard.push([{ 
+                text: '✅ Marcar como REALIZADA', 
+                callback_data: `mark_done_${invoiceID}` 
+            }]);
+        }
+        
+        // 2. Botón de WhatsApp (Si el número se normalizó correctamente)
+        if (normalizedWhatsapp) {
+            console.log("TRAZA 13.6: Creando botón de WhatsApp con número normalizado.");
+            const whatsappLink = `https://wa.me/${normalizedWhatsapp}`;
+            // Agregamos este botón en una nueva fila
+            inlineKeyboard.push([{ text: "💬 Contactar Cliente por WhatsApp", url: whatsappLink }]);
+        }
 
-        // 3. Ensamblar el replyMarkup si hay botones
-        if (inlineKeyboard.length > 0) {
-            replyMarkup = {
-                inline_keyboard: inlineKeyboard
-            };
-        }
+        // 3. Ensamblar el replyMarkup si hay botones
+        if (inlineKeyboard.length > 0) {
+            replyMarkup = {
+                inline_keyboard: inlineKeyboard
+            };
+        }
 
 
         const telegramApiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
@@ -449,14 +454,16 @@ exports.handler = async (event, context) => {
                  tls: { rejectUnauthorized: false }
              });
              
+             // Aquí se reemplaza Malok Recargas por GamingKings
              const emailSubject = newStatus === 'REALIZADA' 
-                 ? `✅ ¡Recarga ACREDITADA! Tu pedido #${invoiceID} está listo.`
-                 : `✅ ¡Pago CONFIRMADO! Tu pedido #${invoiceID} está en proceso.`;
+                 ? `✅ ¡Recarga ACREDITADA con GamingKings! Tu pedido #${invoiceID} está listo.`
+                 : `✅ ¡Pago CONFIRMADO con GamingKings! Tu pedido #${invoiceID} está en proceso.`;
              
              // Se usa el valor de la orden que viene en el webhook (body.source_amount)
+             // Aquí se reemplaza Malok Recargas por GamingKings
              const emailHtml = newStatus === 'REALIZADA'
-                 ? `<p>Hola,</p><p>Tu pago de ${body.source_amount || 'N/A'} ${body.source_currency || 'USD'} ha sido confirmado y el saldo ha sido **acreditado automáticamente** a tu cuenta.</p><p>Gracias por tu compra.</p>`
-                 : `<p>Hola,</p><p>Tu pago de ${body.source_amount || 'N/A'} ${body.source_currency || 'USD'} ha sido confirmado por la pasarela de Plisio. Tu pedido está siendo procesado por nuestro equipo.</p><p>Gracias por tu compra.</p>`;
+                 ? `<p>Hola,</p><p>Tu pago de ${body.source_amount || 'N/A'} ${body.source_currency || 'USD'} ha sido confirmado y el saldo ha sido **acreditado automáticamente** a tu cuenta de GamingKings.</p><p>Gracias por tu compra en GamingKings.</p>`
+                 : `<p>Hola,</p><p>Tu pago de ${body.source_amount || 'N/A'} ${body.source_currency || 'USD'} ha sido confirmado por la pasarela de Plisio. Tu pedido está siendo procesado por el equipo de GamingKings.</p><p>Gracias por tu compra en GamingKings.</p>`;
              
              const mailOptions = {
                  from: SENDER_EMAIL,

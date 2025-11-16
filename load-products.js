@@ -13,7 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // La descripción se recorta si es demasiado larga (200 caracteres es el límite que definimos)
         const description = product.descripcion ? 
             (product.descripcion.length > 150 ? product.descripcion.substring(0, 150) + '...' : product.descripcion) :
-            'Recarga fácil y rápido con Malok Recargas.';
+            // CAMBIO: Reemplazamos "Malok Recargas" por "GamingKings" en la descripción por defecto.
+            'Recarga fácil y rápido con GamingKings.';
 
         // Usamos el 'banner_url' de Supabase
         const imageUrl = product.banner_url || 'images/default_banner.jpg';

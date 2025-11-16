@@ -149,10 +149,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const slug = getSlugFromUrl();
         if (!slug) {
             if (productContainer) {
-                 productContainer.innerHTML = '<h2 class="error-message">❌ Error: No se especificó el juego.</h2><p style="text-align:center;"><a href="index.html">Volver a la página principal</a></p>';
+                // CAMBIO: 'Malok Recargas' a 'GamingKings'
+                   productContainer.innerHTML = '<h2 class="error-message">❌ Error: No se especificó el juego.</h2><p style="text-align:center;"><a href="index.html">Volver a la página principal</a></p>';
             }
             const pageTitle = document.getElementById('page-title');
-            if (pageTitle) pageTitle.textContent = 'Error - Malok Recargas';
+            // CAMBIO: 'Malok Recargas' a 'GamingKings'
+            if (pageTitle) pageTitle.textContent = 'Error - GamingKings'; 
             return;
         }
 
@@ -174,7 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // INICIO DE COMPROBACIONES DEFENSIVAS
                 const pageTitle = document.getElementById('page-title');
-                if (pageTitle) pageTitle.textContent = `${data.nombre} - Malok Recargas`;
+                // CAMBIO: 'Malok Recargas' a 'GamingKings'
+                if (pageTitle) pageTitle.textContent = `${data.nombre} - GamingKings`; 
 
                 const productName = document.getElementById('product-name');
                 if (productName) productName.textContent = data.nombre;
@@ -233,7 +236,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 productContainer.innerHTML = '<h2 class="error-message">❌ Error al conectar con el servidor.</h2><p style="text-align:center;">Por favor, recarga la página o vuelve más tarde.</p>';
             }
             const pageTitle = document.getElementById('page-title');
-            if (pageTitle) pageTitle.textContent = 'Error de Carga - Malok Recargas';
+            // CAMBIO: 'Malok Recargas' a 'GamingKings'
+            if (pageTitle) pageTitle.textContent = 'Error de Carga - GamingKings'; 
         }
     }
     
