@@ -6,29 +6,21 @@
     --card-bg: #1a0033; /* Fondo para tarjetas y elementos (Morado Oscuro) */
     --text-color: #f0f0f0; /* Texto muy claro */
     --secondary-text: #c0a0d0; /* Texto secundario (Morado claro) */
+
     /* Colores de Acento: Rosa Neón */
     --accent-pink: #ff1493; /* Rosa Neón/Fucsia (Para éxito/WhatsApp, etc.) */
-    --carousel-arrow-color: var(--accent-blue-neon);
+
     /* Bordes y Sombras */
     --border-color: #4a148c; /* Borde sutil (Morado Oscuro) */
     --hover-purple: #7b1fa2; /* Morado más oscuro para hover */
     --shadow-dark: rgba(0, 0, 0, 0.6); /* Sombra oscura */
     --shadow-light: rgba(255, 20, 147, 0.3); /* Sombra de brillo Rosa Neón */
-    
-    /* 💡 NUEVAS VARIABLES PARA MAYOR VARIEDAD DE TONOS */
-    --accent-blue-neon: #00bcd4; /* Azul Neón (Para un acento fresco y diferente) */
-    --accent-blue-shadow: rgba(0, 188, 212, 0.4); /* Sombra de brillo Azul Neón */
-    --hero-bg-gradient: linear-gradient(45deg, #7b1fa2, #9c27b0); /* Fondo único para Hero */
-    --checkout-button-gradient: linear-gradient(45deg, var(--accent-pink), #e91e63); /* Gradiente único para botón de Checkout */
-    --checkout-button-hover-gradient: linear-gradient(45deg, #e91e63, #ad1457); 
-    --game-card-hover-border: var(--accent-blue-neon); /* Borde de tarjeta en hover */
-
 
     /* Nuevas variables para un diseño más profundo y distintivo */
     --input-bg: #120025; /* Fondo más oscuro para inputs */
     --selected-item-gradient: linear-gradient(90deg, var(--primary-purple), #7b1fa2); /* Gradiente para elementos seleccionados */
-    --button-gradient: linear-gradient(45deg, var(--primary-purple), var(--accent-pink)); /* Gradiente para botones */
-    --button-hover-gradient: linear-gradient(45deg, #7b1fa2, #c2185b); /* Gradiente de hover para botones */
+    --button-gradient: linear-gradient(45deg, var(--primary-purple), var(--accent-pink)); /* Gradiente para botones (Morado a Rosa) */
+    --button-hover-gradient: linear-gradient(45deg, #7b1fa2, #c2185b); /* Gradiente de hover más oscuro */
 
     /* Colores para los nuevos diseños de paquetes/pagos */
     --item-border-hover: var(--accent-pink);
@@ -39,6 +31,9 @@
     --item-selected-shadow: 0 0 20px rgba(255, 20, 147, 0.8);
 
     --white: #ffffff; /* Añadida para el check del package-item */
+    
+    /* === NUEVA VARIABLE PARA EL CARRUSEL === */
+    --carousel-arrow-color: var(--accent-pink); 
 }
 
 /* Estilos Generales */
@@ -66,8 +61,7 @@ main {
 }
 
 h1, h2, h3 {
-    /* 💡 COLOR ÚNICO: Usamos el Morado Principal en h1, h2, h3 */
-    color: var(--primary-purple); 
+    color: var(--primary-blue);
     text-align: center;
     margin-bottom: 25px;
     font-weight: 700; /* Más negrita */
@@ -133,8 +127,7 @@ header.header-hide {
 }
 
 .search-bar input {
-    /* 💡 CORRECCIÓN: Usamos card-bg o input-bg en vez de dark-bg */
-    background-color: var(--card-bg);
+    background-color: var(--dark-bg);
     border: 1px solid var(--border-color);
     border-radius: 20px;
     padding: 10px 15px 10px 40px;
@@ -146,9 +139,8 @@ header.header-hide {
 }
 
 .search-bar input:focus {
-    /* 💡 COLOR ÚNICO: Usamos Azul Neón en el focus del buscador */
-    border-color: var(--accent-blue-neon); 
-    box-shadow: 0 0 8px var(--accent-blue-shadow);
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 8px var(--shadow-light);
 }
 
 .search-bar .fas.fa-search {
@@ -163,8 +155,7 @@ header.header-hide {
     position: relative;
     cursor: pointer;
     user-select: none;
-    /* 💡 CORRECCIÓN: Usamos card-bg o input-bg en vez de dark-bg */
-    background-color: var(--card-bg);
+    background-color: var(--dark-bg);
     border: 1px solid var(--border-color);
     border-radius: 20px;
     padding: 10px 15px;
@@ -178,8 +169,7 @@ header.header-hide {
 }
 
 .custom-currency-selector:hover {
-    /* 💡 COLOR ÚNICO: Usamos Rosa Neón en el hover del selector de moneda */
-    border-color: var(--accent-pink); 
+    border-color: var(--primary-blue);
     box-shadow: 0 0 8px var(--shadow-light);
 }
 
@@ -246,9 +236,8 @@ header.header-hide {
 }
 
 .currency-options .option:hover {
-    /* 💡 CORRECCIÓN: Usamos card-bg o input-bg en vez de dark-bg */
-    background-color: var(--input-bg); 
-    color: var(--primary-purple);
+    background-color: var(--dark-bg);
+    color: var(--primary-blue);
 }
 
 .currency-options .option img {
@@ -260,7 +249,7 @@ header.header-hide {
 
 /* Botones */
 .btn-primary {
-    background: var(--button-gradient); /* Usar gradiente (Morado a Rosa Neón) */
+    background: var(--button-gradient); /* Usar gradiente para el botón */
     color: #ffffff; /* Aseguramos blanco */
     padding: 12px 25px;
     border: none;
@@ -302,8 +291,7 @@ header.header-hide {
 }
 
 .btn-secondary:hover {
-    /* 💡 COLOR ÚNICO: Usamos el hover-purple del CSS anterior */
-    background-color: var(--hover-purple);
+    background-color: #7a8288;
     transform: translateY(-1px);
 }
 
@@ -318,101 +306,30 @@ section {
     border: 1px solid var(--border-color);
 }
 
-/* El contenedor principal que reemplaza la sección .hero */
-.carousel-wrapper {
-    /* Quitamos el padding interno de la sección hero para que el carrusel ocupe todo */
-    padding: 0 !important; 
-    overflow: hidden; /* Esto es CLAVE para que las imágenes se deslicen */
-    position: relative;
-    height: 300px; /* Altura fija para el carrusel (ajusta a tu gusto) */
-    width: 100%;
+/* ESTILO ESPECÍFICO PARA EL HERO SECTION EN INDEX.HTML */
+.hero {
+    background: var(--hover-blue); /* Gradiente azul vibrante */
+    padding: 60px 25px;
+    border-radius: 15px;
     margin-bottom: 30px;
-    background-color: var(--card-bg); /* Fondo de la tarjeta */
+    color: #ffffff; /* Aseguramos blanco */
+    box-shadow: 0 0 25px rgba(0, 123, 255, 0.6); /* Sombra de brillo más intensa */
+    border: none; /* Eliminar borde si el gradiente es el foco */
 }
 
-/* La pista del carrusel donde van las imágenes */
-.carousel-track {
-    display: flex;
-    height: 100%;
-    width: 100%;
-    transition: transform 0.5s ease-in-out; /* Transición suave para el deslizamiento */
+.hero h1 {
+    font-size: 2.8em;
+    color: #ffffff; /* Aseguramos blanco */
+    margin-bottom: 12px;
+    line-height: 1.2;
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
 }
 
-/* Cada imagen individual */
-.carousel-slide {
-    min-width: 100%; /* Cada slide ocupa el 100% del contenedor */
-    height: 100%;
-    flex-shrink: 0; /* Evita que el slide se encoja */
-}
-
-.carousel-slide img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover; /* Asegura que la imagen cubra el área sin distorsión */
-}
-
-/* Flechas de Navegación */
-.carousel-arrow {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(0, 0, 0, 0.4);
-    color: var(--carousel-arrow-color);
-    border: none;
-    padding: 15px 10px;
-    cursor: pointer;
-    font-size: 1.5em;
-    z-index: 10;
-    transition: background-color 0.3s, color 0.3s;
-}
-
-.carousel-arrow:hover {
-    background: rgba(0, 0, 0, 0.7);
-    color: var(--accent-pink); /* Rosa Neón en hover */
-}
-
-.carousel-arrow.prev {
-    left: 0;
-    border-radius: 0 5px 5px 0;
-}
-
-.carousel-arrow.next {
-    right: 0;
-    border-radius: 5px 0 0 5px;
-}
-
-/* Puntos de Navegación */
-.carousel-dots {
-    position: absolute;
-    bottom: 15px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 8px;
-    z-index: 10;
-}
-
-.dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.5); /* Blanco semi-transparente */
-    cursor: pointer;
-    transition: background-color 0.3s, transform 0.3s;
-    border: 1px solid rgba(0, 0, 0, 0.2);
-}
-
-.dot.active {
-    background-color: var(--accent-pink); /* Rosa Neón para el punto activo */
-    transform: scale(1.2);
-    border-color: var(--accent-pink);
-}
-
-/* Ajuste Responsivo */
-@media (max-width: 768px) {
-    .carousel-wrapper {
-        height: 200px; /* Reducir la altura en móviles */
-    }
+.hero p {
+    font-size: 1.2em;
+    color: rgba(255, 255, 255, 0.9);
+    max-width: 700px;
+    margin: 0 auto;
 }
 
 /* Tarjetas de Juegos - DISEÑO COMPLETAMENTE NUEVO (Home Page) */
@@ -425,8 +342,7 @@ section {
 }
 
 .game-card {
-    /* 💡 CORRECCIÓN: Usamos card-bg o input-bg en vez de dark-bg */
-    background-color: var(--input-bg); 
+    background-color: var(--dark-bg); /* Fondo más oscuro para la tarjeta */
     border: 2px solid var(--border-color); /* Borde más pronunciado */
     border-radius: 15px; /* Más redondeado */
     overflow: hidden;
@@ -444,8 +360,7 @@ section {
 .game-card:hover {
     transform: translateY(-10px); /* Mayor elevación */
     box-shadow: 0 15px 30px var(--shadow-dark); /* Sombra aún más grande */
-    /* 💡 COLOR ÚNICO: Usamos Azul Neón para el borde en hover de las tarjetas */
-    border-color: var(--game-card-hover-border); 
+    border-color: var(--primary-blue); /* Borde primario en hover */
 }
 
 .game-card img {
@@ -459,8 +374,7 @@ section {
 .game-card h2 {
     font-size: 1.6em; /* Título ligeramente más pequeño para mejor ajuste */
     margin: 20px 0 10px;
-    /* 💡 COLOR ÚNICO: Usamos el Azul Neón para el título de las tarjetas */
-    color: var(--accent-blue-neon);
+    color: var(--primary-blue);
     flex-grow: 1;
     display: flex;
     align-items: center;
@@ -515,8 +429,7 @@ section {
 .input-group input[type="text"]:focus,
 .input-group input[type="number"]:focus,
 .input-group select:focus {
-    /* 💡 COLOR ÚNICO: Usamos Rosa Neón en el focus de los inputs de formulario */
-    border-color: var(--accent-pink);
+    border-color: var(--primary-blue);
     box-shadow: 0 0 8px var(--shadow-light);
 }
 
@@ -526,7 +439,7 @@ section {
 
 .player-name-display {
     font-weight: 600;
-    color: var(--accent-pink); /* Usamos Rosa Neón para el nombre del jugador */
+    color: var(--accent-green);
     margin-top: 10px;
     min-height: 1.2em;
     font-size: 1.1em;
@@ -572,8 +485,7 @@ section {
 
 /* Efecto de "check" al seleccionar */
 .package-item.selected {
-    /* 💡 GRADIENTE ÚNICO: Usamos el Morado Principal a Rosa Neón para seleccionar */
-    background: var(--button-gradient); 
+    background: var(--selected-item-gradient); /* Gradiente para seleccionado */
     color: var(--item-selected-text);
     border-color: var(--item-selected-border);
     transform: translateY(-2px) scale(1.02); /* Ligeramente más grande y elevado */
@@ -593,8 +505,7 @@ section {
     top: 8px;
     right: 8px;
     color: var(--white);
-    /* 💡 COLOR ÚNICO: Usamos Azul Neón para el círculo de check, si deseas Rosa, usa --accent-pink */
-    background-color: var(--accent-blue-neon); 
+    background-color: var(--accent-green);
     border-radius: 50%;
     width: 24px;
     height: 24px;
@@ -613,8 +524,7 @@ section {
 
 .package-item .price {
     font-weight: 700;
-    /* 💡 COLOR ÚNICO: Usamos Rosa Neón para el precio (destacando) */
-    color: var(--accent-pink); 
+    color: var(--accent-green);
     font-size: 1.25em; /* Precio más grande */
 }
 
@@ -654,8 +564,7 @@ section {
 }
 
 .payment-method-option input[type="radio"]:checked + label {
-    /* 💡 GRADIENTE ÚNICO: Usamos el Morado Principal a Rosa Neón para seleccionar */
-    background: var(--button-gradient); 
+    background: var(--selected-item-gradient);
     color: var(--item-selected-text);
     border-color: var(--item-selected-border);
     transform: scale(1.02);
@@ -671,8 +580,7 @@ section {
     top: 8px;
     right: 8px;
     color: #ffffff; /* Aseguramos blanco */
-    /* 💡 COLOR ÚNICO: Usamos Azul Neón para el círculo de check */
-    background-color: var(--accent-blue-neon); 
+    background-color: var(--accent-green);
     border-radius: 50%;
     width: 24px;
     height: 24px;
@@ -758,16 +666,14 @@ footer p {
 }
 
 .footer-links a:hover {
-    /* 💡 COLOR ÚNICO: Usamos Rosa Neón en el hover de los links del footer */
-    color: var(--accent-pink);
+    color: var(--primary-blue);
 }
 
 .whatsapp-link {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    /* 💡 COLOR ÚNICO: Usamos el Morado Principal para el fondo del botón de WhatsApp */
-    background-color: var(--primary-purple); 
+    background-color: var(--accent-green);
     color: #ffffff; /* Aseguramos blanco */
     padding: 10px 18px;
     border-radius: 20px;
@@ -780,8 +686,7 @@ footer p {
 }
 
 .whatsapp-link:hover {
-    /* 💡 COLOR ÚNICO: Usamos el hover-purple en el hover de WhatsApp */
-    background-color: var(--hover-purple);
+    background-color: #218838;
     transform: translateY(-1px);
 }
 
@@ -802,8 +707,7 @@ footer p {
 }
 
 .form-container h2, .info-card h2, .payment-details-card h2 {
-    /* 💡 COLOR ÚNICO: Usamos el Rosa Neón para los títulos de los formularios */
-    color: var(--accent-pink);
+    color: var(--primary-blue);
     text-align: center;
     margin-bottom: 25px;
     font-size: 2em;
@@ -834,9 +738,8 @@ footer p {
 
 .form-group input:focus,
 .form-group select:focus {
-    /* 💡 COLOR ÚNICO: Usamos Azul Neón en el focus de los inputs de formulario */
-    border-color: var(--accent-blue-neon);
-    box-shadow: 0 0 8px var(--accent-blue-shadow);
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 8px var(--shadow-light);
 }
 
 .form-group input::placeholder {
@@ -861,8 +764,7 @@ footer p {
 }
 
 .payment-details-card h2 {
-    /* 💡 COLOR ÚNICO: Usamos el Rosa Neón en el título de la tarjeta de pago */
-    color: var(--accent-pink);
+    color: var(--primary-blue);
     margin-bottom: 25px;
     font-size: 2em;
 }
@@ -874,8 +776,7 @@ footer p {
 }
 
 .payment-details-card strong {
-    /* 💡 COLOR ÚNICO: Usamos Azul Neón para resaltar valores */
-    color: var(--accent-blue-neon);
+    color: var(--accent-green);
 }
 
 .payment-instructions {
@@ -893,12 +794,11 @@ footer p {
 }
 
 .payment-instructions code {
-    /* 💡 COLOR ÚNICO: Usamos un Morado Principal semi-transparente como fondo */
-    background-color: rgba(156, 39, 176, 0.1);
+    background-color: rgba(0, 123, 255, 0.1);
     border-radius: 4px;
     padding: 2px 6px;
     font-family: 'Consolas', 'Courier New', monospace; /* Fuente monoespaciada */
-    color: var(--primary-purple);
+    color: var(--primary-blue);
     font-weight: 600;
     display: inline-block;
     word-break: break-all;
@@ -926,8 +826,7 @@ footer p {
 }
 
 .game-info strong {
-    /* 💡 COLOR ÚNICO: Usamos Rosa Neón para resaltar info del juego */
-    color: var(--accent-pink);
+    color: var(--accent-green);
 }
 
 /* Styles for Payment Selection page */
@@ -946,8 +845,7 @@ footer p {
 }
 
 .transaction-summary strong {
-    /* 💡 COLOR ÚNICO: Usamos Azul Neón para el resumen de la transacción */
-    color: var(--accent-blue-neon);
+    color: var(--accent-green);
 }
 
 /* Styles for Info Pages (Privacy, Terms) */
@@ -965,8 +863,7 @@ footer p {
 }
 
 .info-card h3 {
-    /* 💡 COLOR ÚNICO: Usamos Azul Neón para los subtítulos de Info */
-    color: var(--accent-blue-neon);
+    color: var(--primary-blue);
     margin-top: 25px;
     margin-bottom: 12px;
     font-size: 1.5em;
@@ -976,7 +873,6 @@ footer p {
     margin-bottom: 15px;
     font-size: 0.95em;
     color: var(--text-color);
-    text-align: left; /* CORRECCIÓN: Asegurar alineación izquierda en info-card */
 }
 
 .info-card ul {
@@ -992,8 +888,7 @@ footer p {
 }
 
 .info-card a {
-    /* 💡 COLOR ÚNICO: Usamos Rosa Neón en los links de Info */
-    color: var(--accent-pink);
+    color: var(--primary-blue);
     text-decoration: none;
 }
 
@@ -1075,6 +970,17 @@ footer p {
     
     /* *** FIN DE LA CORRECCIÓN PARA REDUCIR LA BARRA SUPERIOR EN MÓVIL *** */
 
+    .hero {
+        padding: 40px 15px;
+    }
+
+    .hero h1 {
+        font-size: 2.2em;
+    }
+
+    .hero p {
+        font-size: 1em;
+    }
 
     .home-main h1 {
         font-size: 1.8em;
@@ -1140,6 +1046,14 @@ footer p {
         max-height: 60px; /* Logo más pequeño en móviles muy pequeños */
     }
 
+    .hero h1 {
+        font-size: 1.8em;
+        margin-bottom: 10px;
+    }
+
+    .hero p {
+        font-size: 0.95em;
+    }
 
     .home-main h1 {
         font-size: 1.6em;
@@ -1244,8 +1158,7 @@ footer p {
 .copy-feedback {
     display: none; /* Oculto por defecto, se muestra con JS */
     margin-left: 10px;
-    /* 💡 COLOR ÚNICO: Usamos Azul Neón para el mensaje de éxito "Copiado!" */
-    color: var(--accent-blue-neon); 
+    color: var(--accent-green); /* Usa tu verde de acento para el éxito */
     font-size: 0.9em;
     font-weight: bold;
     white-space: nowrap; /* Evita que se rompa el mensaje */
@@ -1390,8 +1303,7 @@ footer p {
 }
 
 .cart-icon:hover {
-    /* 💡 COLOR ÚNICO: Usamos Rosa Neón en el hover del carrito */
-    color: var(--accent-pink);
+    color: var(--primary-blue);
 }
 
 .cart-count {
@@ -1427,8 +1339,7 @@ footer p {
 }
 
 .auth-btn:hover {
-    /* 💡 COLOR ÚNICO: Usamos Azul Neón en el hover del botón de perfil */
-    color: var(--accent-blue-neon);
+    color: var(--primary-blue);
 }
 
 /* Contenido del Dropdown */
@@ -1460,8 +1371,7 @@ footer p {
 
 .dropdown-content a:hover {
     background-color: var(--bg-color);
-    /* 💡 COLOR ÚNICO: Usamos Morado Principal en el hover de los links del dropdown */
-    color: var(--primary-purple);
+    color: var(--primary-blue);
 }
 
 .cart-sidebar {
@@ -1499,8 +1409,7 @@ footer p {
 .cart-header h2 {
     margin: 0;
     font-size: 1.5em;
-    /* 💡 COLOR ÚNICO: Usamos el Rosa Neón en el título del carrito */
-    color: var(--accent-pink);
+    color: var(--text-color);
 }
 
 #close-cart-btn {
@@ -1581,20 +1490,13 @@ footer p {
 .total-amount {
     font-size: 1.5em;
     font-weight: bold;
-    /* 💡 COLOR ÚNICO: Usamos Rosa Neón para el monto total del carrito */
-    color: var(--accent-pink);
+    color: var(--accent-green);
     margin-bottom: 15px;
 }
 
 .checkout-btn {
     width: 100%;
-    /* 💡 GRADIENTE ÚNICO: Usamos un gradiente de Checkout único (Rosa a Oscuro) */
-    background: var(--checkout-button-gradient); 
-}
-
-.checkout-btn:hover {
-    /* 💡 GRADIENTE ÚNICO: Usamos un gradiente de Checkout de hover único */
-    background: var(--checkout-button-hover-gradient);
+    /* Reutiliza el estilo .btn-primary, pero si necesitas un estilo único puedes agregarlo */
 }
 
 .checkout-btn:disabled {
@@ -1616,8 +1518,7 @@ footer p {
     height: 35px;
     border-radius: 50%;
     object-fit: cover;
-    /* 💡 COLOR ÚNICO: Usamos Azul Neón en el borde de la imagen de perfil */
-    border: 2px solid var(--accent-blue-neon); 
+    border: 2px solid var(--accent-green); /* Borde verde para indicar sesión activa */
 }
 
 /* Ocultar el ícono genérico y mostrar la imagen se maneja en JavaScript,
@@ -1643,8 +1544,7 @@ footer p {
 .wallet-display {
     display: flex;
     align-items: center;
-    /* 💡 COLOR ÚNICO: Usamos Azul Neón para el saldo */
-    color: var(--accent-blue-neon); 
+    color: var(--accent-green); 
     font-weight: bold;
     font-size: 0.9em;
     min-width: 75px; /* Evita saltos de diseño al cargar el saldo */
@@ -1652,7 +1552,7 @@ footer p {
 
 .wallet-display .fas.fa-wallet {
     margin-right: 8px;
-    color: var(--primary-purple);
+    color: var(--primary-blue);
     font-size: 1.1em;
 }
 
@@ -1687,7 +1587,7 @@ footer p {
     height: 35px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid var(--accent-blue-neon); /* Borde Azul Neón */
+    border: 2px solid var(--accent-green); /* Borde verde para indicar sesión activa */
     /* Asegura que la imagen de perfil se muestre */
 }
 
@@ -1695,8 +1595,7 @@ footer p {
     display: block;
     padding: 10px 15px;
     font-weight: bold;
-    /* 💡 COLOR ÚNICO: Usamos Rosa Neón para el nombre del usuario en el dropdown */
-    color: var(--accent-pink); 
+    color: var(--primary-blue); /* Destacar el nombre del usuario */
     text-align: center;
 }
 
@@ -1722,8 +1621,7 @@ footer p {
 }
 
 .auth-dropdown .logout-btn:hover {
-    /* 💡 COLOR ÚNICO: Usamos el Morado Principal en el hover del logout */
-    background-color: var(--primary-purple); 
+    background-color: var(--hover-blue);
     color: var(--white, #fff);
 }
 
@@ -1756,4 +1654,113 @@ footer p {
      * que tenga un ancho definido.
      */
     margin: 20px auto 0 !important; 
+}
+
+/* ==================================== */
+/* === ESTILOS DEL CARRUSEL (NUEVO) === */
+/* ==================================== */
+
+/* 1. Contenedor principal del carrusel (usa la clase .hero) */
+.hero.carousel-wrapper {
+    /* Sobreescribe los estilos del hero section anterior */
+    background: var(--card-bg); 
+    padding: 0 !important; 
+    overflow: hidden; 
+    position: relative;
+    height: 350px; /* Altura un poco mayor */
+    width: 100%;
+    margin-bottom: 30px;
+    border-radius: 12px; /* Mantener un radio similar al de las secciones */
+    box-shadow: 0 5px 15px var(--shadow-dark);
+    border: 1px solid var(--border-color);
+}
+
+/* 2. La pista del carrusel */
+.carousel-track {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    transition: transform 0.5s ease-in-out;
+}
+
+/* 3. Cada slide (imagen individual) */
+.carousel-slide {
+    min-width: 100%;
+    height: 100%;
+    flex-shrink: 0;
+}
+
+.carousel-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Asegura que la imagen cubra el área sin distorsión */
+}
+
+/* 4. Flechas de Navegación */
+.carousel-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(26, 0, 51, 0.6); /* var(--card-bg) con transparencia */
+    color: var(--carousel-arrow-color, var(--accent-pink));
+    border: none;
+    padding: 15px 10px;
+    cursor: pointer;
+    font-size: 1.5em;
+    z-index: 10;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.carousel-arrow:hover {
+    background: rgba(156, 39, 176, 0.8); /* var(--primary-purple) con transparencia */
+    color: var(--white); 
+}
+
+.carousel-arrow.prev {
+    left: 0;
+    border-radius: 0 5px 5px 0;
+}
+
+.carousel-arrow.next {
+    right: 0;
+    border-radius: 5px 0 0 5px;
+}
+
+/* 5. Puntos de Navegación */
+.carousel-dots {
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: rgba(240, 240, 240, 0.5); /* var(--text-color) semi-transparente */
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.3s;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.dot.active {
+    background-color: var(--accent-pink); 
+    transform: scale(1.2);
+    border-color: var(--accent-pink);
+}
+
+/* Ajuste Responsivo */
+@media (max-width: 768px) {
+    .hero.carousel-wrapper {
+        height: 250px; 
+    }
+}
+@media (max-width: 480px) {
+    .hero.carousel-wrapper {
+        height: 180px; 
+    }
 }
