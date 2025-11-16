@@ -1,267 +1,127 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GamingKings - Centro de Recargas</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="preload" href="images/gamingkings_logo.png" as="image">
-    <link rel="preload" href="images/flag_ve.png" as="image">
-    <link rel="preload" href="images/flag_us.png" as="image">
-    <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GamingKings - Centro de Recargas</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="preload" href="images/gamingkings_logo.png" as="image">
+    <link rel="preload" href="images/flag_ve.png" as="image">
+    <link rel="preload" href="images/flag_us.png" as="image">
+    <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
 </head>
 <body>
 
 <header>
-    <div class="header-left">
-        <a href="index.html" class="logo-link">
-            <img src="images/gamingkings_logo.png" alt="GamingKings" class="logo-img">
-        </a>
-    </div>
-    <div class="header-right">
-        
-        <div class="wallet-container" id="wallet-container" style="display:none;"> 
-            <div class="wallet-display">
-                <i class="fas fa-wallet"></i>
-                <span id="virtual-balance">$. --.--</span>
-            </div>
-            <a href="rechargedwallet.html" class="recharge-btn" title="Recargar Saldo">
-                <i class="fas fa-plus"></i>
-            </a>
-        </div>
-        <div class="search-bar">
-            <input type="text" placeholder="Buscar juego...">
-            <i class="fas fa-search"></i>
-        </div>
+    <div class="header-left">
+        <a href="index.html" class="logo-link">
+            <img src="images/gamingkings_logo.png" alt="GamingKings" class="logo-img">
+        </a>
+    </div>
+    <div class="header-right">
+        
+        <div class="wallet-container" id="wallet-container" style="display:none;"> 
+            <div class="wallet-display">
+                <i class="fas fa-wallet"></i>
+                <span id="virtual-balance">$. --.--</span>
+            </div>
+            <a href="rechargedwallet.html" class="recharge-btn" title="Recargar Saldo">
+                <i class="fas fa-plus"></i>
+            </a>
+        </div>
+        <div class="search-bar">
+            <input type="text" placeholder="Buscar juego...">
+            <i class="fas fa-search"></i>
+        </div>
 
-        <div class="custom-currency-selector" id="custom-currency-selector">
-            <div class="selected-currency" id="selected-currency">
-                <img src="images/flag_ve.png" alt="Venezuela Flag"> <span>Bs. (VES)</span> <i class="fas fa-chevron-down"></i>
-            </div>
-            <div class="currency-options" id="currency-options">
-                <div class="option" data-value="VES">
-                    <img src="images/flag_ve.png" alt="Venezuela Flag"> <span>Bs. (VES)</span>
-                </div>
-                <div class="option" data-value="USD">
-                    <img src="images/flag_us.png" alt="USA Flag"> <span>$ (USD)</span>
-                </div>
-                <div class="option" data-value="USDM"> 
-                    <img src="images/favicon.ico" alt="GamingKings USD Flag"> <span>$ (GKUSD)</span>
-                </div>
-            </div>
-        </div>
+        <div class="custom-currency-selector" id="custom-currency-selector">
+            <div class="selected-currency" id="selected-currency">
+                <img src="images/flag_ve.png" alt="Venezuela Flag"> <span>Bs. (VES)</span> <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="currency-options" id="currency-options">
+                <div class="option" data-value="VES">
+                    <img src="images/flag_ve.png" alt="Venezuela Flag"> <span>Bs. (VES)</span>
+                </div>
+                <div class="option" data-value="USD">
+                    <img src="images/flag_us.png" alt="USA Flag"> <span>$ (USD)</span>
+                </div>
+                <div class="option" data-value="USDM"> 
+                    <img src="images/favicon.ico" alt="GamingKings USD Flag"> <span>$ (GKUSD)</span>
+                </div>
+            </div>
+        </div>
 
-        <div class="cart-icon" id="cart-icon">
-            <i class="fas fa-shopping-cart"></i>
-            <span class="cart-count" id="cart-count">0</span>
-        </div>
+        <div class="cart-icon" id="cart-icon">
+            <i class="fas fa-shopping-cart"></i>
+            <span class="cart-count" id="cart-count">0</span>
+        </div>
 
-        <div class="auth-dropdown" id="auth-dropdown">
-            <button class="auth-btn" id="toggle-login-btn">
-                <i class="fas fa-user-circle"></i>
-                <img src="images/default_user.png" alt="Usuario" class="auth-user-picture" id="auth-user-picture" style="display:none;">
-            </button>
-            
-            <div class="dropdown-content">
-                <a href="#" class="auth-display-name" id="auth-display-name">Iniciar Sesión</a>
-                <hr>
-                
-                <div id="google-login-btn" style="display: block;">
-                    </div>
-                
-                <button id="logout-btn" class="logout-btn" style="display:none;">
-                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-                </button>
-            </div>
-        </div>
-    </div>
-</header>
-    <main class="home-main">
-                <section class="hero carousel-wrapper">
-            <div class="carousel-track" id="main-carousel-track">
-                </div>
-            
-            <div class="carousel-dots" id="carousel-dots">
-                </div>
-            
-            <button class="carousel-arrow prev" id="carousel-prev">
-                <i class="fas fa-chevron-left"></i>
-            </button>
-            <button class="carousel-arrow next" id="carousel-next">
-                <i class="fas fa-chevron-right"></i>
-            </button>
-        </section>
-                <section>
-            <h2>Productos Disponibles</h2>
-            <p class="small-text">Haz clic en tu juego para comenzar la recarga.</p>
-            <div class="product-grid" id="product-grid">
-            </div>
-        </section>
-    </main>
- 
-    <footer>
-        <div class="footer-content">
-            <p>&copy; 2025 GamingKings. Todos los derechos reservados.</p>
-            <div class="footer-links">
-                <a href="privacy.html">Políticas de Privacidad</a>
-                <a href="terms.html">Términos de Servicio</a>
-            </div>
-            <a href="https://wa.me/573021090841" target="_blank" class="whatsapp-link">
-                <i class="fab fa-whatsapp"></i> Contáctanos por WhatsApp
-            </a>
-        </div>
-    </footer>
-
-    <div class="cart-sidebar" id="cart-sidebar">
-        <div class="cart-header">
-            <h2>Tu Carrito</h2>
-            <button class="close-btn" id="close-cart-btn"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="cart-items-wrapper">
-            <div class="cart-items" id="cart-items">
-                </div>
-        </div>
-        <div class="cart-footer">
-            <div class="cart-total-info">
-                <span>Total:</span>
-                <span id="cart-total">$0.00</span>
-            </div>
-            <button class="btn-primary checkout-btn" id="checkout-btn" disabled>Proceder al Pago</button>
-        </div>
-    </div>
-
-        <script src="script.js"></script>
-    <script src="load-products.js"></script>
-
-    <script>
-        // 🎯 MODIFICACIÓN CLAVE: Ahora se hace un FETCH a la función de Netlify
-        async function fetchCarouselImageLinks() {
-            try {
-                // Llama al endpoint de Netlify que devuelve la configuración, incluyendo las imágenes
-                const response = await fetch('/.netlify/functions/get-site-config');
-                
-                if (!response.ok) {
-                    console.error('Error al cargar la configuración del sitio:', response.statusText);
-                    return [];
-                }
-
-                const config = await response.json();
-                
-                const imageKeys = ['img1', 'img2', 'img3', 'img4'];
-                
-                // Definimos valores predeterminados para el texto alternativo y los enlaces de destino
-                const defaultLinks = {
-                    'img1': 'freefire.html',
-                    'img2': 'tiktok.html',
-                    'img3': 'bloodstrike.html',
-                    'img4': '#'
-                };
-                const defaultAlts = {
-                    'img1': 'Recarga Free Fire',
-                    'img2': 'Recarga TikTok',
-                    'img3': 'Recarga Blood Strike',
-                    'img4': 'Promociones GamingKings'
-                };
-
-                // Mapeamos los datos de configuración a la estructura de imágenes
-                const images = imageKeys
-                    .map(key => ({
-                        url: config[key], // Toma la URL de la respuesta de la función
-                        alt: defaultAlts[key] || '',
-                        link: defaultLinks[key] || '#'
-                    }))
-                    .filter(img => img.url); // Solo incluye si la URL no es nula/vacía
-
-                return images;
-
-            } catch (error) {
-                console.error('Error al conectar con la función de Netlify:', error);
-                // Retorna un array vacío si la carga falla para evitar errores de renderizado
-                return []; 
-            }
-        }
-
-        // 🎯 MODIFICACIÓN CLAVE: Hacemos el listener de DOMContentLoaded asíncrono
-        document.addEventListener('DOMContentLoaded', async () => {
-            const track = document.getElementById('main-carousel-track');
-            const dotsContainer = document.getElementById('carousel-dots');
-            const prevBtn = document.getElementById('carousel-prev');
-            const nextBtn = document.getElementById('carousel-next');
+        <div class="auth-dropdown" id="auth-dropdown">
+            <button class="auth-btn" id="toggle-login-btn">
+                <i class="fas fa-user-circle"></i>
+                <img src="images/default_user.png" alt="Usuario" class="auth-user-picture" id="auth-user-picture" style="display:none;">
+            </button>
             
-            // Espera la carga de los links de las imágenes
-            const images = await fetchCarouselImageLinks(); 
-            
-            let currentIndex = 0;
-            let slideCount = images.length;
+            <div class="dropdown-content">
+                <a href="#" class="auth-display-name" id="auth-display-name">Iniciar Sesión</a>
+                <hr>
+                
+                <div id="google-login-btn" style="display: block;">
+                    </div>
+                
+                <button id="logout-btn" class="logout-btn" style="display:none;">
+                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+    <main class="home-main">
+        <section class="hero">
+            <h1>¡Recarga tus Juegos Favoritos al Mejor Precio!</h1>
+            <p>Diamantes, monedas, saldo y más para Free Fire, TikTok y Blood Strike. Rápido, seguro y al instante.</p>
+        </section>
 
-            if (slideCount === 0 || !track || !dotsContainer) return;
+        <section>
+            <h2>Juegos Disponibles</h2>
+            <p class="small-text">Haz clic en tu juego para comenzar la recarga.</p>
+            <div class="product-grid" id="product-grid">
+            </div>
+        </section>
+    </main>
+ 
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 GamingKings. Todos los derechos reservados.</p>
+            <div class="footer-links">
+                <a href="privacy.html">Políticas de Privacidad</a>
+                <a href="terms.html">Términos de Servicio</a>
+            </div>
+            <a href="https://wa.me/573021090841" target="_blank" class="whatsapp-link">
+                <i class="fab fa-whatsapp"></i> Contáctanos por WhatsApp
+            </a>
+        </div>
+    </footer>
 
-            // 1. Renderizar Slides y Dots
-            images.forEach((img, index) => {
-                // Crear Slide (imagen dentro de un link)
-                const slide = document.createElement('a');
-                slide.classList.add('carousel-slide');
-                slide.href = img.link || '#'; 
-                
-                const imgElement = document.createElement('img');
-                imgElement.src = img.url;
-                imgElement.alt = img.alt;
-                slide.appendChild(imgElement);
-                track.appendChild(slide);
-
-                // Crear Dot
-                const dot = document.createElement('span');
-                dot.classList.add('dot');
-                if (index === 0) dot.classList.add('active');
-                dot.addEventListener('click', () => {
-                    moveToSlide(index);
-                });
-                dotsContainer.appendChild(dot);
-            });
-
-            // Seleccionar los dots después de crearlos
-            const dots = document.querySelectorAll('#carousel-dots .dot');
-            
-            // 2. Lógica de Movimiento
-            function moveToSlide(index) {
-                if (index < 0) {
-                    index = slideCount - 1; // Volver al final (Movimiento infinito)
-                } else if (index >= slideCount) {
-                    index = 0; // Volver al inicio (Movimiento infinito)
-                }
-
-                currentIndex = index;
-                const offset = -currentIndex * 100;
-                track.style.transform = `translateX(${offset}%)`;
-
-                // Actualizar Dots
-                dots.forEach(dot => dot.classList.remove('active'));
-                if (dots[currentIndex]) {
-                    dots[currentIndex].classList.add('active');
-                }
-            }
-
-            // 3. Control de Flechas
-            prevBtn.addEventListener('click', () => moveToSlide(currentIndex - 1));
-            nextBtn.addEventListener('click', () => moveToSlide(currentIndex + 1));
-
-            // 4. Auto-Play 
-            let autoPlayInterval = setInterval(() => {
-                moveToSlide(currentIndex + 1);
-            }, 5000); // Cambia cada 5 segundos
-
-            // Pausar auto-play en hover
-            const carouselWrapper = document.querySelector('.carousel-wrapper');
-            if(carouselWrapper) {
-                carouselWrapper.addEventListener('mouseenter', () => clearInterval(autoPlayInterval));
-                carouselWrapper.addEventListener('mouseleave', () => {
-                    autoPlayInterval = setInterval(() => {
-                        moveToSlide(currentIndex + 1);
-                    }, 5000);
-                });
-            }
-        });
-    </script>
-    </body>
+    <div class="cart-sidebar" id="cart-sidebar">
+        <div class="cart-header">
+            <h2>Tu Carrito</h2>
+            <button class="close-btn" id="close-cart-btn"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="cart-items-wrapper">
+            <div class="cart-items" id="cart-items">
+                </div>
+        </div>
+        <div class="cart-footer">
+            <div class="cart-total-info">
+                <span>Total:</span>
+                <span id="cart-total">$0.00</span>
+            </div>
+            <button class="btn-primary checkout-btn" id="checkout-btn" disabled>Proceder al Pago</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+    <script src="load-products.js"></script>
+</body>
 </html>
