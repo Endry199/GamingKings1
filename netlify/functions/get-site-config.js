@@ -18,15 +18,17 @@ const DB_TO_CSS_MAP = {
     'border_color': '--border-color',
     'shadow_light': '--shadow-light',
     'button_text_color': '--button-text-color', 
-    // 🎯 CAMBIO CLAVE: Agregado el mapeo para la tasa de cambio
     'tasa_dolar': '--tasa-dolar', 
-    // 🎯 NUEVAS CLAVES: Mapeo de URLs para el carrusel de imágenes
+    // 🎯 CLAVES DEL CARRUSEL
     'img1': '--carousel-img1', 
     'img2': '--carousel-img2', 
     'img3': '--carousel-img3', 
     'img4': '--carousel-img4',
     // Asegúrate de que esta lista sea idéntica a las columnas de tu tabla
 };
+
+// 🚨 Nueva constante para identificar rápidamente las columnas de imagen
+const IMAGE_DB_KEYS = ['img1', 'img2', 'img3', 'img4'];
 
 exports.handler = async function(event, context) {
     if (event.httpMethod !== "GET") {
@@ -43,19 +45,17 @@ exports.handler = async function(event, context) {
 
     try {
         // --- 2. Consulta a Supabase ---
-        // 🟢 CORRECCIÓN CLAVE: Quitamos .single() y usamos .limit(1)
         const { data: rows, error } = await supabase
             .from('configuracion_sitio') 
             .select('*') 
             .eq('id', 1) 
-            .limit(1); // Traeremos 0 o 1 fila
+            .limit(1); 
         
         if (error) {
             console.error(`[NETLIFY] ERROR EN DB: ${error.message}`);
             throw new Error(error.message); 
         }
         
-        // 🟢 COMPROBACIÓN CLAVE: Extraemos la fila de la matriz si existe.
         const config = (rows && rows.length > 0) ? rows[0] : null;
         
         console.log("[NETLIFY] LOG: Array de filas retornado por Supabase:", JSON.stringify(rows));
@@ -63,27 +63,32 @@ exports.handler = async function(event, context) {
             
         // --- 3. Manejo de la No Existencia (0 Filas) ---
         if (!config) {
-            // El log anterior mostró que config era 'null' porque rows.length era 0.
             console.warn(`[NETLIFY] Advertencia: No se encontró la fila con ID=1. Devolviendo configuración vacía.`);
 
             return {
                 statusCode: 200,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({}), // Devuelve objeto vacío
+                body: JSON.stringify({}), 
             };
         }
 
         // --- 4. Mapeo de Claves (Deg DB a CSS) ---
         const cssConfig = {};
-        // Usamos Object.entries para iterar sobre las columnas de la DB y sus valores
+        
         for (const [dbKey, value] of Object.entries(config)) {
             const cssKey = DB_TO_CSS_MAP[dbKey];
             
             if (cssKey) {
-                // Si el valor es null/undefined en la DB, no lo incluimos, 
-                // ya que el front-end debe usar el valor CSS por defecto.
-                if (value !== null && value !== undefined) { 
-                    cssConfig[cssKey] = value;
+                // 1. Evitar valores nulos/vacíos
+                if (value !== null && value !== undefined && value !== '') { 
+                    let finalValue = value;
+                    
+                    // 🚨 CORRECCIÓN: Si es una clave de imagen, envuelve el valor en url('')
+                    if (IMAGE_DB_KEYS.includes(dbKey)) {
+                        finalValue = `url('${value}')`;
+                    }
+
+                    cssConfig[cssKey] = finalValue;
                 }
             }
         }
