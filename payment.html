@@ -1175,18 +1175,6 @@
                     // 🔑 LÍNEA CLAVE AÑADIDA: Refrescar el saldo después de una deducción exitosa
                     window.refreshWalletBalance(); 
 
-                    // 🎯 INICIO DE LA CORRECCIÓN: Obtener y validar el google_id para el flujo de notificación
-                    const currentUser = JSON.parse(localStorage.getItem('currentUserData') || '{}'); 
-                    const loggedInGoogleId = currentUser.google_id;
-
-                    if (!loggedInGoogleId) {
-                        console.error('ERROR CRÍTICO: Se dedujo el saldo, pero falta el ID de Google para la notificación. No se enviará la notificación por Telegram, solo el correo del cliente.');
-                        alert('Advertencia: El saldo fue deducido exitosamente, pero falló la notificación automática. Contacta a soporte con la captura de este mensaje.');
-                        // NOTA: Se sigue con la notificación, aunque se haya dado la advertencia, para no romper el flujo
-                    }
-                    // 🎯 FIN DE LA CORRECCIÓN
-
-
                     // a. Preparar FormData para la función process-payment (simulando formulario)
                     const processFormData = new FormData();
                     processFormData.append('paymentMethod', 'wallet');
@@ -1194,11 +1182,6 @@
                     processFormData.append('whatsappNumber', whatsappInput.value.trim());
                     // Enviamos la cadena de valor del input hidden
                     processFormData.append('paymentReceipt', 'Wallet_Deduction_Flow'); 
-                    
-                    // 2. Añadir el google_id al processFormData
-                    if (loggedInGoogleId) {
-                        processFormData.append('google_id', loggedInGoogleId);
-                    }
                     
                     // Añadir todos los datos de transacción
                     processFormData.append('cartDetails', JSON.stringify(Array.isArray(transactionDetails) ? transactionDetails : [transactionDetails]));
@@ -1340,21 +1323,6 @@
         }
         
         // Lógica para flujo de pago normal (requiere comprobante o ID - Pago Móvil/Zinli/Binance ID)
-        
-        // 🎯 INICIO DE LA CORRECCIÓN: Agregar google_id al FormData
-        const currentUser = JSON.parse(localStorage.getItem('currentUserData') || '{}'); 
-        const loggedInGoogleId = currentUser.google_id;
-
-        if (!loggedInGoogleId) {
-            alert('Error: Falta el ID de Google (google_id) para buscar el email. Por favor, inicia sesión de nuevo.');
-            finalizeBtn.disabled = false;
-            finalizeBtn.textContent = 'Finalizar Recarga';
-            return;
-        }
-
-        // 1. Añadir el google_id al FormData
-        formData.append('google_id', loggedInGoogleId);
-        // 🎯 FIN DE LA CORRECCIÓN
         
         let requiresReceipt = (selectedPaymentMethod === 'pago-movil' || selectedPaymentMethod === 'zinli');
 
