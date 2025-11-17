@@ -121,11 +121,12 @@ exports.handler = async function(event, context) {
     const SMTP_USER = process.env.SMTP_USER;
     const SMTP_PASS = process.env.SMTP_PASS;
     const SENDER_EMAIL = process.env.SENDER_EMAIL || SMTP_USER;
-    // ⭐️ CAMBIO 1: Declaración de la variable del Recargador
     const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR;
-    // ⭐️ FIN DE CAMBIO 1
     
-    // ⭐️ CAMBIO 2: Añadir WHATSAPP_NUMBER_RECARGADOR a la validación
+    // 📢 DEBUG LOG 1: Verificar si el número de recargador está presente
+    console.log(`[DEBUG - RECARGADOR] WHATSAPP_NUMBER_RECARGADOR is set: ${!!WHATSAPP_NUMBER_RECARGADOR}`);
+    // 📢 FIN DEBUG LOG 1
+    
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !SMTP_HOST || !parseInt(SMTP_PORT, 10) || !SMTP_USER || !SMTP_PASS || !supabaseUrl || !supabaseServiceKey) {
         console.error("Faltan variables de entorno requeridas o SMTP_PORT no es un número válido.");
         return {
@@ -133,7 +134,6 @@ exports.handler = async function(event, context) {
             body: JSON.stringify({ message: "Error de configuración del servidor: Faltan credenciales o configuración inválida." })
         };
     }
-    // ⭐️ FIN DE CAMBIO 2
 
     // --- Extracción y Normalización de Datos del Carrito y Globales ---
     const { finalPrice, currency, paymentMethod, email, whatsappNumber, cartDetails } = data;
@@ -351,16 +351,25 @@ exports.handler = async function(event, context) {
         );
     }
     
-    // ⭐️ INICIO DE CAMBIO 3: Lógica para el botón de WhatsApp del Recargador (Múltiples Free Fire Items)
+    // ⭐️ INICIO DE Lógica para el botón de WhatsApp del Recargador (Múltiples Free Fire Items)
     if (WHATSAPP_NUMBER_RECARGADOR) {
+        console.log(`[DEBUG - RECARGADOR] Iniciando iteración para buscar items de Free Fire.`);
+
         const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
 
         // Iterar sobre todos los productos para encontrar Free Fire
         cartItems.forEach((item, index) => {
-            // Se comprueba si el producto es Free Fire (insensible a mayúsculas/minúsculas)
-            if (item.game && item.game.toLowerCase() === 'free fire') {
+            const itemGameName = item.game || 'N/A';
+            // Se usa .toLowerCase() para asegurar la insensibilidad a mayúsculas/minúsculas
+            const isFreeFire = itemGameName.toLowerCase() === 'free fire'; 
+
+            // 📢 DEBUG LOG 2: Log el juego y el resultado de la condición
+            console.log(`[DEBUG - RECARGADOR] Producto ${index + 1}: Game='${itemGameName}', IsFreeFire=${isFreeFire}`);
+
+            // Se comprueba si el producto es Free Fire
+            if (isFreeFire) {
                 const playerIdForWhatsappRecargador = item.playerId || 'N/A';
-                // Reemplazar '+' por su codificación URL (%2B) si packageName contiene '+'
+                // Se reemplaza el '+' por su codificación URL para evitar errores en el link
                 const cleanedPackageNameForWhatsappRecargador = (item.packageName || 'N/A').replace(/\+/g, '%2B');
 
                 let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
@@ -377,10 +386,15 @@ exports.handler = async function(event, context) {
                 inlineKeyboard.push([
                     { text: buttonText, url: whatsappLinkRecargadorButton }
                 ]);
+                
+                // 📢 DEBUG LOG 3: Log cuando un botón es generado
+                console.log(`[DEBUG - RECARGADOR] ✅ Botón de Recargador generado para Producto ${index + 1} (${itemGameName}).`);
             }
         });
+    } else {
+        console.log(`[DEBUG - RECARGADOR] WHATSAPP_NUMBER_RECARGADOR no está configurado. Se omite la generación de botones de recarga.`);
     }
-    // ⭐️ FIN DE CAMBIO 3
+    // ⭐️ FIN DE Lógica para el botón de WhatsApp del Recargador
 
     
     const replyMarkup = {
