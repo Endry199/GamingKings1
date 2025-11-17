@@ -121,7 +121,11 @@ exports.handler = async function(event, context) {
     const SMTP_USER = process.env.SMTP_USER;
     const SMTP_PASS = process.env.SMTP_PASS;
     const SENDER_EMAIL = process.env.SENDER_EMAIL || SMTP_USER;
-
+    // ⭐️ CAMBIO 1: Declaración de la variable del Recargador
+    const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR;
+    // ⭐️ FIN DE CAMBIO 1
+    
+    // ⭐️ CAMBIO 2: Añadir WHATSAPP_NUMBER_RECARGADOR a la validación
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !SMTP_HOST || !parseInt(SMTP_PORT, 10) || !SMTP_USER || !SMTP_PASS || !supabaseUrl || !supabaseServiceKey) {
         console.error("Faltan variables de entorno requeridas o SMTP_PORT no es un número válido.");
         return {
@@ -129,6 +133,7 @@ exports.handler = async function(event, context) {
             body: JSON.stringify({ message: "Error de configuración del servidor: Faltan credenciales o configuración inválida." })
         };
     }
+    // ⭐️ FIN DE CAMBIO 2
 
     // --- Extracción y Normalización de Datos del Carrito y Globales ---
     const { finalPrice, currency, paymentMethod, email, whatsappNumber, cartDetails } = data;
@@ -176,7 +181,7 @@ exports.handler = async function(event, context) {
     let id_transaccion_generado;
 
     try {
-        // ⭐️ CAMBIO 1: Reemplazo de prefijo MALOK por GAMING
+        // Reemplazo de prefijo MALOK por GAMING (si aplica)
         id_transaccion_generado = `GAMING-${Date.now()}`;
 
         const firstItem = cartItems[0] || {};
@@ -237,9 +242,9 @@ exports.handler = async function(event, context) {
 
 
     let messageText = isWalletRecharge 
-        // ⭐️ CAMBIO 2: Reemplazo de Malok Recargas por GamingKings
+        // Reemplazo de Malok Recargas por GamingKings (si aplica)
         ? `💸 Nueva Recarga de Billetera GamingKings 💸\n\n`
-        // ⭐️ CAMBIO 3: Reemplazo de Malok Recargas por GamingKings
+        // Reemplazo de Malok Recargas por GamingKings (si aplica)
         : `✨ Nueva Recarga (CARRITO) GamingKings ✨\n\n`;
     
     messageText += `*ID de Transacción:* \`${id_transaccion_generado || 'N/A'}\`\n`;
@@ -345,6 +350,38 @@ exports.handler = async function(event, context) {
             [{ text: "💬 Contactar Cliente por WhatsApp", url: whatsappLink }]
         );
     }
+    
+    // ⭐️ INICIO DE CAMBIO 3: Lógica para el botón de WhatsApp del Recargador (Múltiples Free Fire Items)
+    if (WHATSAPP_NUMBER_RECARGADOR) {
+        const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
+
+        // Iterar sobre todos los productos para encontrar Free Fire
+        cartItems.forEach((item, index) => {
+            // Se comprueba si el producto es Free Fire (insensible a mayúsculas/minúsculas)
+            if (item.game && item.game.toLowerCase() === 'free fire') {
+                const playerIdForWhatsappRecargador = item.playerId || 'N/A';
+                // Reemplazar '+' por su codificación URL (%2B) si packageName contiene '+'
+                const cleanedPackageNameForWhatsappRecargador = (item.packageName || 'N/A').replace(/\+/g, '%2B');
+
+                let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
+                whatsappMessageRecargador += `*ID de Transacción:* ${id_transaccion_generado}\n`;
+                whatsappMessageRecargador += `*ID de Jugador:* ${playerIdForWhatsappRecargador}\n`;
+                whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageNameForWhatsappRecargador}\n`;
+                
+                // Se añade el índice del producto para distinguir si hay varios Free Fire
+                const buttonText = `📲 Recargador FF - Prod ${index + 1}`; 
+                
+                const whatsappLinkRecargadorButton = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
+
+                // Añadir el botón de WhatsApp para el recargador en una fila separada
+                inlineKeyboard.push([
+                    { text: buttonText, url: whatsappLinkRecargadorButton }
+                ]);
+            }
+        });
+    }
+    // ⭐️ FIN DE CAMBIO 3
+
     
     const replyMarkup = {
         inline_keyboard: inlineKeyboard
@@ -472,7 +509,7 @@ exports.handler = async function(event, context) {
         const mailOptions = {
             from: SENDER_EMAIL,
             to: email,
-            // ⭐️ CAMBIO 4: Reemplazo de Malok Recargas por GamingKings
+            // Reemplazo de Malok Recargas por GamingKings (si aplica)
             subject: `🎉 Tu Solicitud de Recarga (Pedido #${id_transaccion_generado}) con GamingKings ha sido Recibida! 🎉`,
             html: `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
