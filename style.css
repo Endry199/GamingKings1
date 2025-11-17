@@ -1447,6 +1447,31 @@ footer p {
     margin-bottom: 20px;
 }
 
+/* ==================================== */
+/* === SOLUCIÓN PARA SCROLL DEL CARRITO === */
+/* ==================================== */
+
+/* 1. Contenedor de los ítems del carrito */
+/* Esto permite que la lista de productos use el espacio restante y aplique scroll */
+#cart-items-container {
+    flex-grow: 1; /* Permite que este contenedor tome todo el espacio restante */
+    overflow-y: auto; /* *** CLAVE: Habilita el scroll vertical cuando el contenido exceda la altura *** */
+    /* Estilos opcionales para mejorar la UX del scroll */
+    padding-right: 10px; /* Deja espacio para el scrollbar */
+    margin-right: -10px; /* Compensa el padding para mantener el ancho del sidebar */
+    margin-bottom: 20px; /* Espacio para separarlo del footer/botón de pago */
+}
+
+/* 2. Asegurar que el área del total y el botón de pago no se encojan ni se muevan */
+/* Asumo que el contenedor del total y el botón tienen la clase '.cart-footer' o similar, 
+   o son elementos que vienen después de #cart-items-container. 
+   Si usas una clase para el área del total/pago, ajústala aquí. */
+.cart-footer {
+    flex-shrink: 0; /* Evita que el footer se encoja */
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color); /* Línea divisoria, opcional */
+}
+
 .cart-header h2 {
     margin: 0;
     font-size: 1.5em;
