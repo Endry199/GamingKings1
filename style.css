@@ -1279,7 +1279,7 @@ footer p {
     /* 100% del ancho de la tarjeta */
     width: 100%; 
     /* Altura definida o limitada para que no se estire demasiado */
-    height: 500px; 
+    height: 220px; 
     /* **LA SOLUCIÓN A LA DISTORSIÓN:** Asegura que la imagen cubra el área sin estirarse, recortando si es necesario */
     object-fit: contain; 
     /* Esquinas redondeadas en la parte superior de la imagen */
