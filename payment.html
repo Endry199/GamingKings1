@@ -1191,6 +1191,23 @@
                     processFormData.append('totalVES', transactionDetails.totalVES);
                     processFormData.append('totalUSDM', transactionDetails.totalUSDM);
 
+                    // 🛑 INICIO DE CORRECCIÓN PARA GOOGLE_ID (FLUJO WALLET): Se utiliza el mismo token de sesión
+                    const userDataJsonWallet = localStorage.getItem('userData');
+                    let google_id_wallet = null;
+                    if (userDataJsonWallet) {
+                        try {
+                            const userData = JSON.parse(userDataJsonWallet);
+                            google_id_wallet = userData.google_id || userData.sub; 
+                        } catch (error) {
+                            console.error("Error al parsear userData de localStorage para Wallet:", error);
+                        }
+                    }
+                    if (google_id_wallet) {
+                        processFormData.append('google_id', google_id_wallet); 
+                    }
+                    // 🛑 FIN DE CORRECCIÓN PARA GOOGLE_ID (FLUJO WALLET)
+
+
                     // b. Llamar a process-payment
                     const processPaymentResponse = await fetch('/.netlify/functions/process-payment', {
                         method: 'POST',
@@ -1334,6 +1351,28 @@
             }
         }
         
+        // 🛑 INICIO DE CORRECCIÓN: Obtener google_id de la sesión y añadirlo al FormData
+        const userDataJson = localStorage.getItem('userData');
+        let google_id = null;
+        
+        if (userDataJson) {
+            try {
+                const userData = JSON.parse(userDataJson);
+                // El ID de Google se guarda como 'sub' o 'google_id' en el objeto userData
+                google_id = userData.google_id || userData.sub; 
+            } catch (error) {
+                console.error("Error al parsear userData de localStorage:", error);
+            }
+        }
+
+        if (google_id) {
+            // AÑADIR EL ID DE GOOGLE AL FORM DATA
+            formData.append('google_id', google_id); 
+            console.log("Añadido google_id al FormData:", google_id);
+        }
+        // 🛑 FIN DE CORRECCIÓN
+
+
         // Agregamos todos los datos de transacción
         formData.append('cartDetails', JSON.stringify(Array.isArray(transactionDetails) ? transactionDetails : [transactionDetails]));
         
