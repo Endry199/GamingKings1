@@ -262,7 +262,11 @@
                 
                 <div class="form-section-step">
                     <h3>Paso 3: Información de Contacto para Notificaciones</h3>
-                    
+                    <div class="input-group">
+                        <label for="email">Correo Electrónico (Para notificaciones y factura):</label>
+                        <input type="email" id="email" name="email" placeholder="tu_correo@ejemplo.com" required>
+                    </div>
+
                     <div class="input-group">
                         <label for="whatsappNumber">Número de WhatsApp (Para contacto):</label>
                         <input type="tel" id="whatsappNumber" name="whatsappNumber" placeholder="Ej: 584121234567" required>
@@ -569,11 +573,11 @@
         if (!isAssistedFlow()) return;
 
         const whatsappLink = document.querySelector('.whatsapp-link');
-        // const email = document.getElementById('email') ? document.getElementById('email').value.trim() : ''; // REMOVIDO
+        const email = document.getElementById('email') ? document.getElementById('email').value.trim() : '';
         const whatsappNumber = document.getElementById('whatsappNumber') ? document.getElementById('whatsappNumber').value.trim() : '';
-        // const isEmailValid = document.getElementById('email') ? document.getElementById('email').checkValidity() : false; // REMOVIDO
+        const isEmailValid = document.getElementById('email') ? document.getElementById('email').checkValidity() : false;
         
-        if (whatsappLink && whatsappNumber && transactionDetails && transactionDetails.finalPrice) { // 'email' y 'isEmailValid' REMOVIDOS
+        if (whatsappLink && email && isEmailValid && whatsappNumber && transactionDetails && transactionDetails.finalPrice) {
             
             let message = `¡Hola! Quiero confirmar mi pedido de recarga.\n\n*Pedido Asistido:*\n`;
             
@@ -599,8 +603,7 @@
             });
             
             message += `\n*TOTAL A PAGAR:* ${totalAmount} ${currency}`;
-            // message += `\n\n*Correo de Contacto:* ${email}\n*WhatsApp de Contacto:* ${whatsappNumber}\n\nPor favor, ayúdame a finalizar mi compra.`; // REEMPLAZADO
-            message += `\n\n*WhatsApp de Contacto:* ${whatsappNumber}\n\nPor favor, ayúdame a finalizar mi compra.`; // Correo no es necesario, se busca en la sesión
+            message += `\n\n*Correo de Contacto:* ${email}\n*WhatsApp de Contacto:* ${whatsappNumber}\n\nPor favor, ayúdame a finalizar mi compra.`;
 
             const encodedMessage = encodeURIComponent(message);
             
@@ -913,19 +916,17 @@
     /**
      * @MODIFICADO: Verifica la validez del formulario y habilita/deshabilita los botones.
      * Ahora incluye la excepción para 'binance', 'binance-id' y 'wallet'.
-     *
-     * ❌ CAMBIO CLAVE: Se eliminan las validaciones de email.
      */
     function checkFormValidity() {
         const selectedRadio = document.querySelector('input[name="paymentMethod"]:checked');
         const isMethodSelected = selectedRadio !== null;
         const selectedMethodId = selectedRadio ? selectedRadio.value : null; // Obtener el ID seleccionado
         
-        // const emailInput = document.getElementById('email'); // REMOVIDO
+        const emailInput = document.getElementById('email');
         const whatsappInput = document.getElementById('whatsappNumber');
 
-        // const isEmailFilled = emailInput && emailInput.value.trim() !== ''; // REMOVIDO
-        // const isEmailValid = emailInput && emailInput.checkValidity(); // REMOVIDO
+        const isEmailFilled = emailInput && emailInput.value.trim() !== '';
+        const isEmailValid = emailInput && emailInput.checkValidity();
 
         const isWhatsappFilled = whatsappInput && whatsappInput.value.trim() !== '';
 
@@ -935,7 +936,7 @@
             areDetailsFilled = true; 
         } else if (selectedMethodId === 'binance') { // Plisio (Redirección automática)
             areDetailsFilled = true;
-        } else if (selectedMethodId === 'wallet') { // 🎯 Wallet
+        } else if (selectedMethodId === 'wallet') { // 🎯 CAMBIO CLAVE: Wallet RESTAURADA
             areDetailsFilled = true;
         } else if (selectedMethodId === 'binance-id') { // 🆕 Binance ID (Comprobante opcional)
             areDetailsFilled = true;
@@ -951,9 +952,8 @@
         
         // Lógica para el botón de FINALIZAR RECARGA (flujo normal)
         if (!isAssistedFlow()) { 
-            // Se habilita si: hay método, detalles OK, y whatsapp lleno
-            // ❌ CAMBIO CLAVE: Eliminada la validación de email
-            finalizeBtn.disabled = !(isMethodSelected && areDetailsFilled && isWhatsappFilled); 
+            // Se habilita si: hay método, detalles OK, email lleno/válido, y whatsapp lleno
+            finalizeBtn.disabled = !(isMethodSelected && areDetailsFilled && isEmailFilled && isEmailValid && isWhatsappFilled);
         } else {
             // Lógica para el botón de WHATSAPP (flujo asistido)
             updateWhatsAppLink();
@@ -1037,9 +1037,9 @@
             }
 
             // Mover los listeners de los campos de contacto aquí para que estén activos siempre
-            // const emailInput = document.getElementById('email'); // REMOVIDO
+            const emailInput = document.getElementById('email');
             const whatsappInput = document.getElementById('whatsappNumber');
-            // if (emailInput) emailInput.addEventListener('input', checkFormValidity); // REMOVIDO
+            if (emailInput) emailInput.addEventListener('input', checkFormValidity);
             if (whatsappInput) whatsappInput.addEventListener('input', checkFormValidity);
 
             updateTransactionSummary(); // Esto calcula los totales y los adjunta a transactionDetails
@@ -1080,10 +1080,15 @@
         const formData = new FormData(paymentForm);
 
         const selectedPaymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value;
-        // const emailInput = document.getElementById('email'); // REMOVIDO
+        const emailInput = document.getElementById('email');
         const whatsappInput = document.getElementById('whatsappNumber');
         
-        // ❌ Eliminadas validaciones de correo electrónico
+        // Validaciones de campos de contacto (universales)
+        if (!emailInput || emailInput.value.trim() === '' || !emailInput.checkValidity()) {
+            alert('Por favor, ingresa un correo electrónico válido para recibir notificaciones.');
+            emailInput.focus();
+            return;
+        }
         
         if (!whatsappInput || whatsappInput.value.trim() === '') {
             alert('Por favor, ingresa tu número de WhatsApp para poder contactarte y completar la recarga.');
@@ -1157,7 +1162,7 @@
                         'Authorization': `Bearer ${sessionToken}` 
                     },
                     body: JSON.stringify({
-                        // email: emailInput.value.trim(), // ❌ REMOVIDO: Se busca en el backend.
+                        email: emailInput.value.trim(),
                         whatsapp: whatsappInput.value.trim(),
                         amountUSD: finalPriceUSD, 
                         cartDetails: JSON.stringify(Array.isArray(transactionDetails) ? transactionDetails : [transactionDetails]), 
@@ -1178,7 +1183,7 @@
                     // a. Preparar FormData para la función process-payment (simulando formulario)
                     const processFormData = new FormData();
                     processFormData.append('paymentMethod', 'wallet');
-                    // processFormData.append('email', emailInput.value.trim()); // ❌ REMOVIDO
+                    processFormData.append('email', emailInput.value.trim());
                     processFormData.append('whatsappNumber', whatsappInput.value.trim());
                     // Enviamos la cadena de valor del input hidden
                     processFormData.append('paymentReceipt', 'Wallet_Deduction_Flow'); 
@@ -1220,7 +1225,7 @@
                     } else {
                         // 3. ÉXITO PARCIAL (Pago OK, Notificación fallida)
                         const errorData = await processPaymentResponse.json();
-                        alert(`¡Pago con Wallet exitoso, pero falló la notificación automática! Por favor, contacta a soporte para confirmar tu pedido y envíanos la captura de tu pedido en Telegram.\nError: ${errorData.message || 'Error desconocido'}`); // Mensaje sin email
+                        alert(`¡Pago con Wallet exitoso, pero falló la notificación automática! Por favor, contacta a soporte con tu email (${emailInput.value.trim()}) para confirmar tu pedido y envíanos la captura de tu pedido en Telegram.\nError: ${errorData.message || 'Error desconocido'}`);
                         console.error('DIAGNÓSTICO: Process Payment (Telegram) error after successful Wallet deduction:', errorData);
 
                         // Se considera éxito para el usuario, se limpia storage y se redirige
@@ -1289,7 +1294,7 @@
                     },
                     body: JSON.stringify({
                         amount: finalPriceUSD, // 🎯 FIX 11: amount: usa el precio final (USD/USDM)
-                        // email: emailInput.value.trim(), // ❌ REMOVIDO: El backend lo buscará por sesión.
+                        email: emailInput.value.trim(),
                         whatsapp: whatsappInput.value.trim(),
                         cartDetails: JSON.stringify(Array.isArray(transactionDetails) ? transactionDetails : [transactionDetails]), 
                         googleId: googleIdToSend, 
