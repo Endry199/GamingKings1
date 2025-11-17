@@ -122,10 +122,6 @@ function checkUserSessionAndRenderUI() {
 }
 
 /**
-// script.js (SOLO LA FUNCIÓN handleCredentialResponse)
-// ... (código previo de script.js)
-
-/**
  * Función de Callback llamada por el SDK de Google al iniciar sesión.
  */
 window.handleCredentialResponse = async (response) => {
@@ -191,7 +187,6 @@ window.handleCredentialResponse = async (response) => {
     }
 };
 
-// ... (resto del código de script.js)
 /**
  * Inicializa el SDK de Google y dibuja el botón.
  * @param {boolean} forceRender Si es true, fuerza la renderización aunque haya sesión.
@@ -617,7 +612,35 @@ document.addEventListener('DOMContentLoaded', () => {
             checkoutBtn.addEventListener('click', () => {
                 const cart = getCart();
                 if (cart.length > 0) {
-                    localStorage.setItem('transactionDetails', JSON.stringify(cart));
+                    
+                    // 🚨 INICIO DE LA MODIFICACIÓN CLAVE PARA INCLUIR GOOGLE_ID 🚨
+                    
+                    const userDataJson = localStorage.getItem('userData');
+                    let google_id = null;
+                    
+                    // Intentamos obtener el google_id del objeto userData
+                    if (userDataJson) {
+                        try {
+                            const userData = JSON.parse(userDataJson);
+                            // Asumimos que el google_id es el campo 'sub' (Subject ID) del token
+                            // o un campo llamado 'google_id' que tu backend guardó.
+                            google_id = userData.sub || userData.google_id || null; 
+                        } catch (e) {
+                            console.error("Error al parsear userData:", e);
+                        }
+                    }
+
+                    // Preparamos los datos de la transacción, incluyendo el google_id
+                    const transactionData = {
+                        cart: cart, // El contenido actual del carrito
+                        google_id: google_id // El ID de Google para que el backend busque el email
+                    };
+                    
+                    // Guardamos la nueva estructura de datos en localStorage
+                    localStorage.setItem('transactionDetails', JSON.stringify(transactionData));
+                    
+                    // 🚨 FIN DE LA MODIFICACIÓN CLAVE 🚨
+                    
                     window.location.href = 'payment.html';
                 }
             });
