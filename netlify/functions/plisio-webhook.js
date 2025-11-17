@@ -66,6 +66,8 @@ exports.handler = async (event, context) => {
     const SMTP_USER = process.env.SMTP_USER;
     const SMTP_PASS = process.env.SMTP_PASS;
     const SENDER_EMAIL = process.env.SENDER_EMAIL || SMTP_USER;
+    // 💡 AÑADIDO: Variable del recargador
+    const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR;
 
     if (!PLISIO_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_KEY || !TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
         console.error("TRAZA 0.2: Faltan variables de entorno esenciales.");
@@ -407,6 +409,50 @@ exports.handler = async (event, context) => {
             inlineKeyboard.push([{ text: "💬 Contactar Cliente por WhatsApp", url: whatsappLink }]);
         }
 
+        // ⭐️ INICIO DE Lógica para el botón de WhatsApp del Recargador (Múltiples Free Fire Items)
+        if (WHATSAPP_NUMBER_RECARGADOR) {
+            console.log(`TRAZA 13.7: Iniciando iteración para buscar items de Free Fire.`);
+
+            // Asegurar que el número tenga el prefijo '+' si no lo tiene.
+            const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
+
+            // Iterar sobre todos los productos para encontrar Free Fire
+            cartItems.forEach((item, index) => {
+                const itemGameName = item.game || 'N/A';
+                // Se usa .toLowerCase() para asegurar la insensibilidad a mayúsculas/minúsculas
+                const isFreeFire = itemGameName.toLowerCase() === 'free fire'; 
+
+                console.log(`TRAZA 13.7.1: Producto ${index + 1}: Game='${itemGameName}', IsFreeFire=${isFreeFire}`);
+
+                // Se comprueba si el producto es Free Fire
+                if (isFreeFire) {
+                    const playerIdForWhatsappRecargador = item.playerId || 'N/A';
+                    // Asegurar que el packageName esté codificado, incluyendo el manejo de '+'
+                    const cleanedPackageNameForWhatsappRecargador = (item.packageName || 'N/A').replace(/\+/g, '%2B');
+
+                    let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible (Pago Plisio).\n\n`;
+                    whatsappMessageRecargador += `*ID de Transacción:* ${invoiceID}\n`;
+                    whatsappMessageRecargador += `*ID de Jugador:* ${playerIdForWhatsappRecargador}\n`;
+                    whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageNameForWhatsappRecargador}\n`;
+                    
+                    // Se añade el índice del producto para distinguir si hay varios Free Fire
+                    const buttonText = `📲 Recargador FF - Prod ${index + 1}`; 
+                    
+                    const whatsappLinkRecargadorButton = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
+
+                    // Añadir el botón de WhatsApp para el recargador en una fila separada
+                    inlineKeyboard.push([
+                        { text: buttonText, url: whatsappLinkRecargadorButton }
+                    ]);
+                    
+                    console.log(`TRAZA 13.7.2: ✅ Botón de Recargador generado para Producto ${index + 1} (${itemGameName}).`);
+                }
+            });
+        } else {
+            console.log(`TRAZA 13.7: WHATSAPP_NUMBER_RECARGADOR no está configurado. Se omite la generación de botones de recarga.`);
+        }
+        // ⭐️ FIN DE Lógica para el botón de WhatsApp del Recargador
+        
         // 3. Ensamblar el replyMarkup si hay botones
         if (inlineKeyboard.length > 0) {
             replyMarkup = {
