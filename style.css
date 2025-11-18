@@ -1282,7 +1282,7 @@ footer p {
     height: 225px; 
     /* **LA SOLUCIÓN A LA DISTORSIÓN:** Asegura que la imagen cubra el área sin estirarse, recortando si es necesario */
     object-fit: contain; 
-    /* Esquinas redondeadas en la parte superior de la imagen */
+    /* Esquinas redondeadas en la parte superior 32423423423423de la imagen */
     border-top-left-radius: 8px; 
     border-top-right-radius: 8px;
     margin-bottom: 10px; /* Espacio entre la imagen y el texto */
