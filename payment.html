@@ -318,7 +318,7 @@
         'pago-movil': `
             <p><strong>Paso 1:</strong> Realiza el Pago Móvil a los siguientes datos:</p>
             <ul>
-                <li><strong>Banco:</strong> Banco Activo (0171)</li>
+                <li><strong>Banco:</strong> Banco Venezolano de Credito (0104)</li>
                 <li class="copy-container">
                     <strong>Cédula/RIF:</strong> <span id="pm-cedula">V-31605458</span>
                     <button type="button" class="copy-button" data-copy-target="pm-cedula"><i class="fas fa-copy"></i></button>
@@ -336,6 +336,23 @@
                 <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
             </div>
         `,
+
+        'pago-ubi': `
+            <p><strong>Paso 1:</strong> Transfiere el monto exacto a nuestra cuenta Pago Ubi.</p>
+            <ul>
+                <li class="copy-container">
+                    <strong>Correo Pago Ubi:</strong> <span id="ubi-email">endryjosuereyessequera@gmail.com</span>
+                    <button type="button" class="copy-button" data-copy-target="ubi-email"><i class="fas fa-copy"></i></button>
+                    <span id="ubi-email-copy-feedback" class="copy-feedback"></span>
+                </li>
+            </ul>
+            <div class="payment-fields-container">
+                <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
+                <label for="payment-receipt">Subir Comprobante de Pago:</label>
+                <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
+            </div>
+        `,
+        
         // Plantilla para Plisio (Redirección de pago)
         'binance': `
             <div class="payment-fields-container">
