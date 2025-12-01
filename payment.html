@@ -255,16 +255,23 @@
                 </div>
 
                 <div class="form-section-step">
-                    <h3>Paso 2: Realiza el Pago y Confirma Contacto</h3>
+                    <h3>Paso 2: Realiza el Pago y Sube tu Comprobante</h3>
                     <div id="payment-details-form" class="payment-details-form">
-                        </div>
-                    
+                    </div>
+                </div>
+                
+                <div class="form-section-step">
+                    <h3>Paso 3: Información de Contacto para Notificaciones</h3>
                     <div class="input-group">
-                        <label for="whatsappNumber">Número de WhatsApp (Para contacto y confirmación):</label>
+                        <label for="email">Correo Electrónico (Para notificaciones y factura):</label>
+                        <input type="email" id="email" name="email" placeholder="tu_correo@ejemplo.com" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="whatsappNumber">Número de WhatsApp (Para contacto):</label>
                         <input type="tel" id="whatsappNumber" name="whatsappNumber" placeholder="Ej: 584121234567" required>
                     </div>
-                    </div>
-                
+                </div>
                 <div id="whatsapp-message-container" class="payment-confirmation-message" style="margin-top: 30px; margin-bottom: 20px; text-align: center; display: none;">
                     <p style="font-size: 1.1em; color: var(--text-color); margin-bottom: 15px;">
                         ¡Importante! Una vez realizado el pago con el método seleccionado, <strong>envía la captura de tu comprobante y tus datos de TikTok</strong> al siguiente número de WhatsApp para que tu recarga sea procesada rápidamente:
@@ -324,10 +331,9 @@
                 </li>
             </ul>
             <div class="payment-fields-container">
-                <p class="attention-message" style="color: #ff9800; font-weight: bold;">
-                    ⚠️ Importante: Una vez realizado el pago, debes confirmar por WhatsApp con la captura.
-                </p>
-                <input type="hidden" id="payment-receipt" name="paymentReceipt" value="Confirm_By_WhatsApp" required> 
+                <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
+                <label for="payment-receipt">Subir Comprobante de Pago:</label>
+                <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
             </div>
         `,
 
@@ -341,10 +347,9 @@
                 </li>
             </ul>
             <div class="payment-fields-container">
-                <p class="attention-message" style="color: #ff9800; font-weight: bold;">
-                    ⚠️ Importante: Una vez realizado el pago, debes confirmar por WhatsApp con la captura.
-                </p>
-                <input type="hidden" id="payment-receipt" name="paymentReceipt" value="Confirm_By_WhatsApp" required>
+                <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
+                <label for="payment-receipt">Subir Comprobante de Pago:</label>
+                <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
             </div>
         `,
         
@@ -367,10 +372,9 @@
                 </li>
             </ul>
             <div class="payment-fields-container">
-                <p class="attention-message" style="color: #ff9800; font-weight: bold;">
-                    ⚠️ Importante: Una vez realizado el pago, debes confirmar por WhatsApp con la captura.
-                </p>
-                <input type="hidden" id="payment-receipt" name="paymentReceipt" value="Confirm_By_WhatsApp" required>
+                <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
+                <label for="payment-receipt">Subir Comprobante de Pago:</label>
+                <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
             </div>
         `,
         // 🆕 NUEVA PLANTILLA: Binance Pay (Transferencia por ID)
@@ -384,10 +388,9 @@
                 </li>
             </ul>
             <div class="payment-fields-container">
-                <p class="attention-message" style="color: #ff9800; font-weight: bold;">
-                    ⚠️ Importante: Una vez realizado el pago, debes confirmar por WhatsApp con el ID de transacción.
-                </p>
-                <input type="hidden" id="payment-receipt" name="paymentReceipt" value="Confirm_By_WhatsApp" required>
+                <p><strong>Paso 2:</strong> Sube el comprobante de pago.</p>
+                <label for="payment-receipt">Subir Comprobante de Pago:</label>
+                <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf">
                 </div>
         `,
         // 🎯 Plantilla para Wallet
@@ -432,10 +435,9 @@
     let timerInterval;
 
     // 🔐 NUEVAS VARIABLES DE SEGURIDAD Y REDIRECCIÓN
-    const SESSION_TOKEN_KEY = 'userSessionToken'; // Clave usada en el flujo de Wallet
+    const SESSION_TOKEN_KEY = 'google_id'; // Clave usada en el flujo de Wallet
     const LOGIN_PAGE_URL = 'login.html'; // Página a la que redirigir
-    // 🚨 NUEVA CLAVE: Para obtener el correo del usuario logeado
-    const USER_EMAIL_KEY = 'userEmail'; 
+
 
     // 3. FUNCIONES DE LÓGICA
     
@@ -445,13 +447,11 @@
      * @returns {boolean} True si la sesión es válida, False si redirige.
      */
     function checkActiveSession() {
-        // 🚨 Usamos la clave correcta para el token de sesión
+        // 🚨 Usamos la clave correcta para el token de sesión (ver flujo de Wallet)
         const sessionToken = localStorage.getItem(SESSION_TOKEN_KEY); 
-        // 🚨 También requerimos el correo, ya que no se pide en el formulario.
-        const userEmail = localStorage.getItem(USER_EMAIL_KEY);
 
-        // Si la sesión no existe, o no tenemos el correo, redirigimos
-        if (!sessionToken || !userEmail) {
+        // Si la sesión no existe, redirigimos
+        if (!sessionToken) {
             // Guardar la URL actual de payment.html en localStorage para volver después del login
             localStorage.setItem('redirectAfterLogin', window.location.href);
 
@@ -591,14 +591,11 @@
         if (!isAssistedFlow()) return;
 
         const whatsappLink = document.querySelector('.whatsapp-link');
-        // 🚨 CAMBIO: Correo extraído de localStorage 🚨
-        const email = localStorage.getItem(USER_EMAIL_KEY) || 'Correo no disponible (Error de sesión)';
+        const email = document.getElementById('email') ? document.getElementById('email').value.trim() : '';
         const whatsappNumber = document.getElementById('whatsappNumber') ? document.getElementById('whatsappNumber').value.trim() : '';
+        const isEmailValid = document.getElementById('email') ? document.getElementById('email').checkValidity() : false;
         
-        // 🚨 CAMBIO: La validación del correo se basa en su existencia en localStorage 🚨
-        const isEmailValid = email !== 'Correo no disponible (Error de sesión)'; 
-        
-        if (whatsappLink && isEmailValid && whatsappNumber && transactionDetails && transactionDetails.finalPrice) {
+        if (whatsappLink && email && isEmailValid && whatsappNumber && transactionDetails && transactionDetails.finalPrice) {
             
             let message = `¡Hola! Quiero confirmar mi pedido de recarga.\n\n*Pedido Asistido:*\n`;
             
@@ -869,8 +866,26 @@
             }
 
 
-            // 🚨 MODIFICACIÓN: Ya no hay input de archivo, por lo que esta lógica es solo de validación interna.
             const fileInput = document.getElementById('payment-receipt');
+            
+            // 🛑 MODIFICACIÓN: Solo agregar listener 'change' si es un input de tipo 'file'
+            // También ajustar la propiedad 'required' según el método
+            if (fileInput) {
+                // Métodos que requieren subir archivo (por defecto)
+                if (methodId === 'pago-movil' || methodId === 'zinli') {
+                    fileInput.required = true;
+                } 
+                // Métodos que NO requieren subir archivo o usan hidden input (binance, binance-id, wallet)
+                else { 
+                    fileInput.required = false; 
+                }
+
+                // Si es un input de tipo 'file', agregamos el listener
+                if (fileInput.type === 'file') {
+                    fileInput.addEventListener('change', checkFormValidity);
+                }
+            }
+            
             
             // 🛠️ CORRECCIÓN: Usar querySelectorAll para adjuntar evento a *todos* los botones de copiar
             const copyButtons = paymentDetailsFormDiv.querySelectorAll('.copy-button'); 
@@ -918,21 +933,45 @@
 
     /**
      * @MODIFICADO: Verifica la validez del formulario y habilita/deshabilita los botones.
-     * Ahora solo depende de la selección del método y el llenado del campo WhatsApp.
+     * Ahora incluye la excepción para 'binance', 'binance-id' y 'wallet'.
      */
     function checkFormValidity() {
         const selectedRadio = document.querySelector('input[name="paymentMethod"]:checked');
         const isMethodSelected = selectedRadio !== null;
+        const selectedMethodId = selectedRadio ? selectedRadio.value : null; // Obtener el ID seleccionado
         
+        const emailInput = document.getElementById('email');
         const whatsappInput = document.getElementById('whatsappNumber');
+
+        const isEmailFilled = emailInput && emailInput.value.trim() !== '';
+        const isEmailValid = emailInput && emailInput.checkValidity();
+
         const isWhatsappFilled = whatsappInput && whatsappInput.value.trim() !== '';
 
-        let areDetailsFilled = true; // Siempre true ya que se eliminó el file input
+        let areDetailsFilled = true;
 
+        if (isAssistedFlow()) { // Flujo asistido
+            areDetailsFilled = true; 
+        } else if (selectedMethodId === 'binance') { // Plisio (Redirección automática)
+            areDetailsFilled = true;
+        } else if (selectedMethodId === 'wallet') { // 🎯 CAMBIO CLAVE: Wallet RESTAURADA
+            areDetailsFilled = true;
+        } else if (selectedMethodId === 'binance-id') { // 🆕 Binance ID (Comprobante opcional)
+            areDetailsFilled = true;
+        } else if (isMethodSelected) { 
+            // Otros métodos (Pago Movil/Zinli): Requieren archivo
+            const fileInput = document.getElementById('payment-receipt');
+            if (fileInput && fileInput.files.length === 0) {
+                areDetailsFilled = false;
+            }
+        } else {
+            areDetailsFilled = false; // Debe seleccionar un método
+        }
+        
         // Lógica para el botón de FINALIZAR RECARGA (flujo normal)
         if (!isAssistedFlow()) { 
-            // Se habilita si: hay método, detalles OK, y whatsapp lleno
-            finalizeBtn.disabled = !(isMethodSelected && areDetailsFilled && isWhatsappFilled);
+            // Se habilita si: hay método, detalles OK, email lleno/válido, y whatsapp lleno
+            finalizeBtn.disabled = !(isMethodSelected && areDetailsFilled && isEmailFilled && isEmailValid && isWhatsappFilled);
         } else {
             // Lógica para el botón de WHATSAPP (flujo asistido)
             updateWhatsAppLink();
@@ -1016,8 +1055,9 @@
             }
 
             // Mover los listeners de los campos de contacto aquí para que estén activos siempre
-            // 🚨 MODIFICACIÓN: Solo escuchamos el input de WhatsApp 🚨
+            const emailInput = document.getElementById('email');
             const whatsappInput = document.getElementById('whatsappNumber');
+            if (emailInput) emailInput.addEventListener('input', checkFormValidity);
             if (whatsappInput) whatsappInput.addEventListener('input', checkFormValidity);
 
             updateTransactionSummary(); // Esto calcula los totales y los adjunta a transactionDetails
@@ -1058,15 +1098,13 @@
         const formData = new FormData(paymentForm);
 
         const selectedPaymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value;
-        // 🚨 CAMBIO: Correo extraído de localStorage 🚨
-        const userEmail = localStorage.getItem(USER_EMAIL_KEY);
+        const emailInput = document.getElementById('email');
         const whatsappInput = document.getElementById('whatsappNumber');
         
-        // 🚨 CAMBIO: Validación de Correo/WhatsApp 🚨
-        if (!userEmail) {
-            alert('Error: No se encontró tu correo electrónico de sesión. Por favor, cierra sesión e inicia de nuevo.');
-            finalizeBtn.disabled = false;
-            finalizeBtn.textContent = 'Finalizar Recarga';
+        // Validaciones de campos de contacto (universales)
+        if (!emailInput || emailInput.value.trim() === '' || !emailInput.checkValidity()) {
+            alert('Por favor, ingresa un correo electrónico válido para recibir notificaciones.');
+            emailInput.focus();
             return;
         }
         
@@ -1074,9 +1112,6 @@
             alert('Por favor, ingresa tu número de WhatsApp para poder contactarte y completar la recarga.');
             return;
         }
-
-        // 🚨 AÑADIDO: Agregar el email de la sesión a los datos del formulario
-        formData.append('email', userEmail);
         
         // Lógica especial para recargas asistidas (no se envían al backend)
         if (isAssistedFlow()) { 
@@ -1145,8 +1180,7 @@
                         'Authorization': `Bearer ${sessionToken}` 
                     },
                     body: JSON.stringify({
-                        // 🚨 CAMBIO: Usar userEmail de localStorage 🚨
-                        email: userEmail,
+                        email: emailInput.value.trim(),
                         whatsapp: whatsappInput.value.trim(),
                         amountUSD: finalPriceUSD, 
                         cartDetails: JSON.stringify(Array.isArray(transactionDetails) ? transactionDetails : [transactionDetails]), 
@@ -1167,8 +1201,7 @@
                     // a. Preparar FormData para la función process-payment (simulando formulario)
                     const processFormData = new FormData();
                     processFormData.append('paymentMethod', 'wallet');
-                    // 🚨 CAMBIO: Usar userEmail de localStorage 🚨
-                    processFormData.append('email', userEmail);
+                    processFormData.append('email', emailInput.value.trim());
                     processFormData.append('whatsappNumber', whatsappInput.value.trim());
                     // Enviamos la cadena de valor del input hidden
                     processFormData.append('paymentReceipt', 'Wallet_Deduction_Flow'); 
@@ -1210,8 +1243,7 @@
                     } else {
                         // 3. ÉXITO PARCIAL (Pago OK, Notificación fallida)
                         const errorData = await processPaymentResponse.json();
-                        // 🚨 CAMBIO: Usar userEmail de localStorage en el mensaje 🚨
-                        alert(`¡Pago con Wallet exitoso, pero falló la notificación automática! Por favor, contacta a soporte con tu email (${userEmail}) para confirmar tu pedido y envíanos la captura de tu pedido en Telegram.\nError: ${errorData.message || 'Error desconocido'}`);
+                        alert(`¡Pago con Wallet exitoso, pero falló la notificación automática! Por favor, contacta a soporte con tu email (${emailInput.value.trim()}) para confirmar tu pedido y envíanos la captura de tu pedido en Telegram.\nError: ${errorData.message || 'Error desconocido'}`);
                         console.error('DIAGNÓSTICO: Process Payment (Telegram) error after successful Wallet deduction:', errorData);
 
                         // Se considera éxito para el usuario, se limpia storage y se redirige
@@ -1280,8 +1312,7 @@
                     },
                     body: JSON.stringify({
                         amount: finalPriceUSD, // 🎯 FIX 11: amount: usa el precio final (USD/USDM)
-                        // 🚨 CAMBIO: Usar userEmail de localStorage 🚨
-                        email: userEmail,
+                        email: emailInput.value.trim(),
                         whatsapp: whatsappInput.value.trim(),
                         cartDetails: JSON.stringify(Array.isArray(transactionDetails) ? transactionDetails : [transactionDetails]), 
                         googleId: googleIdToSend, 
@@ -1314,9 +1345,17 @@
             return;
         }
         
-        // Lógica para flujo de pago normal (NO requiere comprobante, solo confirmación por WhatsApp)
+        // Lógica para flujo de pago normal (requiere comprobante o ID - Pago Móvil/Zinli/Binance ID)
         
-        // 🚨 CAMBIO: Ya no se verifica 'requiresReceipt' 🚨
+        let requiresReceipt = (selectedPaymentMethod === 'pago-movil' || selectedPaymentMethod === 'zinli');
+
+        if (requiresReceipt) {
+            const paymentReceipt = document.getElementById('payment-receipt');
+            if (!paymentReceipt || paymentReceipt.files.length === 0) {
+                alert('Por favor, sube tu comprobante de pago.');
+                return;
+            }
+        }
         
         // Agregamos todos los datos de transacción
         formData.append('cartDetails', JSON.stringify(Array.isArray(transactionDetails) ? transactionDetails : [transactionDetails]));
@@ -1329,16 +1368,10 @@
             formData.append('totalUSDM', transactionDetails.totalUSDM); // 🎯 FIX 12: Agregar totalUSDM al formData
         }
 
-        // 🚨 CAMBIO: El valor del comprobante siempre será "Confirm_By_WhatsApp" para estos métodos 🚨
-        const hiddenReceiptValue = document.getElementById('payment-receipt')?.value;
-        if (hiddenReceiptValue) {
-             formData.append('paymentReceipt', hiddenReceiptValue);
-        }
-
         console.log('Datos a enviar (FormData):');
         for (let pair of formData.entries()) {
             if (pair[0] === 'paymentReceipt') {
-                console.log(pair[0]+ ': ' + pair[1]);
+                console.log(pair[0]+ ': [Archivo subido]');
             } else if (pair[0] === 'cartDetails') {
                 console.log(pair[0]+ ': ' + pair[1]);
             } else {
