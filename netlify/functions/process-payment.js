@@ -136,9 +136,7 @@ exports.handler = async function(event, context) {
     }
 
     // --- Extracción y Normalización de Datos del Carrito y Globales ---
-    // El email ahora se extrae y se define con 'let' para ser reasignado.
-    const { finalPrice, currency, paymentMethod, whatsappNumber, cartDetails } = data;
-    let email = data.email; // Inicializa el email con el valor de la solicitud.
+    const { finalPrice, currency, paymentMethod, email, whatsappNumber, cartDetails } = data;
     
     // Normalizar el número de WhatsApp aquí
     const normalizedWhatsapp = normalizeWhatsappNumber(whatsappNumber);
@@ -166,40 +164,6 @@ exports.handler = async function(event, context) {
             body: JSON.stringify({ message: "El carrito de compra está vacío." })
         };
     }
-    
-    // Define firstItem early to check for google_id
-    const firstItem = cartItems[0] || {};
-
-    // 🚀 INICIO DE LA LÓGICA DE EXTRACCIÓN DE EMAIL DESDE SUPABASE
-    if (firstItem.google_id) {
-        try {
-            console.log(`Buscando email para google_id: ${firstItem.google_id}`);
-            const { data: userData, error: userError } = await supabase
-                .from('usuarios')
-                .select('email')
-                .eq('google_id', firstItem.google_id)
-                .single();
-
-            // PGRST116: No Rows Found. Permite continuar usando el email original.
-            if (userError && userError.code !== 'PGRST116') { 
-                throw userError;
-            }
-
-            if (userData && userData.email) {
-                console.log(`Email encontrado en Supabase: ${userData.email}. Reemplazando email de la solicitud.`);
-                email = userData.email; 
-            } else {
-                 console.log(`No se encontró un usuario con google_id ${firstItem.google_id}. Usando el email original: ${email}`);
-            }
-
-        } catch (dbFetchError) {
-            console.error("Error al buscar el email en la tabla de usuarios de Supabase:", dbFetchError.message);
-            // Continúa usando el email original en caso de error en la DB
-        }
-    } else {
-        console.log("No google_id presente en el primer item del carrito. Usando el email de la solicitud.");
-    }
-    // 🚀 FIN DE LA LÓGICA DE EXTRACCIÓN DE EMAIL DESDE SUPABASE
     
     // Obtener detalles específicos del método de pago
     let methodSpecificDetails = {};
@@ -220,13 +184,14 @@ exports.handler = async function(event, context) {
         // Reemplazo de prefijo MALOK por GAMING (si aplica)
         id_transaccion_generado = `GAMING-${Date.now()}`;
 
+        const firstItem = cartItems[0] || {};
         
         const transactionToInsert = {
             id_transaccion: id_transaccion_generado,
             finalPrice: parseFloat(finalPrice),
             currency: currency,
             paymentMethod: paymentMethod,
-            email: email, // Usa la variable email (potencialmente actualizada)
+            email: email,
             whatsappNumber: normalizedWhatsapp || whatsappNumber || null,
             methodDetails: methodSpecificDetails,
             status: 'pendiente',
@@ -269,7 +234,7 @@ exports.handler = async function(event, context) {
 
     // --- Generar Notificación para Telegram ---
     
-    // const firstItem = cartItems[0] || {}; // firstItem ya está definido
+    const firstItem = cartItems[0] || {};
     const isWalletRecharge = cartItems.length === 1 && firstItem.game === 'Recarga de Saldo';
     
     console.log("[DEBUG - GLOBAL] currency:", currency);
@@ -352,7 +317,7 @@ exports.handler = async function(event, context) {
     messageText += `\n*RESUMEN DE PAGO*\n`;
     messageText += `💰 *TOTAL A PAGAR:* *${finalPrice} ${currency}*\n`;
     messageText += `💳 Método de Pago: *${paymentMethod.replace('-', ' ').toUpperCase()}*\n`;
-    messageText += `📧 Correo Cliente: ${email}\n`; // Usa la variable email (potencialmente actualizada)
+    messageText += `📧 Correo Cliente: ${email}\n`;
     
     // Mostrar el número original y el normalizado para referencia en el chat
     if (whatsappNumber) {
@@ -386,7 +351,7 @@ exports.handler = async function(event, context) {
         );
     }
     
-    // ⭐️ INICIO de Lógica para el botón de WhatsApp del Recargador (Múltiples Free Fire Items)
+    // ⭐️ INICIO DE Lógica para el botón de WhatsApp del Recargador (Múltiples Free Fire Items)
     if (WHATSAPP_NUMBER_RECARGADOR) {
         console.log(`[DEBUG - RECARGADOR] Iniciando iteración para buscar items de Free Fire.`);
 
@@ -557,7 +522,7 @@ exports.handler = async function(event, context) {
         
         const mailOptions = {
             from: SENDER_EMAIL,
-            to: email, // Usa la variable email (potencialmente actualizada)
+            to: email,
             // Reemplazo de Malok Recargas por GamingKings (si aplica)
             subject: `🎉 Tu Solicitud de Recarga (Pedido #${id_transaccion_generado}) con GamingKings ha sido Recibida! 🎉`,
             html: `

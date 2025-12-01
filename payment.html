@@ -546,31 +546,20 @@
     }
 
     /**
-     * @UNIVERSAL_FUNCTION_CLAVE: Busca y retorna el google_id de la sesión del usuario.
-     * Esto garantiza que el ID se envíe en todas las transacciones para buscar el email.
-     * @returns {string|null} El Google ID si se encuentra en la sesión o en los detalles del carrito, de lo contrario null.
+     * @NUEVA_FUNCIÓN_CLAVE: Busca y retorna el google_id de la transacción.
+     * Esto es CRÍTICO para las recargas de saldo.
+     * @returns {string|null} El Google ID si se encuentra un ítem de 'Recarga de Saldo', de lo contrario null.
      */
-    function getLoggedInGoogleId() {
-        // Prioridad 1: Intentar obtener el ID de una clave universal en localStorage (debe ser establecida en el login)
-        // Usamos 'loggedInGoogleId' como la clave universal.
-        const storedGoogleId = localStorage.getItem('loggedInGoogleId'); 
-        if (storedGoogleId) {
-            console.log('Google ID obtenido de localStorage: loggedInGoogleId');
-            return storedGoogleId;
-        }
-
-        // Prioridad 2 (Fallback): Buscar en los detalles del carrito (para compatibilidad o recargas de saldo)
-        // Esta era la lógica original que solo funcionaba si el frontend inyectaba el ID en el item.
+    function getGoogleIdFromTransaction() {
+        // Aseguramos que transactionDetails sea un array
         const cartItems = Array.isArray(transactionDetails) ? transactionDetails : (transactionDetails ? [transactionDetails] : []);
         
         for (const item of cartItems) {
-            if (item.google_id) { 
-                console.log('Google ID obtenido de cartDetails/item.google_id');
-                return item.google_id; // Retorna el primero que encuentre
+            // Buscamos específicamente el item de 'Recarga de Saldo' que debería contener el google_id
+            if (item.game === 'Recarga de Saldo' && item.google_id) { 
+                return item.google_id;
             }
         }
-        
-        console.log('Google ID no encontrado en sesión ni en cartDetails.');
         return null; 
     }
 
@@ -1151,10 +1140,6 @@
         const finalPriceUSD = selectedPaymentMethod === 'wallet' 
             ? (transactionDetails.totalUSDM || transactionDetails.priceUSDM) 
             : (transactionDetails.totalUSD || transactionDetails.priceUSD);
-        
-        // 🔑 OBTENER GOOGLE ID UNIVERSAL
-        const googleIdToSend = getLoggedInGoogleId(); 
-        // ----------------------------------------------------
 
 
         // 🎯 INICIO DEL CAMBIO CLAVE: Lógica para el flujo de pago con Wallet
@@ -1198,8 +1183,7 @@
                         email: emailInput.value.trim(),
                         whatsapp: whatsappInput.value.trim(),
                         amountUSD: finalPriceUSD, 
-                        cartDetails: JSON.stringify(Array.isArray(transactionDetails) ? transactionDetails : [transactionDetails]),
-                        googleId: googleIdToSend, // ⬅️ AÑADIDO: Se envía el googleId al deduct-wallet-balance
+                        cartDetails: JSON.stringify(Array.isArray(transactionDetails) ? transactionDetails : [transactionDetails]), 
                     })
                 });
 
@@ -1229,7 +1213,6 @@
                     processFormData.append('totalUSD', transactionDetails.totalUSD);
                     processFormData.append('totalVES', transactionDetails.totalVES);
                     processFormData.append('totalUSDM', transactionDetails.totalUSDM);
-                    processFormData.append('googleId', googleIdToSend); // ⬅️ AÑADIDO: Se envía el googleId al process-payment
 
                     // b. Llamar a process-payment
                     const processPaymentResponse = await fetch('/.netlify/functions/process-payment', {
@@ -1314,6 +1297,8 @@
             finalizeBtn.disabled = true;
             finalizeBtn.textContent = 'Creando Factura en Plisio...';
             
+            const googleIdToSend = getGoogleIdFromTransaction();
+            
             // ⏰ AÑADIDO: Limpiar el temporizador antes de la redirección a una pasarela externa
             clearInterval(timerInterval);
             localStorage.removeItem('paymentStartTime');
@@ -1330,7 +1315,7 @@
                         email: emailInput.value.trim(),
                         whatsapp: whatsappInput.value.trim(),
                         cartDetails: JSON.stringify(Array.isArray(transactionDetails) ? transactionDetails : [transactionDetails]), 
-                        googleId: googleIdToSend, // ⬅️ AÑADIDO: Se envía el googleId a Plisio
+                        googleId: googleIdToSend, 
                     })
                 });
 
@@ -1381,11 +1366,6 @@
             formData.append('totalUSD', transactionDetails.totalUSD);
             formData.append('totalVES', transactionDetails.totalVES);
             formData.append('totalUSDM', transactionDetails.totalUSDM); // 🎯 FIX 12: Agregar totalUSDM al formData
-        }
-
-        // 🔑 AÑADIDO: Adjuntar el googleId al FormData para la función process-payment
-        if (googleIdToSend) {
-            formData.append('googleId', googleIdToSend); 
         }
 
         console.log('Datos a enviar (FormData):');
