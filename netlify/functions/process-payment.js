@@ -121,12 +121,12 @@ exports.handler = async function(event, context) {
     const SMTP_USER = process.env.SMTP_USER;
     const SMTP_PASS = process.env.SMTP_PASS;
     const SENDER_EMAIL = process.env.SENDER_EMAIL || SMTP_USER;
-    const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR;
-    
-    // 📢 DEBUG LOG 1: Verificar si el número de recargador está presente
-    console.log(`[DEBUG - RECARGADOR] WHATSAPP_NUMBER_RECARGADOR is set: ${!!WHATSAPP_NUMBER_RECARGADOR}`);
-    // 📢 FIN DEBUG LOG 1
-    
+    const WHATSAPP_NUMBER_RECARGADOR = process.env.WHATSAPP_NUMBER_RECARGADOR;
+    
+    // 📢 DEBUG LOG 1: Verificar si el número de recargador está presente
+    console.log(`[DEBUG - RECARGADOR] WHATSAPP_NUMBER_RECARGADOR is set: ${!!WHATSAPP_NUMBER_RECARGADOR}`);
+    // 📢 FIN DEBUG LOG 1
+    
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !SMTP_HOST || !parseInt(SMTP_PORT, 10) || !SMTP_USER || !SMTP_PASS || !supabaseUrl || !supabaseServiceKey) {
         console.error("Faltan variables de entorno requeridas o SMTP_PORT no es un número válido.");
         return {
@@ -136,7 +136,8 @@ exports.handler = async function(event, context) {
     }
 
     // --- Extracción y Normalización de Datos del Carrito y Globales ---
-    const { finalPrice, currency, paymentMethod, email, whatsappNumber, cartDetails } = data;
+    // Se usa 'let' para que la variable 'email' pueda ser actualizada desde la base de datos.
+    let { finalPrice, currency, paymentMethod, email, whatsappNumber, cartDetails } = data;
     
     // Normalizar el número de WhatsApp aquí
     const normalizedWhatsapp = normalizeWhatsappNumber(whatsappNumber);
@@ -165,6 +166,36 @@ exports.handler = async function(event, context) {
         };
     }
     
+    // Variables del carrito para lógica de recarga/Google ID
+    const firstItem = cartItems[0] || {};
+    const isWalletRecharge = cartItems.length === 1 && firstItem.game === 'Recarga de Saldo';
+    
+    // ⭐️ LÓGICA AGREGADA: Obtener el correo del usuario desde Supabase usando el Google ID (solo para Recarga de Saldo)
+    if (isWalletRecharge && firstItem.google_id) {
+        console.log(`[DB FETCH] Intentando obtener correo para Google ID: ${firstItem.google_id}`);
+        try {
+            // **IMPORTANTE**: Asume que la tabla de usuarios/perfiles se llama 'users' y tiene una columna 'google_id'.
+            const { data: userData, error: userError } = await supabase
+                .from('users') 
+                .select('email')
+                .eq('google_id', firstItem.google_id)
+                .single();
+
+            if (userError && userError.code !== 'PGRST116') { // PGRST116 es "No Rows Found"
+                console.error("Error al buscar usuario en Supabase:", userError.message);
+            } else if (userData) {
+                // Sobrescribir el email con el valor de la base de datos
+                email = userData.email; 
+                console.log(`[DB FETCH] Correo obtenido de la DB y actualizado: ${email}`);
+            } else {
+                console.log("[DB FETCH] No se encontró un usuario con ese Google ID. Se usará el email original de la solicitud.");
+            }
+        } catch (dbFetchError) {
+            console.error("Error inesperado al consultar la DB por Google ID:", dbFetchError.message);
+        }
+    }
+    // ⭐️ FIN LÓGICA AGREGADA ⭐️
+    
     // Obtener detalles específicos del método de pago
     let methodSpecificDetails = {};
     if (paymentMethod === 'pago-movil') {
@@ -184,14 +215,14 @@ exports.handler = async function(event, context) {
         // Reemplazo de prefijo MALOK por GAMING (si aplica)
         id_transaccion_generado = `GAMING-${Date.now()}`;
 
-        const firstItem = cartItems[0] || {};
+        // La variable firstItem ya está definida más arriba
         
         const transactionToInsert = {
             id_transaccion: id_transaccion_generado,
             finalPrice: parseFloat(finalPrice),
             currency: currency,
             paymentMethod: paymentMethod,
-            email: email,
+            email: email, // Usa el 'email' actualizado/verificado
             whatsappNumber: normalizedWhatsapp || whatsappNumber || null,
             methodDetails: methodSpecificDetails,
             status: 'pendiente',
@@ -234,8 +265,8 @@ exports.handler = async function(event, context) {
 
     // --- Generar Notificación para Telegram ---
     
-    const firstItem = cartItems[0] || {};
-    const isWalletRecharge = cartItems.length === 1 && firstItem.game === 'Recarga de Saldo';
+    // const firstItem = cartItems[0] || {}; // Se mueve la definición al bloque superior
+    // const isWalletRecharge = cartItems.length === 1 && firstItem.game === 'Recarga de Saldo'; // Se mueve la definición al bloque superior
     
     console.log("[DEBUG - GLOBAL] currency:", currency);
     console.log("[DEBUG - GLOBAL] finalPrice:", finalPrice);
@@ -317,7 +348,7 @@ exports.handler = async function(event, context) {
     messageText += `\n*RESUMEN DE PAGO*\n`;
     messageText += `💰 *TOTAL A PAGAR:* *${finalPrice} ${currency}*\n`;
     messageText += `💳 Método de Pago: *${paymentMethod.replace('-', ' ').toUpperCase()}*\n`;
-    messageText += `📧 Correo Cliente: ${email}\n`;
+    messageText += `📧 Correo Cliente: ${email}\n`; // Usa el 'email' actualizado/verificado
     
     // Mostrar el número original y el normalizado para referencia en el chat
     if (whatsappNumber) {
@@ -350,51 +381,51 @@ exports.handler = async function(event, context) {
             [{ text: "💬 Contactar Cliente por WhatsApp", url: whatsappLink }]
         );
     }
-    
-    // ⭐️ INICIO DE Lógica para el botón de WhatsApp del Recargador (Múltiples Free Fire Items)
-    if (WHATSAPP_NUMBER_RECARGADOR) {
-        console.log(`[DEBUG - RECARGADOR] Iniciando iteración para buscar items de Free Fire.`);
+    
+    // ⭐️ INICIO DE Lógica para el botón de WhatsApp del Recargador (Múltiples Free Fire Items)
+    if (WHATSAPP_NUMBER_RECARGADOR) {
+        console.log(`[DEBUG - RECARGADOR] Iniciando iteración para buscar items de Free Fire.`);
 
-        const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
+        const recargadorWhatsappNumberFormatted = WHATSAPP_NUMBER_RECARGADOR.startsWith('+') ? WHATSAPP_NUMBER_RECARGADOR : `+${WHATSAPP_NUMBER_RECARGADOR}`;
 
-        // Iterar sobre todos los productos para encontrar Free Fire
-        cartItems.forEach((item, index) => {
-            const itemGameName = item.game || 'N/A';
-            // Se usa .toLowerCase() para asegurar la insensibilidad a mayúsculas/minúsculas
-            const isFreeFire = itemGameName.toLowerCase() === 'free fire'; 
+        // Iterar sobre todos los productos para encontrar Free Fire
+        cartItems.forEach((item, index) => {
+            const itemGameName = item.game || 'N/A';
+            // Se usa .toLowerCase() para asegurar la insensibilidad a mayúsculas/minúsculas
+            const isFreeFire = itemGameName.toLowerCase() === 'free fire'; 
 
-            // 📢 DEBUG LOG 2: Log el juego y el resultado de la condición
-            console.log(`[DEBUG - RECARGADOR] Producto ${index + 1}: Game='${itemGameName}', IsFreeFire=${isFreeFire}`);
+            // 📢 DEBUG LOG 2: Log el juego y el resultado de la condición
+            console.log(`[DEBUG - RECARGADOR] Producto ${index + 1}: Game='${itemGameName}', IsFreeFire=${isFreeFire}`);
 
-            // Se comprueba si el producto es Free Fire
-            if (isFreeFire) {
-                const playerIdForWhatsappRecargador = item.playerId || 'N/A';
-                // Se reemplaza el '+' por su codificación URL para evitar errores en el link
-                const cleanedPackageNameForWhatsappRecargador = (item.packageName || 'N/A').replace(/\+/g, '%2B');
+            // Se comprueba si el producto es Free Fire
+            if (isFreeFire) {
+                const playerIdForWhatsappRecargador = item.playerId || 'N/A';
+                // Se reemplaza el '+' por su codificación URL para evitar errores en el link
+                const cleanedPackageNameForWhatsappRecargador = (item.packageName || 'N/A').replace(/\+/g, '%2B');
 
-                let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
-                whatsappMessageRecargador += `*ID de Transacción:* ${id_transaccion_generado}\n`;
-                whatsappMessageRecargador += `*ID de Jugador:* ${playerIdForWhatsappRecargador}\n`;
-                whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageNameForWhatsappRecargador}\n`;
-                
-                // Se añade el índice del producto para distinguir si hay varios Free Fire
-                const buttonText = `📲 Recargador FF - Prod ${index + 1}`; 
-                
-                const whatsappLinkRecargadorButton = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
+                let whatsappMessageRecargador = `Hola. Por favor, realiza esta recarga lo antes posible.\n\n`;
+                whatsappMessageRecargador += `*ID de Transacción:* ${id_transaccion_generado}\n`;
+                whatsappMessageRecargador += `*ID de Jugador:* ${playerIdForWhatsappRecargador}\n`;
+                whatsappMessageRecargador += `*Paquete a Recargar:* ${cleanedPackageNameForWhatsappRecargador}\n`;
+                
+                // Se añade el índice del producto para distinguir si hay varios Free Fire
+                const buttonText = `📲 Recargador FF - Prod ${index + 1}`; 
+                
+                const whatsappLinkRecargadorButton = `https://wa.me/${recargadorWhatsappNumberFormatted}?text=${encodeURIComponent(whatsappMessageRecargador)}`;
 
-                // Añadir el botón de WhatsApp para el recargador en una fila separada
-                inlineKeyboard.push([
-                    { text: buttonText, url: whatsappLinkRecargadorButton }
-                ]);
-                
-                // 📢 DEBUG LOG 3: Log cuando un botón es generado
-                console.log(`[DEBUG - RECARGADOR] ✅ Botón de Recargador generado para Producto ${index + 1} (${itemGameName}).`);
-            }
-        });
-    } else {
-        console.log(`[DEBUG - RECARGADOR] WHATSAPP_NUMBER_RECARGADOR no está configurado. Se omite la generación de botones de recarga.`);
-    }
-    // ⭐️ FIN DE Lógica para el botón de WhatsApp del Recargador
+                // Añadir el botón de WhatsApp para el recargador en una fila separada
+                inlineKeyboard.push([
+                    { text: buttonText, url: whatsappLinkRecargadorButton }
+                ]);
+                
+                // 📢 DEBUG LOG 3: Log cuando un botón es generado
+                console.log(`[DEBUG - RECARGADOR] ✅ Botón de Recargador generado para Producto ${index + 1} (${itemGameName}).`);
+            }
+        });
+    } else {
+        console.log(`[DEBUG - RECARGADOR] WHATSAPP_NUMBER_RECARGADOR no está configurado. Se omite la generación de botones de recarga.`);
+    }
+    // ⭐️ FIN DE Lógica para el botón de WhatsApp del Recargador
 
     
     const replyMarkup = {
@@ -522,7 +553,7 @@ exports.handler = async function(event, context) {
         
         const mailOptions = {
             from: SENDER_EMAIL,
-            to: email,
+            to: email, // Usa el 'email' actualizado/verificado
             // Reemplazo de Malok Recargas por GamingKings (si aplica)
             subject: `🎉 Tu Solicitud de Recarga (Pedido #${id_transaccion_generado}) con GamingKings ha sido Recibida! 🎉`,
             html: `
