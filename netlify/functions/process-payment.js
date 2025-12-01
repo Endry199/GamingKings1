@@ -542,7 +542,7 @@ exports.handler = async function(event, context) {
                     
                                         <p style="margin-top: 20px;">¡Gracias por confiar en GamingKings!</p>
                     
-                                        <p style="font-size: 0.9em; color: #777;">Si tienes alguna pregunta, contáctanos a través de nuestro WhatsApp: <a href="https://wa.me/584126949631" style="color: #a72885ff; text-decoration: none;">+58 412 7123391</a></p>
+                                        <p style="font-size: 0.9em; color: #777;">Si tienes alguna pregunta, contáctanos a través de nuestro WhatsApp: <a href="https://wa.me/56932493452" style="color: #a72885ff; text-decoration: none;">+58 412 7123391</a></p>
                 </div>
             `,
         };
