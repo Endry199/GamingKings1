@@ -4,10 +4,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Estas variables son accesibles por todas las funciones anidadas (closure)
     let selectedPackage = null;
     let currentProductData = null; // Variable para almacenar los datos del producto actual
+    // 🎯 MODIFICACIÓN 1: NUEVA VARIABLE GLOBAL PARA ALMACENAR LA TASA DE CAMBIO
+    let usdToVesRate = 0; 
+    
     const productContainer = document.getElementById('product-container');
     const rechargeForm = document.getElementById('recharge-form');
 
-    // 1. Funciones de ayuda
+    // --- 1. Funciones de ayuda ---
+
     function getSlugFromUrl() {
         const params = new URLSearchParams(window.location.search);
         return params.get('slug');
@@ -59,6 +63,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // 🎯 MODIFICACIÓN 2: FUNCIÓN PARA OBTENER LA TASA DE CAMBIO DEL SERVIDOR
+    async function getUsdToVesRate() {
+        try {
+            // Llama a la Netlify Function que trae la configuración, incluyendo la tasa
+            const response = await fetch('/.netlify/functions/get-site-config');
+            if (!response.ok) {
+                console.error("No se pudo cargar la configuración del sitio para la tasa.");
+                return 0; 
+            }
+
+            const config = await response.json();
+            // Extrae la tasa usando la clave que definiste en el mapeo ('--tasa-dolar')
+            const rate = parseFloat(config['--tasa-dolar'] || 0); 
+            
+            return isNaN(rate) ? 0 : rate; 
+        } catch (error) {
+            console.error('Error al obtener la tasa de USD/VES:', error);
+            return 0;
+        }
+    }
+
 
     // Función para renderizar el HTML de los paquetes
     function renderProductPackages(data, currency) {
@@ -79,29 +104,35 @@ document.addEventListener('DOMContentLoaded', () => {
         const currencySymbol = (currency === 'VES') ? 'Bs.' : '$';
 
         data.paquetes.forEach(pkg => {
-            // Asegurarse de que las propiedades existen y son números válidos
-            const usdPrice = parseFloat(pkg.precio_usd || 0).toFixed(2);
-            const vesPrice = parseFloat(pkg.precio_ves || 0).toFixed(2);
-            // 🎯 NUEVO: OBTENER PRECIO USDM
-            const usdmPrice = parseFloat(pkg.precio_usdm || 0).toFixed(2); 
+            // Obtener el precio USD (base para el cálculo)
+            const usdPrice = parseFloat(pkg.precio_usd || 0); 
+            
+            // 🎯 MODIFICACIÓN 3: CALCULAR EL PRECIO VES USANDO LA TASA GLOBAL
+            const calculatedVesPrice = (usdPrice * usdToVesRate);
+            
+            const usdPriceFormatted = usdPrice.toFixed(2);
+            const calculatedVesPriceFormatted = calculatedVesPrice.toFixed(2);
+            
+            // Obtener precio USDM (se mantiene)
+            const usdmPriceFormatted = parseFloat(pkg.precio_usdm || 0).toFixed(2); 
 
             // 🎯 LÓGICA MODIFICADA PARA SELECCIONAR EL PRECIO A MOSTRAR
             let displayPrice;
             if (currency === 'VES') {
-                displayPrice = vesPrice;
+                displayPrice = calculatedVesPriceFormatted; // Usamos el valor calculado
             } else if (currency === 'USDM') {
-                displayPrice = usdmPrice;
+                displayPrice = usdmPriceFormatted;
             } else { // Por defecto, USD
-                displayPrice = usdPrice;
+                displayPrice = usdPriceFormatted;
             }
 
             const packageHtml = `
                 <div 
                     class="package-option" 
                     data-package-name="${pkg.nombre_paquete}"
-                    data-price-usd="${usdPrice}"
-                    data-price-ves="${vesPrice}"
-                    data-price-usdm="${usdmPrice}" // 👈 NUEVO: Agregar el precio USDM al dataset
+                    data-price-usd="${usdPriceFormatted}"
+                    data-price-ves="${calculatedVesPriceFormatted}" // 👈 USAR EL VALOR CALCULADO EN EL DATASET
+                    data-price-usdm="${usdmPriceFormatted}" 
                 >
                     <div class="package-name">${pkg.nombre_paquete}</div>
                     <div class="package-price">${currencySymbol} ${displayPrice}</div>
@@ -115,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Función para actualizar SÓLO los precios de la UI cuando cambia la moneda
+    // Esta función funciona porque el precio VES CALCULADO ya fue guardado en el dataset (data-price-ves)
     function updatePackagesUI(currency) {
         if (!currentProductData || !currentProductData.paquetes) return;
 
@@ -130,14 +162,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // 🎯 LÓGICA MODIFICADA: Seleccionar la clave del dataset según la moneda
             let priceKeyDataset;
             if (currency === 'VES') {
-                priceKeyDataset = 'priceVes';
-            } else if (currency === 'USDM') { // 👈 NUEVA LÓGICA USDM
+                priceKeyDataset = 'priceVes'; // El valor ya es el calculado
+            } else if (currency === 'USDM') { // Lógica USDM
                 priceKeyDataset = 'priceUsdm'; 
             } else {
                 priceKeyDataset = 'priceUsd';
             }
 
-            // data-price-usdm se mapea a element.dataset.priceUsdm (camelCase)
+            // data-price-ves se mapea a element.dataset.priceVes (camelCase)
             const price = parseFloat(element.dataset[priceKeyDataset]).toFixed(2);
             element.querySelector('.package-price').textContent = `${currencySymbol} ${price}`;
         });
@@ -159,6 +191,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
+            // 🎯 MODIFICACIÓN 4: OBTENER LA TASA ANTES DE CARGAR LOS PAQUETES
+            usdToVesRate = await getUsdToVesRate();
+            console.log(`✅ Tasa USD/VES utilizada para el cálculo: ${usdToVesRate}`);
+
+
             // Llama a tu Netlify Function para obtener el producto
             // Se asume que esta función ya trae el campo 'precio_usdm' en la respuesta.
             const response = await fetch(`/.netlify/functions/get-product-details?slug=${slug}`);
@@ -216,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const initialCurrency = localStorage.getItem('selectedCurrency') || 'VES';
                 
-                // Renderizar los paquetes
+                // Renderizar los paquetes (usará la tasa global para calcular VES)
                 renderProductPackages(data, initialCurrency); 
 
                 // Adjuntar Listener al cambio de moneda (script.js debe disparar este evento)
@@ -265,10 +302,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Obtener datos del paquete seleccionado
             const packageName = selectedPackage.dataset.packageName;
-            // Usamos los strings del dataset, que ya vienen con 2 decimales
+            // Usamos los strings del dataset, que ahora contienen el precio VES CALCULADO
             const itemPriceUSD = selectedPackage.dataset.priceUsd; 
-            const itemPriceVES = selectedPackage.dataset.priceVes; 
-            // 👈 NUEVO: OBTENER EL PRECIO USDM DEL DATASET DEL ELEMENTO SELECCIONADO
+            const itemPriceVES = selectedPackage.dataset.priceVes; // 👈 ES EL VALOR CALCULADO
+            // 👈 OBTENER EL PRECIO USDM DEL DATASET DEL ELEMENTO SELECCIONADO
             const itemPriceUSDM = selectedPackage.dataset.priceUsdm; 
             
             
@@ -286,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Enviamos los tres precios como strings (tal como están en el dataset)
                 priceUSD: itemPriceUSD, 
                 priceVES: itemPriceVES, 
-                priceUSDM: itemPriceUSDM, // 👈 NUEVO: Añadir precio USDM
+                priceUSDM: itemPriceUSDM, // 👈 Añadir precio USDM
                 requiresAssistance: currentProductData.require_id !== true 
             };
 
