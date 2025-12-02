@@ -338,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let initialImgSrc = 'images/flag_ve.png';
 
     if (savedCurrency === 'USD') {
-        initialText = '$ (USDT)'; // 👈 CAMBIO AQUÍ: (USD) -> (USDT)
+        initialText = 'USDT'; // 🟢 MODIFICADO: Solo 'USDT' (sin $ ni paréntesis)
         initialImgSrc = 'images/flag_us.png';
     } else if (savedCurrency === 'USDM') { 
         initialText = '$ (GKUSD)';
@@ -458,9 +458,16 @@ document.addEventListener('DOMContentLoaded', () => {
         cartItemsContainer.innerHTML = ''; 
         let total = 0;
         const selectedCurrency = localStorage.getItem('selectedCurrency') || 'VES';
-        // CLAVE: USD y USDM usan el mismo símbolo '$'
-        const currencySymbol = selectedCurrency === 'VES' ? 'Bs.S' : '$';
-
+        
+        // 🟢 MODIFICADO: Lógica para establecer el símbolo ('' para USDT/USD)
+        let currencySymbol = '$'; // Por defecto para USDM
+        if (selectedCurrency === 'VES') {
+            currencySymbol = 'Bs.S';
+        } else if (selectedCurrency === 'USD') {
+            // SI es USD (ahora USDT), el símbolo es vacío
+            currencySymbol = ''; 
+        } 
+        
         if (cart.length === 0) {
             cartItemsContainer.innerHTML = '<p class="empty-cart-message">Tu carrito está vacío.</p>';
             if (cartTotalElement) cartTotalElement.textContent = `${currencySymbol}0.00`;
@@ -480,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Si es USDM, usa el nuevo campo priceUSDM
                 price = parseFloat(item.priceUSDM || 0); 
             } else {
-                // Por defecto (USD), usa priceUSD
+                // Por defecto (USD/USDT), usa priceUSD
                 price = parseFloat(item.priceUSD || 0);
             }
             
