@@ -338,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let initialImgSrc = 'images/flag_ve.png';
 
     if (savedCurrency === 'USD') {
-        initialText = '$ (USD)';
+        initialText = '$ (USDT)'; // 👈 CAMBIO AQUÍ: (USD) -> (USDT)
         initialImgSrc = 'images/flag_us.png';
     } else if (savedCurrency === 'USDM') { 
         initialText = '$ (GKUSD)';

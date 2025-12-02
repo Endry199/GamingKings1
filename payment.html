@@ -361,22 +361,7 @@
                 <input type="hidden" id="payment-receipt" name="paymentReceipt" value="Plisio_Managed_Payment" required> 
             </div>
         `,
-        // Plantilla para Zinli (Comprobante requerido)
-        'zinli': `
-            <p><strong>Paso 1:</strong> Transfiere el monto exacto a nuestra cuenta Zinli.</p>
-            <ul>
-                <li class="copy-container">
-                    <strong>Usuario Zinli:</strong> <span id="zinli-email">endryreyes199@gmail.com</span>
-                    <button type="button" class="copy-button" data-copy-target="zinli-email"><i class="fas fa-copy"></i></button>
-                    <span id="zinli-email-copy-feedback" class="copy-feedback"></span>
-                </li>
-            </ul>
-            <div class="payment-fields-container">
-                <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
-                <label for="payment-receipt">Subir Comprobante de Pago:</label>
-                <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
-            </div>
-        `,
+        
         // 🆕 NUEVA PLANTILLA: Binance Pay (Transferencia por ID)
         'binance-id': `
             <p><strong>Paso 1:</strong> Transfiere el monto exacto por Binance Pay a la siguiente ID:</p>
@@ -408,10 +393,10 @@
         { id: 'pago-ubi', name: 'Pago Ubi', type: 'ves', icon: 'fas fa-mobile-alt' }
     ];
 
+    // 🛑 MODIFICACIÓN: Eliminado 'zinli' de la lista de métodos USD.
     const paymentMethodsUSD = [
         { id: 'binance', name: 'Binance (Pasarela)', type: 'usd', icon: 'fab fa-bitcoin' },
         { id: 'binance-id', name: 'Binance Pay (ID)', type: 'usd', icon: 'fas fa-money-check-alt' },
-        { id: 'zinli', name: 'Zinli', type: 'usd', icon: 'fas fa-coins' },
     ];
 
     // 🎯 CAMBIO CLAVE: Nueva lista para la moneda USDM (Solo Wallet)
@@ -871,8 +856,8 @@
             // 🛑 MODIFICACIÓN: Solo agregar listener 'change' si es un input de tipo 'file'
             // También ajustar la propiedad 'required' según el método
             if (fileInput) {
-                // Métodos que requieren subir archivo (por defecto)
-                if (methodId === 'pago-movil' || methodId === 'zinli') {
+                // 🛑 CORRECCIÓN: Ahora solo pago-movil y pago-ubi requieren subir archivo
+                if (methodId === 'pago-movil' || methodId === 'pago-ubi') {
                     fileInput.required = true;
                 } 
                 // Métodos que NO requieren subir archivo o usan hidden input (binance, binance-id, wallet)
@@ -933,7 +918,7 @@
 
     /**
      * @MODIFICADO: Verifica la validez del formulario y habilita/deshabilita los botones.
-     * Ahora incluye la excepción para 'binance', 'binance-id' y 'wallet'.
+     * Ahora incluye la excepción para 'binance', 'binance-id', 'wallet', y corrige la validación para Zinli.
      */
     function checkFormValidity() {
         const selectedRadio = document.querySelector('input[name="paymentMethod"]:checked');
@@ -957,9 +942,10 @@
         } else if (selectedMethodId === 'wallet') { // 🎯 CAMBIO CLAVE: Wallet RESTAURADA
             areDetailsFilled = true;
         } else if (selectedMethodId === 'binance-id') { // 🆕 Binance ID (Comprobante opcional)
+            // Ya no requiere comprobante, el input es opcional
             areDetailsFilled = true;
-        } else if (isMethodSelected) { 
-            // Otros métodos (Pago Movil/Zinli): Requieren archivo
+        } else if (isMethodSelected && (selectedMethodId === 'pago-movil' || selectedMethodId === 'pago-ubi')) { // 🛑 CORRECCIÓN: Pago Móvil/Pago Ubi
+            // Estos métodos SÍ requieren subir archivo
             const fileInput = document.getElementById('payment-receipt');
             if (fileInput && fileInput.files.length === 0) {
                 areDetailsFilled = false;
@@ -1345,9 +1331,10 @@
             return;
         }
         
-        // Lógica para flujo de pago normal (requiere comprobante o ID - Pago Móvil/Zinli/Binance ID)
+        // Lógica para flujo de pago normal (requiere comprobante o ID - Pago Móvil/Pago Ubi/Binance ID)
         
-        let requiresReceipt = (selectedPaymentMethod === 'pago-movil' || selectedPaymentMethod === 'zinli');
+        // 🛑 CORRECCIÓN: Ahora solo 'pago-movil' y 'pago-ubi' requieren el comprobante para la validación del frontend
+        let requiresReceipt = (selectedPaymentMethod === 'pago-movil' || selectedPaymentMethod === 'pago-ubi'); 
 
         if (requiresReceipt) {
             const paymentReceipt = document.getElementById('payment-receipt');
