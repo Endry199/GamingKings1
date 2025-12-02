@@ -378,7 +378,6 @@
                 <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf">
                 </div>
         `,
-        
         // 🎯 Plantilla para Wallet
         'wallet': `
             <div class="payment-fields-container">
@@ -498,7 +497,7 @@
         if (startTime) {
             endTime = parseInt(startTime) + duration;
         } else {
-            // Si no hay hora de inicio, es la primera vez que se carga la página de pago (REINICIO).
+            // Si no hay hora de inicio, es la primera vez que se carga la página de pago.
             endTime = now + duration;
             localStorage.setItem('paymentStartTime', now.toString());
         }
@@ -1473,10 +1472,8 @@
      * Lógica para reiniciar el contador y vaciar el carrito 
      * si el usuario navega fuera de payment.html (al usar la flecha
      * atrás o al hacer clic en un enlace como index.html o products.html).
-     * * 🎯 CAMBIO CLAVE: Se reemplaza 'unload' con 'pagehide' para una limpieza 
-     * más confiable de localStorage en navegadores modernos al salir de la página.
      */
-    window.addEventListener('pagehide', function (e) {
+    window.addEventListener('unload', function (e) {
         // Verificar si el mensaje de éxito ya se mostró. Si es así, no limpiamos.
         const paymentCompleted = successMessageDisplay.style.display === 'block';
 
@@ -1488,11 +1485,9 @@
         // Solo borra el carrito y la transacción si NO se ha completado el pago Y NO estamos redirigiendo intencionalmente a login.
         if (!paymentCompleted && !isRedirectingToLogin) {
             // Vacía las claves que guardan el estado de la transacción y el temporizador.
-            // Al eliminar 'paymentStartTime', la próxima vez que el usuario entre, 
-            // la función startPaymentTimer() lo reiniciará a 15 minutos.
             localStorage.removeItem('transactionDetails'); // Vacía los detalles de la transacción
             localStorage.removeItem('cartItems'); // Vacía el carrito
-            localStorage.removeItem('paymentStartTime'); // CLAVE PARA EL REINICIO
+            localStorage.removeItem('paymentStartTime'); // Reinicia el contador/temporizador
             
             // Detener el intervalo del temporizador si está activo
             if (timerInterval) {
@@ -1505,34 +1500,6 @@
                 clearInterval(timerInterval);
                 localStorage.removeItem('paymentStartTime');
              }
-        }
-    });
-    
-    // 🎯 NUEVO LISTENER: Maneja el caso en que el usuario usa el botón "Atrás" 
-    // y la página se restaura desde la caché (BFCache).
-    window.addEventListener('pageshow', function (event) {
-        // 'event.persisted' es true si la página fue restaurada desde BFCache
-        if (event.persisted) {
-            console.log("Página restaurada desde BFCache. Forzando reinicio del temporizador si el pago está incompleto.");
-            
-            const paymentCompleted = successMessageDisplay.style.display === 'block';
-
-            if (!paymentCompleted) {
-                // Al eliminar 'paymentStartTime' y llamar a startPaymentTimer(), forzamos 
-                // el temporizador a reiniciarse a los 15 minutos completos.
-                localStorage.removeItem('paymentStartTime');
-                
-                // Limpiar el intervalo anterior para evitar múltiples contadores
-                if (timerInterval) {
-                    clearInterval(timerInterval);
-                }
-                
-                // Reiniciar el temporizador si los detalles de la transacción aún existen
-                const storedDetails = localStorage.getItem('transactionDetails');
-                if (storedDetails) {
-                    startPaymentTimer(); 
-                }
-            }
         }
     });
 
