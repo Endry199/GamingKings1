@@ -1,4 +1,4 @@
-// script.js COMPLETO Y MODIFICADO (Versión Final con Soporte USDM Separado y Refresco de Saldo)
+// script.js COMPLETO Y MODIFICADO (Versión Final con Soporte USDM y USDE)
 
 // 🎯 FUNCIÓN PARA CARGAR Y APLICAR LA CONFIGURACIÓN DE COLORES
 async function applySiteConfig() {
@@ -122,10 +122,6 @@ function checkUserSessionAndRenderUI() {
 }
 
 /**
-// script.js (SOLO LA FUNCIÓN handleCredentialResponse)
-// ... (código previo de script.js)
-
-/**
  * Función de Callback llamada por el SDK de Google al iniciar sesión.
  */
 window.handleCredentialResponse = async (response) => {
@@ -191,7 +187,6 @@ window.handleCredentialResponse = async (response) => {
     }
 };
 
-// ... (resto del código de script.js)
 /**
  * Inicializa el SDK de Google y dibuja el botón.
  * @param {boolean} forceRender Si es true, fuerza la renderización aunque haya sesión.
@@ -237,7 +232,7 @@ function initGoogleSignIn(forceRender = false) {
 
 // 💡 Función global para obtener la moneda guardada.
 window.getCurrentCurrency = function() {
-    // Retorna la moneda guardada ('USD' o 'VES'), o 'VES' como valor por defecto.
+    // Retorna la moneda guardada ('USD', 'VES', 'USDM', 'USDE'), o 'VES' como valor por defecto.
     return localStorage.getItem('selectedCurrency') || 'VES'; 
 };
 
@@ -338,12 +333,18 @@ document.addEventListener('DOMContentLoaded', () => {
     let initialImgSrc = 'images/flag_ve.png';
 
     if (savedCurrency === 'USD') {
-        initialText = 'USDT'; // 🟢 MODIFICADO: Solo 'USDT' (sin $ ni paréntesis)
+        initialText = '(USDT)'; // MODIFICADO: Solo 'USDT' (sin $ ni paréntesis)
         initialImgSrc = 'images/flag_us.png';
     } else if (savedCurrency === 'USDM') { 
         initialText = '$ (GKUSD)';
         initialImgSrc = 'images/favicon.ico';
+    } 
+    // 🟢 NUEVA LÓGICA PARA USDE
+    else if (savedCurrency === 'USDE') { 
+        initialText = '$ (USDE)';
+        initialImgSrc = 'images/flag_ecu.png';
     }
+    
     updateCurrencyDisplay(savedCurrency, initialText, initialImgSrc);
 
     // Toggle para abrir/cerrar el selector
@@ -460,13 +461,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedCurrency = localStorage.getItem('selectedCurrency') || 'VES';
         
         // 🟢 MODIFICADO: Lógica para establecer el símbolo ('' para USDT/USD)
-        let currencySymbol = '$'; // Por defecto para USDM
+        let currencySymbol = '$'; // Por defecto para USDM y USDE
+        
         if (selectedCurrency === 'VES') {
             currencySymbol = 'Bs.S';
         } else if (selectedCurrency === 'USD') {
             // SI es USD (ahora USDT), el símbolo es vacío
             currencySymbol = ''; 
         } 
+        // USDE usará '$' por ser Dólar de Ecuador.
+
         
         if (cart.length === 0) {
             cartItemsContainer.innerHTML = '<p class="empty-cart-message">Tu carrito está vacío.</p>';
@@ -484,9 +488,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Si es VES, usa priceVES
                 price = parseFloat(item.priceVES || 0);
             } else if (selectedCurrency === 'USDM') {
-                // Si es USDM, usa el nuevo campo priceUSDM
+                // Si es USDM, usa el campo priceUSDM
                 price = parseFloat(item.priceUSDM || 0); 
-            } else {
+            } 
+            // 🟢 NUEVA LÓGICA: Si es USDE, usa el campo priceUSDE
+            else if (selectedCurrency === 'USDE') {
+                price = parseFloat(item.priceUSDE || 0); 
+            }
+            else {
                 // Por defecto (USD/USDT), usa priceUSD
                 price = parseFloat(item.priceUSD || 0);
             }
