@@ -101,23 +101,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 🎯 MODIFICACIÓN: El símbolo para VES es 'Bs.' y para USD/USDM/USDE es '$'
         const currencySymbol = (currency === 'VES') ? 'Bs.' : '$';
 
         data.paquetes.forEach(pkg => {
             // Obtener el precio USD (base para el cálculo)
             const usdPrice = parseFloat(pkg.precio_usd || 0); 
             
-            // 🎯 CÁLCULO 1: CALCULAR EL PRECIO VES USANDO LA TASA GLOBAL
+            // 🎯 MODIFICACIÓN 3: CALCULAR EL PRECIO VES USANDO LA TASA GLOBAL
             const calculatedVesPrice = (usdPrice * usdToVesRate);
-            
-            // 💰 CÁLCULO CLAVE PARA USDE: USD + 10%. NO ES VISIBLE COMO UN RECARGO.
-            const calculatedUsdePrice = (usdPrice * 1.10); // 👈 CÁLCULO USDE (10% más)
             
             const usdPriceFormatted = usdPrice.toFixed(2);
             const calculatedVesPriceFormatted = calculatedVesPrice.toFixed(2);
-            // 💰 NUEVO: Precio USDE calculado y formateado
-            const calculatedUsdePriceFormatted = calculatedUsdePrice.toFixed(2); 
             
             // Obtener precio USDM (se mantiene)
             const usdmPriceFormatted = parseFloat(pkg.precio_usdm || 0).toFixed(2); 
@@ -128,8 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 displayPrice = calculatedVesPriceFormatted; // Usamos el valor calculado
             } else if (currency === 'USDM') {
                 displayPrice = usdmPriceFormatted;
-            } else if (currency === 'USDE') { // 🎯 NUEVO: Lógica para USDE
-                displayPrice = calculatedUsdePriceFormatted;
             } else { // Por defecto, USD
                 displayPrice = usdPriceFormatted;
             }
@@ -139,9 +131,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     class="package-option" 
                     data-package-name="${pkg.nombre_paquete}"
                     data-price-usd="${usdPriceFormatted}"
-                    data-price-ves="${calculatedVesPriceFormatted}" 
+                    data-price-ves="${calculatedVesPriceFormatted}" // 👈 USAR EL VALOR CALCULADO EN EL DATASET
                     data-price-usdm="${usdmPriceFormatted}" 
-                    data-price-usde="${calculatedUsdePriceFormatted}" // 🎯 NUEVO DATASET PARA USDE
                 >
                     <div class="package-name">${pkg.nombre_paquete}</div>
                     <div class="package-price">${currencySymbol} ${displayPrice}</div>
@@ -155,13 +146,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Función para actualizar SÓLO los precios de la UI cuando cambia la moneda
+    // Esta función funciona porque el precio VES CALCULADO ya fue guardado en el dataset (data-price-ves)
     function updatePackagesUI(currency) {
         if (!currentProductData || !currentProductData.paquetes) return;
 
         const packageOptionsGrid = document.getElementById('package-options-grid');
         if (!packageOptionsGrid) return; 
         
-        // 🎯 MODIFICACIÓN: El símbolo para USDE sigue siendo '$'
         const currencySymbol = (currency === 'VES') ? 'Bs.' : '$';
 
         // Recorrer los paquetes y actualizar el precio
@@ -171,16 +162,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // 🎯 LÓGICA MODIFICADA: Seleccionar la clave del dataset según la moneda
             let priceKeyDataset;
             if (currency === 'VES') {
-                priceKeyDataset = 'priceVes';
-            } else if (currency === 'USDM') { 
+                priceKeyDataset = 'priceVes'; // El valor ya es el calculado
+            } else if (currency === 'USDM') { // Lógica USDM
                 priceKeyDataset = 'priceUsdm'; 
-            } else if (currency === 'USDE') { // 🎯 NUEVO: Lógica USDE
-                priceKeyDataset = 'priceUsde'; 
             } else {
                 priceKeyDataset = 'priceUsd';
             }
 
-            // data-price-usde se mapea a element.dataset.priceUsde (camelCase)
+            // data-price-ves se mapea a element.dataset.priceVes (camelCase)
             const price = parseFloat(element.dataset[priceKeyDataset]).toFixed(2);
             element.querySelector('.package-price').textContent = `${currencySymbol} ${price}`;
         });
@@ -193,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!slug) {
             if (productContainer) {
                 // CAMBIO: 'Malok Recargas' a 'GamingKings'
-                    productContainer.innerHTML = '<h2 class="error-message">❌ Error: No se especificó el juego.</h2><p style="text-align:center;"><a href="index.html">Volver a la página principal</a></p>';
+                   productContainer.innerHTML = '<h2 class="error-message">❌ Error: No se especificó el juego.</h2><p style="text-align:center;"><a href="index.html">Volver a la página principal</a></p>';
             }
             const pageTitle = document.getElementById('page-title');
             // CAMBIO: 'Malok Recargas' a 'GamingKings'
@@ -208,6 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
             // Llama a tu Netlify Function para obtener el producto
+            // Se asume que esta función ya trae el campo 'precio_usdm' en la respuesta.
             const response = await fetch(`/.netlify/functions/get-product-details?slug=${slug}`);
             
             if (!response.ok) {
@@ -263,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const initialCurrency = localStorage.getItem('selectedCurrency') || 'VES';
                 
-                // Renderizar los paquetes (usará la tasa global para calcular VES y el 10% para USDE)
+                // Renderizar los paquetes (usará la tasa global para calcular VES)
                 renderProductPackages(data, initialCurrency); 
 
                 // Adjuntar Listener al cambio de moneda (script.js debe disparar este evento)
@@ -312,15 +302,15 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Obtener datos del paquete seleccionado
             const packageName = selectedPackage.dataset.packageName;
-            // Usamos los strings del dataset, que ahora contienen los precios CALCULADOS
+            // Usamos los strings del dataset, que ahora contienen el precio VES CALCULADO
             const itemPriceUSD = selectedPackage.dataset.priceUsd; 
-            const itemPriceVES = selectedPackage.dataset.priceVes; 
+            const itemPriceVES = selectedPackage.dataset.priceVes; // 👈 ES EL VALOR CALCULADO
+            // 👈 OBTENER EL PRECIO USDM DEL DATASET DEL ELEMENTO SELECCIONADO
             const itemPriceUSDM = selectedPackage.dataset.priceUsdm; 
-            const itemPriceUSDE = selectedPackage.dataset.priceUsde; // 🎯 NUEVO: Obtener precio USDE
             
             
             // =============================================================
-            // === MODIFICACIÓN CLAVE: AÑADIR AL CARRITO ===
+            // === MODIFICACIÓN CLAVE: AÑADIR AL CARRITO Y MOSTRAR ALERTA ===
             // =============================================================
             
             // 1. Construir objeto de Ítem de Carrito con ID único
@@ -330,11 +320,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Enviamos el ID, que puede ser vacío ('') si no se requiere, o el valor ingresado
                 playerId: playerId, 
                 packageName: packageName,
-                // Enviamos los CUATRO precios como strings (tal como están en el dataset)
+                // Enviamos los tres precios como strings (tal como están en el dataset)
                 priceUSD: itemPriceUSD, 
                 priceVES: itemPriceVES, 
-                priceUSDM: itemPriceUSDM, 
-                priceUSDE: itemPriceUSDE, // 🎯 NUEVO: Añadir precio USDE
+                priceUSDM: itemPriceUSDM, // 👈 Añadir precio USDM
                 requiresAssistance: currentProductData.require_id !== true 
             };
 
@@ -349,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert(`✅ ¡Tu recarga de ${packageName} para ${cartItem.game} se ha agregado al carrito!`);
             
             // Opcional: limpiar el campo de ID después de añadir
-            // if(playerIdInput) playerIdInput.value = ''; 
+            // if(playerIdInput) playerIdInput.value = ''; // <--- COMENTADA PARA MANTENER EL ID
             
             // =============================================================
         });

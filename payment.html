@@ -385,40 +385,6 @@
                 <p style="font-size: 0.9em; color: #ff9800;">(Asegúrate de tener saldo suficiente antes de continuar. La deducción se hará al presionar "Finalizar Recarga")</p>
                 <input type="hidden" id="payment-receipt" name="paymentReceipt" value="Wallet_Deduction_Flow" required>
                 </div>
-        `,
-        
-        // 🚀 NUEVA PLANTILLA: BANCO PICHINCHA
-        'pichincha': `
-            <p><strong>Paso 1:</strong> Realiza la transferencia del monto exacto a los siguientes datos de Banco Pichincha:</p>
-            <ul>
-                <li><strong>Banco:</strong> Banco Pichincha</li>
-                <li><strong>Tipo de Cuenta:</strong> Cuenta de Ahorro</li>
-                <li class="copy-container">
-                    <strong>Titular:</strong> <span id="pichincha-titular">Elkin Freire</span>
-                    <button type="button" class="copy-button" data-copy-target="pichincha-titular"><i class="fas fa-copy"></i></button>
-                    <span id="pichincha-titular-copy-feedback" class="copy-feedback"></span>
-                </li>
-                <li class="copy-container">
-                    <strong>Cédula de Identidad:</strong> <span id="pichincha-cedula">0953809084</span>
-                    <button type="button" class="copy-button" data-copy-target="pichincha-cedula"><i class="fas fa-copy"></i></button>
-                    <span id="pichincha-cedula-copy-feedback" class="copy-feedback"></span>
-                </li>
-                <li class="copy-container">
-                    <strong>Número de Cuenta 1:</strong> <span id="pichincha-cuenta1">2214824294</span>
-                    <button type="button" class="copy-button" data-copy-target="pichincha-cuenta1"><i class="fas fa-copy"></i></button>
-                    <span id="pichincha-cuenta1-copy-feedback" class="copy-feedback"></span>
-                </li>
-                <li class="copy-container">
-                    <strong>Número de Cuenta 2:</strong> <span id="pichincha-cuenta2">2212577920</span>
-                    <button type="button" class="copy-button" data-copy-target="pichincha-cuenta2"><i class="fas fa-copy"></i></button>
-                    <span id="pichincha-cuenta2-copy-feedback" class="copy-feedback"></span>
-                </li>
-            </ul>
-            <div class="payment-fields-container">
-                <p><strong>Paso 2:</strong> Sube tu comprobante de pago.</p>
-                <label for="payment-receipt">Subir Comprobante de Pago:</label>
-                <input type="file" id="payment-receipt" name="paymentReceipt" accept="image/*,application/pdf" required>
-            </div>
         `
     };
 
@@ -427,18 +393,15 @@
         { id: 'pago-ubi', name: 'Pago Ubi', type: 'ves', icon: 'fas fa-mobile-alt' }
     ];
 
+    // 🛑 MODIFICACIÓN: Eliminado 'zinli' de la lista de métodos USD.
     const paymentMethodsUSD = [
         { id: 'binance', name: 'Binance (Pasarela)', type: 'usd', icon: 'fab fa-bitcoin' },
         { id: 'binance-id', name: 'Binance Pay (ID)', type: 'usd', icon: 'fas fa-money-check-alt' },
     ];
 
+    // 🎯 CAMBIO CLAVE: Nueva lista para la moneda USDM (Solo Wallet)
     const paymentMethodsUSDM = [
         { id: 'wallet', name: 'Wallet (Saldo en Página)', type: 'usdm', icon: 'fas fa-wallet' }
-    ];
-    
-    // 🚀 NUEVO ARRAY: Métodos para la moneda USDE
-    const paymentMethodsUSDE = [
-        { id: 'pichincha', name: 'Banco Pichincha', type: 'usde', icon: 'fas fa-university' }
     ];
 
     // 2. VARIABLES GLOBALES DE LA PAGINA
@@ -673,7 +636,7 @@
     /**
      * @MODIFICADO: Genera y actualiza el resumen de la transacción en la UI, ahora manejando un array de productos (el carrito).
      * Calcula el total de todos los productos y muestra los detalles individuales.
-     * 🎯 FIX: Se añade lógica para manejar el precio USDM y **USDE** para el cálculo del total y la visualización.
+     * 🎯 FIX: Se añade lógica para manejar el precio USDM (precio base sin recargo) para el cálculo del total y la visualización.
      */
     function updateTransactionSummary() {
         const summaryDiv = document.getElementById('transaction-summary');
@@ -692,16 +655,10 @@
         }
 
         const selectedCurrency = localStorage.getItem('selectedCurrency') || 'USD';
-        // 🚀 Nuevo símbolo para USDE
-        const currencySymbol = 
-            selectedCurrency === 'VES' ? 'Bs.S' : 
-            (selectedCurrency === 'USDE' ? '$' : '$'); // USDE usa el mismo símbolo $
-        
-        let totalUSD = 0; 
+        const currencySymbol = selectedCurrency === 'VES' ? 'Bs.S' : '$';
+        let totalUSD = 0; // Total con recargo (e.g., $1.13)
         let totalVES = 0;
-        let totalUSDM = 0; 
-        let totalUSDE = 0; // 🚀 Nuevo total para USDE
-        
+        let totalUSDM = 0; // 🎯 FIX 1: Nuevo total para USDM (Precio base sin recargo, e.g., $1.00)
         let summaryHTML = '<h3>Resumen de la Transacción</h3>';
         
         summaryHTML += '<div class="product-list-summary">';
@@ -711,24 +668,22 @@
             // Aseguramos que los precios sean números, usando 0 como fallback
             const priceUSD = parseFloat(item.priceUSD || 0);
             const priceVES = parseFloat(item.priceVES || 0);
+            // 🎯 FIX 2: Usamos un campo para el precio base (USDM). Se asume que el user lo carga como 'priceUSDM' o 'priceBaseUSD'.
             const priceUSDM = parseFloat(item.priceUSDM || item.priceBaseUSD || 0); 
-            const priceUSDE = parseFloat(item.priceUSDE || item.priceUSD || 0); // 🚀 Asumimos que si no hay priceUSDE, usa priceUSD.
 
             // Acumular todos los totales
             totalUSD += priceUSD;
             totalVES += priceVES;
-            totalUSDM += priceUSDM; 
-            totalUSDE += priceUSDE; // 🚀 Acumular el total de USDE
+            totalUSDM += priceUSDM; // 🎯 FIX 3: Acumular el total de USDM
             
             // El precio a mostrar depende de la moneda seleccionada
             let displayPrice;
             if (selectedCurrency === 'VES') {
                 displayPrice = priceVES.toFixed(2);
-            } else if (selectedCurrency === 'USDM') { 
+            } else if (selectedCurrency === 'USDM') { // 🎯 FIX 4: Lógica para USDM (usa el precio base)
+                // Si el precio USDM no está definido (> 0), usa el precio USD (el error original, pero con fallback)
                 displayPrice = priceUSDM > 0 ? priceUSDM.toFixed(2) : priceUSD.toFixed(2);
-            } else if (selectedCurrency === 'USDE') { // 🚀 Lógica para USDE
-                displayPrice = priceUSDE.toFixed(2);
-            } else { // Por defecto 'USD'
+            } else { // Por defecto 'USD' (usa el precio con recargo)
                 displayPrice = priceUSD.toFixed(2);
             }
             
@@ -790,17 +745,16 @@
         });
         
         // 2. Mostrar el Total Final
-        // 🚀 Determinar el total final basado en la moneda seleccionada, incluyendo USDE
+        // 🎯 FIX 5: Determinar el total final basado en la moneda seleccionada, incluyendo USDM
         const finalDisplayTotal = 
             selectedCurrency === 'VES' ? totalVES.toFixed(2) : 
-            (selectedCurrency === 'USDM' ? totalUSDM.toFixed(2) :
-            (selectedCurrency === 'USDE' ? totalUSDE.toFixed(2) : totalUSD.toFixed(2)));
+            (selectedCurrency === 'USDM' ? totalUSDM.toFixed(2) : totalUSD.toFixed(2));
         
         // Añadimos el contenedor final del total
         summaryHTML += `
             </div>
             <div class="transaction-total">
-                <p><strong>TOTAL A PAGAR:</strong> <span id="final-total" data-usd="${totalUSD.toFixed(2)}" data-ves="${totalVES.toFixed(2)}" data-usdm="${totalUSDM.toFixed(2)}" data-usde="${totalUSDE.toFixed(2)}">${currencySymbol} ${finalDisplayTotal}</span></p>
+                <p><strong>TOTAL A PAGAR:</strong> <span id="final-total" data-usd="${totalUSD.toFixed(2)}" data-ves="${totalVES.toFixed(2)}" data-usdm="${totalUSDM.toFixed(2)}">${currencySymbol} ${finalDisplayTotal}</span></p>
             </div>
         `;
 
@@ -810,16 +764,14 @@
         if (Array.isArray(transactionDetails)) {
             transactionDetails.totalUSD = totalUSD.toFixed(2);
             transactionDetails.totalVES = totalVES.toFixed(2);
-            transactionDetails.totalUSDM = totalUSDM.toFixed(2); 
-            transactionDetails.totalUSDE = totalUSDE.toFixed(2); // 🚀 Almacenar totalUSDE
+            transactionDetails.totalUSDM = totalUSDM.toFixed(2); // 🎯 FIX 6: Almacenar totalUSDM
             transactionDetails.finalPrice = finalDisplayTotal;
             transactionDetails.currency = selectedCurrency;
         } else if (transactionDetails) {
             // Para el caso de un objeto singular (flujo antiguo), actualizamos el objeto
             transactionDetails.priceUSD = totalUSD.toFixed(2);
             transactionDetails.priceVES = totalVES.toFixed(2);
-            transactionDetails.priceUSDM = totalUSDM.toFixed(2); 
-            transactionDetails.priceUSDE = totalUSDE.toFixed(2); // 🚀 Almacenar totalUSDE en objeto singular
+            transactionDetails.priceUSDM = totalUSDM.toFixed(2); // 🎯 FIX 7: Almacenar totalUSDM en objeto singular
             transactionDetails.finalPrice = finalDisplayTotal;
             transactionDetails.currency = selectedCurrency;
         }
@@ -853,10 +805,8 @@
 
         if (currentCurrency === 'VES') {
             methods = paymentMethodsVES;
-        } else if (currentCurrency === 'USDM') { 
+        } else if (currentCurrency === 'USDM') { // 🎯 Lógica para USDM: solo Wallet
             methods = paymentMethodsUSDM; 
-        } else if (currentCurrency === 'USDE') { // 🚀 Lógica para USDE
-            methods = paymentMethodsUSDE;
         } else {
             methods = paymentMethodsUSD; // Por defecto USD
         }
@@ -906,8 +856,8 @@
             // 🛑 MODIFICACIÓN: Solo agregar listener 'change' si es un input de tipo 'file'
             // También ajustar la propiedad 'required' según el método
             if (fileInput) {
-                // 🛑 CORRECCIÓN: Ahora solo pago-movil, pago-ubi, y **pichincha** requieren subir archivo
-                if (methodId === 'pago-movil' || methodId === 'pago-ubi' || methodId === 'pichincha') {
+                // 🛑 CORRECCIÓN: Ahora solo pago-movil y pago-ubi requieren subir archivo
+                if (methodId === 'pago-movil' || methodId === 'pago-ubi') {
                     fileInput.required = true;
                 } 
                 // Métodos que NO requieren subir archivo o usan hidden input (binance, binance-id, wallet)
@@ -968,7 +918,7 @@
 
     /**
      * @MODIFICADO: Verifica la validez del formulario y habilita/deshabilita los botones.
-     * Ahora incluye la excepción para 'binance', 'binance-id', 'wallet', y **pichincha**.
+     * Ahora incluye la excepción para 'binance', 'binance-id', 'wallet', y corrige la validación para Zinli.
      */
     function checkFormValidity() {
         const selectedRadio = document.querySelector('input[name="paymentMethod"]:checked');
@@ -989,11 +939,12 @@
             areDetailsFilled = true; 
         } else if (selectedMethodId === 'binance') { // Plisio (Redirección automática)
             areDetailsFilled = true;
-        } else if (selectedMethodId === 'wallet') { // Wallet
+        } else if (selectedMethodId === 'wallet') { // 🎯 CAMBIO CLAVE: Wallet RESTAURADA
             areDetailsFilled = true;
-        } else if (selectedMethodId === 'binance-id') { // Binance ID (Comprobante opcional)
+        } else if (selectedMethodId === 'binance-id') { // 🆕 Binance ID (Comprobante opcional)
+            // Ya no requiere comprobante, el input es opcional
             areDetailsFilled = true;
-        } else if (isMethodSelected && (selectedMethodId === 'pago-movil' || selectedMethodId === 'pago-ubi' || selectedMethodId === 'pichincha')) { // 🛑 CORRECCIÓN: Pago Móvil/Pago Ubi/**Pichincha**
+        } else if (isMethodSelected && (selectedMethodId === 'pago-movil' || selectedMethodId === 'pago-ubi')) { // 🛑 CORRECCIÓN: Pago Móvil/Pago Ubi
             // Estos métodos SÍ requieren subir archivo
             const fileInput = document.getElementById('payment-receipt');
             if (fileInput && fileInput.files.length === 0) {
@@ -1172,15 +1123,9 @@
         }
         
         // 🎯 FIX 9: Obtener el precio final correcto (USDM si es Wallet, USD si es otro método USD)
-        const finalPriceToSend = 
-            selectedPaymentMethod === 'wallet' 
+        const finalPriceUSD = selectedPaymentMethod === 'wallet' 
             ? (transactionDetails.totalUSDM || transactionDetails.priceUSDM) 
             : (transactionDetails.totalUSD || transactionDetails.priceUSD);
-        
-        // 🚀 FIX: Obtener el precio final USDE si el método es Pichincha.
-        const finalPriceUSDE = selectedPaymentMethod === 'pichincha' 
-            ? (transactionDetails.totalUSDE || transactionDetails.priceUSDE)
-            : finalPriceToSend;
 
 
         // 🎯 INICIO DEL CAMBIO CLAVE: Lógica para el flujo de pago con Wallet
@@ -1201,7 +1146,7 @@
             console.log('DIAGNÓSTICO: Token de Sesión Encontrado. Longitud:', sessionToken.length);
 
 
-            if (!finalPriceToSend || parseFloat(finalPriceToSend) <= 0) {
+            if (!finalPriceUSD || parseFloat(finalPriceUSD) <= 0) {
                 alert('Error: El monto de la transacción es inválido. Por favor, revisa tu carrito.');
                 return;
             }
@@ -1210,7 +1155,7 @@
             finalizeBtn.textContent = 'Deduciendo Saldo...';
             
             // 🛑 DIAGNÓSTICO CLAVE 2: Antes de la llamada de red
-            console.log(`DIAGNÓSTICO: Iniciando fetch a Netlify Function '/.netlify/functions/deduct-wallet-balance' con Token Bearer. Monto: ${finalPriceToSend}`);
+            console.log(`DIAGNÓSTICO: Iniciando fetch a Netlify Function '/.netlify/functions/deduct-wallet-balance' con Token Bearer. Monto: ${finalPriceUSD}`);
             
             try {
                 // 1. PAGO: Llamada a deduct-wallet-balance
@@ -1223,7 +1168,7 @@
                     body: JSON.stringify({
                         email: emailInput.value.trim(),
                         whatsapp: whatsappInput.value.trim(),
-                        amountUSD: finalPriceToSend, 
+                        amountUSD: finalPriceUSD, 
                         cartDetails: JSON.stringify(Array.isArray(transactionDetails) ? transactionDetails : [transactionDetails]), 
                     })
                 });
@@ -1329,8 +1274,8 @@
         // 🛑 Lógica para el flujo de pago con Plisio (Método Binance de redirección)
         if (selectedPaymentMethod === 'binance') {
             
-            // Lógica de validación: Usa finalPriceToSend (que ahora contiene el precio USD con recargo si no es 'wallet')
-            if (!finalPriceToSend || parseFloat(finalPriceToSend) <= 0) {
+            // Lógica de validación: Usa finalPriceUSD (que ahora contiene el precio USD con recargo si no es 'wallet')
+            if (!finalPriceUSD || parseFloat(finalPriceUSD) <= 0) {
                 alert('Error: El monto de la transacción es inválido. Por favor, revisa tu carrito.');
                 return;
             }
@@ -1352,7 +1297,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        amount: finalPriceToSend, // 🎯 amount: usa el precio final USD
+                        amount: finalPriceUSD, // 🎯 FIX 11: amount: usa el precio final (USD/USDM)
                         email: emailInput.value.trim(),
                         whatsapp: whatsappInput.value.trim(),
                         cartDetails: JSON.stringify(Array.isArray(transactionDetails) ? transactionDetails : [transactionDetails]), 
@@ -1386,10 +1331,10 @@
             return;
         }
         
-        // Lógica para flujo de pago normal (requiere comprobante o ID - Pago Móvil/Pago Ubi/Binance ID/Pichincha)
+        // Lógica para flujo de pago normal (requiere comprobante o ID - Pago Móvil/Pago Ubi/Binance ID)
         
-        // 🛑 CORRECCIÓN: Ahora solo 'pago-movil', 'pago-ubi' y **'pichincha'** requieren el comprobante para la validación del frontend
-        let requiresReceipt = (selectedPaymentMethod === 'pago-movil' || selectedPaymentMethod === 'pago-ubi' || selectedPaymentMethod === 'pichincha'); 
+        // 🛑 CORRECCIÓN: Ahora solo 'pago-movil' y 'pago-ubi' requieren el comprobante para la validación del frontend
+        let requiresReceipt = (selectedPaymentMethod === 'pago-movil' || selectedPaymentMethod === 'pago-ubi'); 
 
         if (requiresReceipt) {
             const paymentReceipt = document.getElementById('payment-receipt');
@@ -1407,8 +1352,7 @@
             formData.append('currency', transactionDetails.currency);
             formData.append('totalUSD', transactionDetails.totalUSD);
             formData.append('totalVES', transactionDetails.totalVES);
-            formData.append('totalUSDM', transactionDetails.totalUSDM); 
-            formData.append('totalUSDE', transactionDetails.totalUSDE); // 🚀 Agregar totalUSDE
+            formData.append('totalUSDM', transactionDetails.totalUSDM); // 🎯 FIX 12: Agregar totalUSDM al formData
         }
 
         console.log('Datos a enviar (FormData):');
@@ -1500,8 +1444,11 @@
                 clearInterval(timerInterval);
                 localStorage.removeItem('paymentStartTime');
              }
+             // Las otras claves (cartItems, transactionDetails) ya se limpiaron en el flujo de éxito
         }
     });
+
+    // 🚩 FIN DE LA MODIFICACIÓN SOLICITADA 🚩
 
 </script>
 </body>
