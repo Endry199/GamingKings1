@@ -3,35 +3,52 @@ const axios = require('axios');
 const nodemailer = require('nodemailer'); 
 
 exports.handler = async (event, context) => {
+    console.log("--- 🚀 INICIO DE EJECUCIÓN DEL WEBHOOK ---");
+
+    // --- VALIDACIÓN DE MÉTODO ---
     if (event.httpMethod !== "POST") {
-        console.log("Method Not Allowed: Expected POST.");
+        console.warn(`[!] Intento de acceso con método no permitido: ${event.httpMethod}`);
         return { statusCode: 405, body: "Method Not Allowed" };
     }
 
-    // --- Variables de Entorno y Cliente Supabase ---
-    const SUPABASE_URL = process.env.SUPABASE_URL;
-    const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-    const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-    
-    // 🔑 VARIABLES DE CORREO
-    const SMTP_HOST = process.env.SMTP_HOST;
-    const SMTP_PORT = process.env.SMTP_PORT;
-    const SMTP_USER = process.env.SMTP_USER;
-    const SMTP_PASS = process.env.SMTP_PASS;
+    // --- VARIABLES DE ENTORNO ---
+    const {
+        SUPABASE_URL,
+        SUPABASE_SERVICE_KEY,
+        TELEGRAM_BOT_TOKEN,
+        SMTP_HOST,
+        SMTP_PORT,
+        SMTP_USER,
+        SMTP_PASS
+    } = process.env;
 
-    // 🚨 VERIFICACIÓN DE TODAS LAS VARIABLES ESENCIALES
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !TELEGRAM_BOT_TOKEN || !SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
-        console.error("FATAL ERROR: Faltan variables de entorno esenciales (DB, Telegram o SMTP).");
-        return { statusCode: 500, body: "Error de configuración. Verifique SMTP y Supabase." };
+    console.log("--- 🛠️ VERIFICANDO CONFIGURACIÓN DE ENTORNO ---");
+    const envVars = { SUPABASE_URL, SUPABASE_SERVICE_KEY, TELEGRAM_BOT_TOKEN, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS };
+    
+    for (const [key, value] of Object.entries(envVars)) {
+        if (!value) {
+            console.error(`❌ FATAL ERROR: La variable de entorno ${key} está vacía o no definida.`);
+            return { statusCode: 500, body: `Error de configuración: ${key} faltante.` };
+        }
     }
+    console.log("✅ Variables de entorno verificadas correctamente.");
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-    const body = JSON.parse(event.body);
+    
+    let body;
+    try {
+        body = JSON.parse(event.body);
+        console.log("📦 CUERPO DEL WEBHOOK RECIBIDO:", JSON.stringify(body, null, 2));
+    } catch (err) {
+        console.error("❌ ERROR: No se pudo parsear el cuerpo del evento como JSON.", err.message);
+        return { statusCode: 400, body: "Invalid JSON" };
+    }
 
     // ----------------------------------------------------------------------
     // 🔑 PASO 1: OBTENER LA TASA DE CAMBIO DINÁMICA
     // ----------------------------------------------------------------------
     let EXCHANGE_RATE = 1.0; 
+    console.log("--- 💵 CONSULTANDO TASA DE CAMBIO ---");
     
     try {
         const { data: configData, error: configError } = await supabase
@@ -41,51 +58,62 @@ exports.handler = async (event, context) => {
             .maybeSingle();
 
         if (configError) {
-            console.warn(`WARN DB: Fallo al obtener tasa de dólar. Usando tasa por defecto (1.0). Mensaje: ${configError.message}`);
+            console.warn(`⚠️ WARN DB: Error al consultar tasa_dolar. Usando 1.0. Detalle: ${configError.message}`);
         } else if (configData && configData.tasa_dolar > 0) {
             EXCHANGE_RATE = configData.tasa_dolar;
-            console.log(`LOG: Tasa de dólar obtenida de DB: ${EXCHANGE_RATE}`);
+            console.log(`✅ Tasa de dólar obtenida: ${EXCHANGE_RATE}`);
+        } else {
+            console.log("ℹ️ No se encontró configuración específica, se mantiene tasa 1.0");
         }
     } catch (e) {
-        console.error("ERROR CRITICO al obtener configuración de DB:", e.message);
+        console.error("❌ ERROR CRÍTICO obteniendo configuración:", e.message);
     }
-
 
     // ----------------------------------------------------------------------
     // 💡 LÓGICA CLAVE: Manejo de la consulta de Callback
     // ----------------------------------------------------------------------
     if (body.callback_query) {
-        const callbackId = body.callback_query.id; // ID para quitar el parpadeo
+        console.log("--- 🔘 DETECTADO CALLBACK_QUERY DE TELEGRAM ---");
+        const callbackId = body.callback_query.id;
         const callbackData = body.callback_query.data;
         const chatId = body.callback_query.message.chat.id;
         const messageId = body.callback_query.message.message_id;
         const originalText = body.callback_query.message.text;
         const transactionPrefix = 'mark_done_';
         
-        // ✅ PASO CRÍTICO: Responder a Telegram inmediatamente para que el botón deje de parpadear
-        await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackId, "Procesando solicitud...");
+        // Responder al callback inmediatamente para quitar el reloj de arena en Telegram
+        console.log(`LOG: Respondiendo al callback_id: ${callbackId}`);
+        await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
+            callback_query_id: callbackId,
+            text: "Procesando actualización..."
+        }).catch(err => console.warn("⚠️ No se pudo responder answerCallbackQuery:", err.message));
 
         if (callbackData.startsWith(transactionPrefix)) {
             const transactionId = callbackData.replace(transactionPrefix, '');
             const NEW_STATUS = 'REALIZADA'; 
             
-            console.log(`LOG: >>> INICIO PROCESO DE MARCADO. Transacción ID: ${transactionId} <<<`);
+            console.log(`\n>>> 🟢 INICIO PROCESO DE MARCADO [ID: ${transactionId}] <<<`);
             
             let emailCliente = null; 
 
             try {
                 // 2. BUSCAR LA TRANSACCIÓN
-                console.log(`LOG: Buscando datos de transacción ${transactionId} en 'transactions'.`);
+                console.log(`LOG [${transactionId}]: Buscando registro en tabla 'transactions'...`);
                 const { data: transactionData, error: fetchError } = await supabase
                     .from('transactions')
                     .select('status, google_id, "finalPrice", currency, game, "cartDetails", email') 
                     .eq('id_transaccion', transactionId)
                     .maybeSingle();
 
-                if (fetchError || !transactionData) {
-                    console.error(`ERROR DB: Fallo al buscar la transacción ${transactionId}.`, fetchError ? fetchError.message : 'No encontrada');
-                    await sendTelegramAlert(TELEGRAM_BOT_TOKEN, chatId, `❌ <b>Error:</b> No se encontró la transacción ${transactionId}.`, messageId);
-                    return { statusCode: 200, body: "Processed" };
+                if (fetchError) {
+                    console.error(`❌ ERROR DB [${transactionId}]:`, fetchError.message);
+                    throw fetchError;
+                }
+
+                if (!transactionData) {
+                    console.error(`❌ ERROR: Transacción ${transactionId} no existe en la DB.`);
+                    await sendTelegramAlert(TELEGRAM_BOT_TOKEN, chatId, `❌ <b>Error:</b> La transacción <code>${transactionId}</code> no existe.`, messageId);
+                    return { statusCode: 200, body: "Not Found" };
                 }
 
                 const { 
@@ -94,17 +122,15 @@ exports.handler = async (event, context) => {
                     "finalPrice": finalPrice, 
                     currency,
                     game,
-                    "cartDetails": productDetails,
                     email: transactionEmail 
                 } = transactionData;
                 
                 emailCliente = transactionEmail; 
+                console.log(`✅ Datos recuperados: Juego: ${game} | Monto: ${finalPrice} ${currency} | Usuario: ${google_id} | Status actual: ${currentStatus}`);
 
-                console.log(`LOG: Transacción encontrada. Google ID: ${google_id}. Email en transac.: ${emailCliente || 'Nulo'}. Estado: ${currentStatus}.`);
-                
-                // 2.1. BÚSQUEDA SECUNDARIA SI EMAIL ES NULO
+                // 2.1. BÚSQUEDA SECUNDARIA DE EMAIL
                 if (!emailCliente && google_id) {
-                    console.warn(`WARN: Email en transacción es nulo. Intentando buscar en tabla 'usuarios' usando google_id: ${google_id}.`);
+                    console.log(`LOG [${transactionId}]: Email vacío en transacción. Buscando en tabla 'usuarios' para google_id: ${google_id}`);
                     const { data: userData, error: userError } = await supabase
                         .from('usuarios')
                         .select('email')
@@ -112,120 +138,131 @@ exports.handler = async (event, context) => {
                         .maybeSingle();
 
                     if (userError) {
-                        console.error(`ERROR DB: Fallo al buscar el email del usuario ${google_id}. Mensaje: ${userError.message}`);
-                    } else if (userData && userData.email) {
+                        console.error(`⚠️ Error buscando email de usuario: ${userError.message}`);
+                    } else if (userData?.email) {
                         emailCliente = userData.email;
-                        console.log(`LOG: ✅ Email de cliente encontrado (vía usuarios): ${emailCliente}`);
+                        console.log(`✅ Email recuperado de tabla usuarios: ${emailCliente}`);
+                    } else {
+                        console.warn(`⚠️ No se encontró email para el usuario ${google_id} en ninguna tabla.`);
                     }
                 }
                 
-                const IS_WALLET_RECHARGE = game === 'Recarga de Saldo';
+                const IS_WALLET_RECHARGE = (game === 'Recarga de Saldo' || game === 'GK USD'); 
+                console.log(`LOG [${transactionId}]: ¿Es recarga de saldo?: ${IS_WALLET_RECHARGE}`);
+
                 const amountInTransactionCurrency = parseFloat(finalPrice);
                 let amountToInject = amountInTransactionCurrency;
                 let injectionMessage = ""; 
                 let updateDBSuccess = true; 
 
-                // 3. LÓGICA DE INYECCIÓN
+                // -------------------------------------------------------------
+                // 3. LÓGICA DE INYECCIÓN CONDICIONAL 
+                // -------------------------------------------------------------
                 if (currentStatus === NEW_STATUS) {
-                    injectionMessage = "\n\n⚠️ <b>NOTA:</b> La transacción ya estaba en estado 'REALIZADA'. El saldo no fue inyectado de nuevo.";
+                    console.log(`ℹ️ [${transactionId}]: La transacción ya estaba REALIZADA. Saltando inyección.`);
+                    injectionMessage = "\n\n⚠️ <b>NOTA:</b> Transacción ya procesada previamente. No se duplicó el saldo.";
                 } else {
                     if (IS_WALLET_RECHARGE) { 
+                        console.log(`--- 💰 PROCESANDO INYECCIÓN DE SALDO ---`);
+                        
+                        // Conversión de moneda
                         if (currency === 'VES' || currency === 'BS') { 
                             if (EXCHANGE_RATE > 0) {
                                 amountToInject = amountInTransactionCurrency / EXCHANGE_RATE;
-                                console.log(`LOG: Moneda VES detectada. Conversión: $${amountToInject.toFixed(2)} USD.`);
+                                console.log(`🔄 Conversión: ${amountInTransactionCurrency} ${currency} / ${EXCHANGE_RATE} = $${amountToInject.toFixed(2)} USD`);
                             } else {
-                                throw new Error("ERROR FATAL: Tasa de cambio no válida.");
+                                console.error("❌ ERROR: Tasa de cambio inválida para conversión VES/BS.");
+                                throw new Error("Tasa de cambio inválida.");
                             }
                         } 
 
+                        // Validación de datos para inyección
                         if (!google_id || isNaN(amountToInject) || amountToInject <= 0) {
-                            injectionMessage = `\n\n❌ <b>ERROR DE INYECCIÓN DE SALDO:</b> Datos incompletos.`;
+                            console.error(`❌ Datos insuficientes: google_id=${google_id}, amount=${amountToInject}`);
+                            injectionMessage = `\n\n❌ <b>ERROR DE INYECCIÓN:</b> Datos inválidos o Google ID ausente.`;
                             updateDBSuccess = false;
                         } else {
-                            // 4. INYECTAR SALDO (RPC)
-                            try {
-                                const { error: balanceUpdateError } = await supabase
-                                    .rpc('incrementar_saldo', { 
-                                        p_user_id: google_id, 
-                                        p_monto: amountToInject.toFixed(2)
-                                    }); 
+                            console.log(`🚀 Ejecutando RPC 'incrementar_saldo' para ${google_id} con monto $${amountToInject.toFixed(2)}`);
+                            
+                            const { error: balanceUpdateError } = await supabase.rpc('incrementar_saldo', { 
+                                p_user_id: google_id, 
+                                p_monto: amountToInject.toFixed(2)
+                            }); 
                                     
-                                if (balanceUpdateError) {
-                                    injectionMessage = `\n\n❌ <b>ERROR CRÍTICO AL INYECTAR SALDO:</b> ${balanceUpdateError.message}`;
-                                    updateDBSuccess = false; 
-                                    throw new Error("Fallo en la inyección de saldo.");
-                                }
-                                
-                                injectionMessage = `\n\n💰 <b>INYECCIÓN DE SALDO EXITOSA:</b> Se inyectaron <b>$${amountToInject.toFixed(2)} USD</b>.`;
-                            } catch (e) {
-                                updateDBSuccess = false;
-                                throw new Error(`Falló la inyección atómica (RPC).`); 
+                            if (balanceUpdateError) {
+                                console.error(`❌ Error RPC: ${balanceUpdateError.message}`);
+                                injectionMessage = `\n\n❌ <b>ERROR RPC:</b> ${balanceUpdateError.message}`;
+                                updateDBSuccess = false; 
+                                throw new Error(`Fallo en RPC: ${balanceUpdateError.message}`);
                             }
+                            
+                            console.log(`✅ Saldo inyectado exitosamente en DB.`);
+                            injectionMessage = `\n\n💰 <b>INYECCIÓN EXITOSA:</b> Se inyectaron <b>$${amountToInject.toFixed(2)} USD</b> a <code>${google_id}</code>.`;
                         }
                     } else {
-                        injectionMessage = `\n\n🛒 <b>PRODUCTO ENTREGADO ✅: No se requería inyección de saldo.</b>`;
+                        console.log(`🛒 [${transactionId}]: Es un producto físico/digital. No requiere inyección automática.`);
+                        injectionMessage = `\n\n🛒 <b>PRODUCTO LISTO ✅:</b> Marcado para entrega.`;
                     }
                 } 
 
-                // 5. ACTUALIZACIÓN DEL ESTADO
+                // 5. ACTUALIZACIÓN DEL ESTADO DE LA TRANSACCIÓN
                 if (currentStatus !== NEW_STATUS && updateDBSuccess) {
+                    console.log(`--- 📝 ACTUALIZANDO STATUS A REALIZADA ---`);
                     const { error: updateError } = await supabase
                         .from('transactions')
                         .update({ status: NEW_STATUS })
                         .eq('id_transaccion', transactionId)
-                        .in('status', ['pendiente', 'CONFIRMADO']); 
+                        .in('status', ['pendiente', 'CONFIRMADO', 'PENDIENTE']); 
                     
                     if (updateError) {
-                        injectionMessage += `\n\n⚠️ <b>ADVERTENCIA:</b> Fallo al actualizar estado: ${updateError.message}`;
+                        console.error(`❌ Error al actualizar estado: ${updateError.message}`);
+                        injectionMessage += `\n\n⚠️ <b>ERROR DB:</b> No se pudo cambiar el estado a REALIZADA.`;
                         updateDBSuccess = false; 
+                    } else {
+                        console.log(`✅ Transacción ${transactionId} actualizada a REALIZADA.`);
                     }
                 }
                 
                 // 5.5. 📧 ENVÍO DE CORREO
-                if (currentStatus !== NEW_STATUS && updateDBSuccess) {
-                    if (emailCliente) {
-                        const invoiceSubject = `✅ ¡Pedido Entregado! Factura #${transactionId} - ${game} | GamingKings`;
-                        const productDetailHtml = `
-                            <p style="font-size: 1.1em; color: #007bff; font-weight: bold;">Le confirmamos que todos los productos de su pedido han sido procesados y entregados con éxito.</p>
-                            <p>Puede verificar el estado de su cuenta o billetera.</p>`;
-                        
-                        const invoiceBody = `
-                            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                                <h2 style="color: #28a745;">✅ Transacción REALIZADA y Confirmada - GamingKings</h2>
-                                <p>Su pedido <b>${transactionId}</b> ha sido procesado con éxito.</p>
-                                <hr/>
-                                ${productDetailHtml}
-                                <hr/>
-                                <h3 style="color: #007bff;">Resumen de la Factura:</h3>
-                                <ul style="list-style: none; padding: 0;">
-                                    <li><b>ID Transacción:</b> ${transactionId}</li>
-                                    <li><b>Monto Pagado:</b> ${parseFloat(finalPrice).toFixed(2)} ${currency}</li>
-                                    <li><b>Inyectado:</b> ${IS_WALLET_RECHARGE ? `$${amountToInject.toFixed(2)} USD` : 'N/A'}</li>
-                                </ul>
-                                <p>Gracias por preferir a GamingKings.</p>
-                            </div>`;
+                if (updateDBSuccess && emailCliente) {
+                    console.log(`--- 📧 INICIANDO ENVÍO DE EMAIL ---`);
+                    const invoiceSubject = `✅ ¡Pedido Entregado! #${transactionId} - GamingKings`;
+                    const invoiceBody = `
+                        <div style="font-family: sans-serif; border: 1px solid #ddd; padding: 20px;">
+                            <h2 style="color: #28a745;">¡Hola! Tu pedido ha sido procesado</h2>
+                            <p>Tu transacción <b>#${transactionId}</b> ha sido completada por un operador.</p>
+                            <hr>
+                            <p><b>Resumen:</b></p>
+                            <ul>
+                                <li>Servicio: ${game}</li>
+                                <li>Monto: ${amountInTransactionCurrency.toFixed(2)} ${currency}</li>
+                                ${IS_WALLET_RECHARGE ? `<li>Saldo cargado: $${amountToInject.toFixed(2)} USD</li>` : ''}
+                            </ul>
+                            <p>Gracias por confiar en <b>GamingKings</b>.</p>
+                        </div>`;
 
-                        const emailSent = await sendInvoiceEmail(transactionId, emailCliente, invoiceSubject, invoiceBody);
-                        injectionMessage += emailSent ? `\n\n📧 <b>CORREO ENVIADO:</b> Factura enviada a <code>${emailCliente}</code>.` : `\n\n⚠️ <b>ERROR DE CORREO:</b> No se pudo enviar factura.`;
-                    }
+                    const emailSent = await sendInvoiceEmail(transactionId, emailCliente, invoiceSubject, invoiceBody);
+                    injectionMessage += emailSent ? `\n📧 Correo enviado a <code>${emailCliente}</code>.` : `\n⚠️ Fallo al enviar correo.`;
                 }
                 
-                const finalStatusText = (currentStatus === NEW_STATUS || updateDBSuccess) ? NEW_STATUS : 'ERROR CRÍTICO';
-                const finalStatusEmoji = (currentStatus === NEW_STATUS || updateDBSuccess) ? '✅' : '❌';
+                // 6. FINALIZAR EN TELEGRAM
+                const finalStatusText = updateDBSuccess ? 'REALIZADA' : 'ERROR';
+                const finalStatusEmoji = updateDBSuccess ? '✅' : '❌';
 
-                // 6. EDICIÓN DEL MENSAJE DE TELEGRAM
+                console.log(`--- 📱 EDITANDO MENSAJE EN TELEGRAM ---`);
                 const statusMarker = `\n\n------------------------------------------------\n` +
                                      `${finalStatusEmoji} <b>ESTADO FINAL: ${finalStatusText}</b>\n` +
-                                     `<i>Marcada por operador a las: ${new Date().toLocaleTimeString('es-VE')}</i> \n` +
+                                     `<i>Operador: ${body.callback_query.from.first_name || 'Admin'}</i>\n` +
+                                     `<i>Fecha: ${new Date().toLocaleString('es-VE')}</i>\n` +
                                      `------------------------------------------------` +
                                      injectionMessage; 
 
-                await editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, originalText + statusMarker, {});
+                await editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, originalText + statusMarker);
+                console.log(`>>> 🏁 FIN PROCESO [ID: ${transactionId}] <<<`);
                 
             } catch (e) {
-                console.error("ERROR FATAL en handler:", e.message);
-                await editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, `❌ <b>ERROR CRÍTICO</b><br/>Fallo: ${e.message}`, {});
+                console.error(`💥 ERROR CRÍTICO EN EL FLUJO [${transactionId}]:`, e.message);
+                await sendTelegramAlert(TELEGRAM_BOT_TOKEN, chatId, `💥 <b>ERROR CRÍTICO:</b> <code>${e.message}</code>\nID: <code>${transactionId}</code>`, messageId);
             }
         }
     } 
@@ -233,69 +270,63 @@ exports.handler = async (event, context) => {
     return { statusCode: 200, body: "Webhook processed" };
 };
 
-// ----------------------------------------------------------------------
-// --- FUNCIONES AUXILIARES ---
-// ----------------------------------------------------------------------
 
-// ✅ NUEVA: Función para detener el parpadeo de los botones en Telegram
-async function answerCallbackQuery(token, callbackQueryId, text = "") {
-    const url = `https://api.telegram.org/bot${token}/answerCallbackQuery`;
-    try {
-        await axios.post(url, {
-            callback_query_id: callbackQueryId,
-            text: text,
-            show_alert: false
-        });
-    } catch (error) {
-        console.error("ERROR TELEGRAM: answerCallbackQuery fallo", error.message);
-    }
-}
+// ----------------------------------------------------------------------
+// --- FUNCIONES AUXILIARES CON LOGS DETALLADOS ---
+// ----------------------------------------------------------------------
 
 async function sendInvoiceEmail(transactionId, userEmail, emailSubject, emailBody) {
     const port = parseInt(process.env.SMTP_PORT, 10); 
+    console.log(`[SMTP] Configurando transporte: ${process.env.SMTP_HOST}:${port} (User: ${process.env.SMTP_USER})`);
+
     const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: port,
         secure: port === 465,
         auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+        tls: { rejectUnauthorized: false }
     });
 
-    const mailOptions = { from: process.env.SMTP_USER, to: userEmail, subject: emailSubject, html: emailBody };
-
     try {
-        await transporter.sendMail(mailOptions);
+        console.log(`[SMTP] Enviando mail a ${userEmail}...`);
+        let info = await transporter.sendMail({
+            from: `"GamingKings" <${process.env.SMTP_USER}>`,
+            to: userEmail,               
+            subject: emailSubject,
+            html: emailBody,             
+        });
+        console.log(`[SMTP] ✅ Éxito. ID: ${info.messageId}`);
         return true;
     } catch (e) {
-        console.error(`ERROR EMAIL: ${e.message}`);
+        console.error(`[SMTP] ❌ Error enviando email:`, e.message);
         return false;
     }
 }
 
-async function editTelegramMessage(token, chatId, messageId, text, replyMarkup) {
-    const telegramApiUrl = `https://api.telegram.org/bot${token}/editMessageText`;
+async function editTelegramMessage(token, chatId, messageId, text) {
     try {
-        await axios.post(telegramApiUrl, {
+        await axios.post(`https://api.telegram.org/bot${token}/editMessageText`, {
             chat_id: chatId,
             message_id: messageId,
             text: text,
-            parse_mode: 'HTML', 
-            reply_markup: replyMarkup
+            parse_mode: 'HTML'
         });
+        console.log("[Telegram] ✅ Mensaje editado correctamente.");
     } catch (error) {
-        console.error("ERROR TELEGRAM:", error.message);
+        console.error("[Telegram] ❌ Error editando mensaje:", error.response?.data || error.message);
     }
 }
 
 async function sendTelegramAlert(token, chatId, text, replyToMessageId = null) {
-    const telegramApiUrl = `https://api.telegram.org/bot${token}/sendMessage`;
     try {
-        await axios.post(telegramApiUrl, {
+        await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
             chat_id: chatId,
             text: text,
             parse_mode: 'HTML', 
             reply_to_message_id: replyToMessageId 
         });
+        console.log("[Telegram] ✅ Alerta enviada.");
     } catch (error) {
-        console.error("ERROR TELEGRAM ALERT:", error.message);
+        console.error("[Telegram] ❌ Error enviando alerta:", error.response?.data || error.message);
     }
 }
