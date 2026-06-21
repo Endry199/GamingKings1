@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Free Fire Diamonds - GamingKings</title>
+    <link rel="stylesheet\" href="style.css\">
+    <link rel="stylesheet\" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css\">
+    <link rel="shortcut icon" href="images/favicon.ico\" type="image/x-icon\">
+
+    <style>
+        /* --- ESTILOS ENBEBIDOS (CSS) --- */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color, #121214);
+            color: var(--text-color, #ffffff);
+        }
+
+        /* Header de usuario / Control de Saldo */
+        .ff-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 5%;
+            background-color: var(--card-bg, #1a1a1e);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .back-btn {
+            color: var(--primary-color, #a72885);
+            text-decoration: none;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .balance-box {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: 1px solid rgba(167, 40, 133, 0.3);
+        }
+
+        .balance-amount {
+            font-weight: bold;
+            color: #2ecc71;
+            margin-right: 10px;
+        }
+
+        .add-balance-btn {
+            background-color: var(--primary-color, #a72885);
+            color: white;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: transform 0.2s;
+        }
+
+        .add-balance-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* Grid de Productos */
+        .ff-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+            text-align: center;
+        }
+
+        .ff-title {
+            font-size: 2em;
+            margin-bottom: 30px;
+            color: var(--text-color, #fff);
+            text-shadow: 0 0 10px rgba(167, 40, 133, 0.5);
+        }
+
+        .packages-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .package-card {
+            background-color: var(--card-bg, #1a1a1e);
+            border-radius: 12px;
+            padding: 25px 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: translateY 0.3s, border-color 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .package-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary-color, #a72885);
+        }
+
+        .package-icon {
+            font-size: 3rem;
+            color: #f1c40f;
+            margin-bottom: 15px;
+        }
+
+        .package-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .package-price {
+            font-size: 1.5rem;
+            color: #2ecc71;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .buy-btn {
+            background-color: var(--primary-color, #a72885);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s;
+        }
+
+        .buy-btn:hover {
+            background-color: #891f6c;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="ff-header">
+        <a href="index.html" class="back-btn">
+            <i class="fas fa-arrow-left"></i> Volver al Inicio
+        </a>
+        <div class="balance-box">
+            <span>Saldo Wallet: &nbsp;</span>
+            <span class="balance-amount" id="user-balance-display">$.--</span>
+            <button class="add-balance-btn" onclick="location.href='rechargedwallet.html';" title="Recargar Saldo">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="ff-container">
+        <h1 class="ff-title"><i class="fire-icon fas fa-fire"></i> Diamantes Free Fire (PINs)</h1>
+        
+        <div class="packages-grid" id="packages-container">
+            </div>
+    </main>
+
+    <script>
+        // 1. Array de productos solicitados
+        const ffPackages = [
+            { id: "ff_100", name: "100 + 10 Diamantes", price: 0.84, sku: "FF100" },
+            { id: "ff_310", name: "310 + 31 Diamantes", price: 2.80, sku: "FF310" },
+            { id: "ff_520", name: "520 + 52 Diamantes", price: 3.82, sku: "FF520" },
+            { id: "ff_1060", name: "1060 + 106 Diamantes", price: 7.09, sku: "FF1060" },
+            { id: "ff_2180", name: "2180 + 218 Diamantes", price: 14.02, sku: "FF2180" },
+            { id: "ff_5600", name: "5600 + 560 Diamantes", price: 35.62, sku: "FF5600" }
+        ];
+
+        let userBalance = 0.00;
+
+        // 2. Proteger la ruta: Verificar sesión al cargar
+        document.addEventListener("DOMContentLoaded", async () => {
+            const token = localStorage.getItem("sessionToken");
+            
+            if (!token) {
+                console.log("Sesión no detectada. Redireccionando a login.html...");
+                // Guardamos a dónde quería ir el usuario para el redireccionamiento posterior
+                localStorage.setItem("redirectAfterLogin", window.location.pathname);
+                window.location.href = "login.html";
+                return;
+            }
+
+            // Si está autenticado, cargamos su saldo real y pintamos la tienda
+            await fetchUserBalance(token);
+            renderPackages();
+        });
+
+        // 3. Obtener el saldo del usuario llamando a tu Netlify Function existente
+        async function fetchUserBalance(token) {
+            try {
+                const response = await fetch('/.netlify/functions/get-user-balance', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    userBalance = parseFloat(data.saldo || 0);
+                    document.getElementById('user-balance-display').innerText = `$${userBalance.toFixed(2)}`;
+                } else if (response.status === 401) {
+                    // Token expirado o inválido
+                    localStorage.removeItem("sessionToken");
+                    window.location.href = "login.html";
+                }
+            } catch (error) {
+                console.error("Error al obtener el saldo:", error);
+                document.getElementById('user-balance-display').innerText = "$ERROR";
+            }
+        }
+
+        // 4. Renderizar las tarjetas de paquetes en el HTML
+        function renderPackages() {
+            const container = document.getElementById("packages-container");
+            container.innerHTML = "";
+
+            ffPackages.forEach(pkg => {
+                const card = document.createElement("div");
+                card.className = "package-card";
+                card.innerHTML = `
+                    <div class="package-icon"><i class="fas fa-gem"></i></div>
+                    <div class="package-name">${pkg.name}</div>
+                    <div class="package-price">$${pkg.price.toFixed(2)}</div>
+                    <button class="buy-btn" onclick="processPurchase('${pkg.id}', ${pkg.price}, '${pkg.name}')">
+                        Comprar PIN
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // 5. Procesar la compra usando el Wallet de saldo
+        async function processPurchase(packageId, price, packageName) {
+            if (userBalance < price) {
+                alert(`Saldo insuficiente. Requieres $${price.toFixed(2)} y posees $${userBalance.toFixed(2)}. ¡Por favor recarga tu Wallet!`);
+                window.location.href = "rechargedwallet.html";
+                return;
+            }
+
+            const confirmacion = confirm(`¿Confirmas la compra de ${packageName} por $${price.toFixed(2)}? El código del PIN se enviará a tu correo electrónico.`);
+            
+            if (!confirmacion) return;
+
+            const token = localStorage.getItem("sessionToken");
+
+            try {
+                // Indicador visual de procesamiento básico
+                alert("Procesando tu orden con el proveedor... Por favor espera.");
+
+                // Paso A: Descontar de tu wallet usando tu función 'deduct-wallet-balance'
+                const deductResponse = await fetch('/.netlify/functions/deduct-wallet-balance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        deductionAmount: price,
+                        cartDetails: { item: packageName, id: packageId }
+                    })
+                });
+
+                const deductData = await deductResponse.json();
+
+                if (!deductResponse.ok) {
+                    throw new Error(deductData.message || "Error al descontar saldo de la Wallet.");
+                }
+
+                // Paso B: Aquí mandas la petición a tu endpoint que conecta con Recargas América (POST /api/v1/buy/pins)
+                // Y desde allí mismo ejecutas el envío del correo usando Nodemailer con los "pins" que te regrese la API.
+                // EJEMPLO:
+                /*
+                const apiResponse = await fetch('/.netlify/functions/process-provider-pin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ packageId: packageId })
+                });
+                */
+
+                alert(`¡Compra exitosa! Se ha descontado $${price.toFixed(2)}. El PIN y tu factura están en camino a tu correo.`);
+                
+                // Actualizamos el saldo en pantalla volviendo a consultar
+                await fetchUserBalance(token);
+
+            } catch (error) {
+                console.error("Error en la transacción:", error);
+                alert(`Hubo un problema procesando tu compra: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>
