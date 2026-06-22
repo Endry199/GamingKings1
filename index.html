@@ -113,6 +113,58 @@
             background-size: 100% 100%; 
         } 
     }
+
+    /* Estilos para el footer con el nuevo enlace */
+    .footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px 20px;
+        margin: 10px 0;
+    }
+
+    .footer-links a {
+        color: var(--text-color, #fff);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.3s;
+        opacity: 0.8;
+    }
+
+    .footer-links a:hover {
+        color: var(--primary-color, #a72885);
+        opacity: 1;
+    }
+
+    .footer-links .separator {
+        color: var(--secondary-text, #666);
+        opacity: 0.3;
+    }
+
+    .footer-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding: 20px 0;
+    }
+
+    .footer-content p {
+        margin: 0;
+        font-size: 0.85rem;
+        opacity: 0.7;
+    }
+
+    .whatsapp-link {
+        color: #25D366;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.3s;
+    }
+
+    .whatsapp-link:hover {
+        color: #128C7E;
+    }
 </style>
 </head>
 <body>
@@ -213,7 +265,10 @@
             <p>&copy; 2025 GamingKings. Todos los derechos reservados.</p>
             <div class="footer-links">
                 <a href="privacy.html">Políticas de Privacidad</a>
+                <span class="separator">|</span>
                 <a href="terms.html">Términos de Servicio</a>
+                <span class="separator">|</span>
+                <a href="freefire.html" class="reseller-link">Sé Revendedor</a>
             </div>
             <a href="https://wa.me/584226763229" target="_blank" class="whatsapp-link">
                 <i class="fab fa-whatsapp"></i> Contáctanos por WhatsApp
