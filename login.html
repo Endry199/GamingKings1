@@ -57,28 +57,5 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     
     <script src="script.js"></script>
-
-    <script>
-        window.onload = function () {
-            // Inicializar el cliente de Google Identity Services
-            google.accounts.id.initialize({
-                // Reemplaza esto con tu Client ID real de Google Cloud Console si no es este
-                client_id: "721755353118-6f688hsn3gq9df9e38m2be979k6ne3f2.apps.googleusercontent.com", 
-                // 🎯 CLAVE: Le decimos a Google que cuando el usuario se loguee, ejecute la función de tu script.js
-                callback: handleCredentialResponse 
-            });
-
-            // Pintar el botón en el contenedor con un diseño pro
-            google.accounts.id.renderButton(
-                document.getElementById("google-login-btn"),
-                { 
-                    theme: "filled_blue", 
-                    size: "large", 
-                    text: "signin_with",
-                    shape: "pill"
-                }
-            );
-        };
-    </script>
 </body>
 </html>
