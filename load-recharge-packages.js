@@ -1,13 +1,9 @@
-// load-recharge-packages.js (CON MONTO PERSONALIZADO)
+// load-recharge-packages.js (SOLO INPUT PERSONALIZADO)
 
 // =========================================================================
 // === UTILITY: Obtener Google ID desde localStorage ===
 // =========================================================================
 
-/**
- * Utilidad para obtener el google_id del usuario desde localStorage.
- * @returns {string|null} El google_id si existe, o null.
- */
 function getUserId() {
     const userDataJson = localStorage.getItem('userData');
     if (userDataJson) {
@@ -23,28 +19,21 @@ function getUserId() {
 }
 
 // =========================================================================
-// === LÓGICA PRINCIPAL DE PAQUETES ===
+// === LÓGICA PRINCIPAL ===
 // =========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    const packageGrid = document.getElementById('recharge-package-options-grid');
     const rechargeForm = document.getElementById('recharge-wallet-form');
     const selectButton = document.getElementById('select-package-btn');
     const customAmountInput = document.getElementById('custom-amount-input');
     const customCurrencySymbol = document.getElementById('custom-currency-symbol');
+    const currencyLabel = document.getElementById('currency-label');
+    const errorMessage = document.getElementById('error-message');
+    const validMessage = document.getElementById('valid-message');
     
-    let selectedPackageData = null;
-    let isCustomAmountSelected = false;
-
-    // Paquetes de saldo predefinidos (ahora con valores más variados)
-    const RECHARGE_PACKAGES = [
-        { name: 'Saldo $10 GKUSD', usd: '10.00' },
-        { name: 'Saldo $15 GKUSD', usd: '15.00' },
-        { name: 'Saldo $25 GKUSD', usd: '25.00' },
-        { name: 'Saldo $50 GKUSD', usd: '50.00' },
-        { name: 'Saldo $100 GKUSD', usd: '100.00' },
-        { name: 'Saldo $200 GKUSD', usd: '200.00' }
-    ];
+    let isValidAmount = false;
+    let currentAmount = null;
+    let currentCurrency = 'USD';
 
     /**
      * Obtiene la tasa de cambio del Dólar desde la configuración CSS.
@@ -56,209 +45,164 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Actualiza el símbolo de moneda en el input personalizado
+     * Actualiza el símbolo de moneda y el label
      */
-    function updateCustomCurrencySymbol() {
-        const currentCurrency = window.getCurrentCurrency ? window.getCurrentCurrency() : 'USD';
-        const symbol = currentCurrency === 'USD' ? '$' : 'Bs.';
+    function updateCurrencyDisplay() {
+        const selectedCurrency = localStorage.getItem('selectedCurrency') || 'VES';
+        currentCurrency = selectedCurrency;
+        
+        const symbol = selectedCurrency === 'USD' ? '$' : 'Bs.';
+        const label = selectedCurrency === 'USD' ? 'USD' : 'VES';
+        
         if (customCurrencySymbol) {
             customCurrencySymbol.textContent = symbol;
         }
-    }
-
-    /**
-     * Renderiza los paquetes predefinidos
-     */
-    function renderPackages() {
-        if (!packageGrid) return;
         
-        packageGrid.innerHTML = '';
+        if (currencyLabel) {
+            currencyLabel.textContent = label;
+        }
         
-        const currentCurrency = window.getCurrentCurrency ? window.getCurrentCurrency() : 'USD';
-        const exchangeRate = getExchangeRate();
-        updateCustomCurrencySymbol();
-        
-        // Habilitar el input personalizado
+        // Actualizar placeholder
         if (customAmountInput) {
-            customAmountInput.disabled = false;
-            customAmountInput.value = '';
-            customAmountInput.placeholder = currentCurrency === 'USD' ? 'Ej: 25' : 'Ej: 950';
-        }
-        
-        RECHARGE_PACKAGES.forEach((pkg) => {
-            const usdPrice = parseFloat(pkg.usd);
-            const calculatedVesPrice = (usdPrice * exchangeRate).toFixed(2);
+            customAmountInput.placeholder = selectedCurrency === 'USD' ? 'Ej: 25' : 'Ej: 950';
+            customAmountInput.min = selectedCurrency === 'USD' ? 10 : 10 * getExchangeRate();
             
-            const priceValue = currentCurrency === 'USD' ? usdPrice.toFixed(2) : calculatedVesPrice;
-            const priceSymbol = currentCurrency === 'USD' ? '$' : 'Bs.';
-            const price = `${priceSymbol} ${priceValue}`;
-
-            const packageHtml = document.createElement('div');
-            packageHtml.className = 'package-option';
-            packageHtml.dataset.packageName = pkg.name;
-            packageHtml.dataset.priceUsd = pkg.usd;
-            packageHtml.dataset.priceVes = calculatedVesPrice; 
-
-            packageHtml.innerHTML = `
-                <p class="package-name">${pkg.name.replace('Saldo ', '')}</p>
-                <p class="package-price">${price}</p>
-            `;
-            
-            packageGrid.appendChild(packageHtml);
-        });
-
-        attachPackageEventListeners();
-        updateButtonState();
+            // Si hay un valor, revalidar
+            if (customAmountInput.value) {
+                validateAmount(customAmountInput.value);
+            }
+        }
+        
+        // Actualizar el texto del monto mínimo
+        const minAmountElement = document.querySelector('.min-amount');
+        if (minAmountElement) {
+            const minValue = selectedCurrency === 'USD' ? 10 : (10 * getExchangeRate()).toFixed(0);
+            minAmountElement.textContent = `${symbol}${minValue} ${label}`;
+        }
     }
 
     /**
-     * Attaches click listeners to the package options.
+     * Valida el monto ingresado
      */
-    function attachPackageEventListeners() {
-        const packageOptions = document.querySelectorAll('.package-option');
+    function validateAmount(value) {
+        // Limpiar caracteres no numéricos
+        const cleanValue = value.replace(/[^0-9]/g, '');
         
-        packageOptions.forEach(opt => {
-            opt.addEventListener('click', function() {
-                // Deseleccionar todos los paquetes
-                packageOptions.forEach(o => o.classList.remove('selected'));
-                
-                // Seleccionar el actual
-                this.classList.add('selected');
-                
-                // Limpiar el input personalizado
-                if (customAmountInput) {
-                    customAmountInput.value = '';
-                    isCustomAmountSelected = false;
-                }
-                
-                // Actualizar datos seleccionados
-                selectedPackageData = {
-                    name: this.dataset.packageName,
-                    usd: this.dataset.priceUsd,
-                    ves: this.dataset.priceVes,
-                    isCustom: false
-                };
-                
-                updateButtonState();
-            });
-        });
-    }
-
-    /**
-     * Maneja el cambio en el input de monto personalizado
-     */
-    function handleCustomAmountChange() {
-        if (!customAmountInput) return;
-        
-        const value = customAmountInput.value.trim();
-        
-        // Si el campo está vacío, deseleccionar todo
-        if (value === '') {
-            // Deseleccionar paquetes
-            document.querySelectorAll('.package-option').forEach(o => o.classList.remove('selected'));
-            selectedPackageData = null;
-            isCustomAmountSelected = false;
-            updateButtonState();
-            return;
-        }
-        
-        const amount = parseFloat(value);
-        const currentCurrency = window.getCurrentCurrency ? window.getCurrentCurrency() : 'USD';
-        
-        // Validar: mínimo 10, sin decimales
-        if (isNaN(amount) || amount < 10 || !Number.isInteger(amount)) {
-            // Si es inválido, deseleccionar
-            document.querySelectorAll('.package-option').forEach(o => o.classList.remove('selected'));
-            selectedPackageData = null;
-            isCustomAmountSelected = false;
-            updateButtonState();
-            return;
-        }
-        
-        // Deseleccionar paquetes predefinidos
-        document.querySelectorAll('.package-option').forEach(o => o.classList.remove('selected'));
-        
-        // Calcular el precio en la moneda actual
-        let usdAmount = amount;
-        let vesAmount = amount;
-        
-        if (currentCurrency === 'VES') {
-            const exchangeRate = getExchangeRate();
-            usdAmount = (amount / exchangeRate);
-            vesAmount = amount;
-        } else {
-            usdAmount = amount;
-            vesAmount = amount * getExchangeRate();
-        }
-        
-        // Crear el objeto de paquete personalizado
-        const packageName = currentCurrency === 'USD' 
-            ? `Saldo $${amount} GKUSD` 
-            : `Saldo Bs. ${amount} GKUSD`;
-        
-        selectedPackageData = {
-            name: packageName,
-            usd: usdAmount.toFixed(2),
-            ves: vesAmount.toFixed(2),
-            isCustom: true,
-            customAmount: amount
-        };
-        
-        isCustomAmountSelected = true;
-        updateButtonState();
-    }
-
-    /**
-     * Actualiza el estado del botón de continuar
-     */
-    function updateButtonState() {
-        if (selectedPackageData) {
-            selectButton.disabled = false;
-            const displayName = selectedPackageData.isCustom 
-                ? selectedPackageData.name 
-                : selectedPackageData.name;
-            selectButton.textContent = `Pagar Recarga de ${displayName}`;
-        } else {
+        if (cleanValue === '') {
+            errorMessage.classList.remove('visible');
+            validMessage.classList.remove('visible');
             selectButton.disabled = true;
             selectButton.textContent = 'Continuar al Pago';
+            isValidAmount = false;
+            currentAmount = null;
+            return false;
+        }
+        
+        const amount = parseInt(cleanValue, 10);
+        
+        // Verificar que sea un número entero positivo
+        if (isNaN(amount) || amount < 10) {
+            errorMessage.classList.add('visible');
+            validMessage.classList.remove('visible');
+            selectButton.disabled = true;
+            selectButton.textContent = 'Continuar al Pago';
+            isValidAmount = false;
+            currentAmount = null;
+            return false;
+        }
+        
+        // Monto válido
+        errorMessage.classList.remove('visible');
+        validMessage.classList.add('visible');
+        selectButton.disabled = false;
+        
+        const symbol = currentCurrency === 'USD' ? '$' : 'Bs.';
+        selectButton.textContent = `Pagar Recarga de ${symbol}${amount} ${currentCurrency}`;
+        
+        isValidAmount = true;
+        currentAmount = amount;
+        return true;
+    }
+
+    /**
+     * Maneja el cambio en el input
+     */
+    function handleInputChange() {
+        if (!customAmountInput) return;
+        
+        const value = customAmountInput.value;
+        
+        // Solo permitir números (eliminar cualquier otro carácter)
+        const numericValue = value.replace(/[^0-9]/g, '');
+        if (numericValue !== value) {
+            customAmountInput.value = numericValue;
+        }
+        
+        validateAmount(numericValue);
+    }
+
+    /**
+     * Maneja cuando el input pierde el foco
+     */
+    function handleBlur() {
+        if (!customAmountInput) return;
+        
+        const value = customAmountInput.value;
+        if (value !== '') {
+            const numValue = parseInt(value, 10);
+            if (!isNaN(numValue) && numValue >= 10) {
+                // Mostrar el monto formateado
+                customAmountInput.value = numValue.toString();
+                validateAmount(numValue.toString());
+            }
         }
     }
 
     /**
-     * Escucha el evento de cambio de moneda
+     * Previene la entrada de puntos y comas
      */
+    function handleKeyDown(e) {
+        // Prevenir puntos y comas
+        if (e.key === '.' || e.key === ',' || e.key === 'e' || e.key === '-') {
+            e.preventDefault();
+        }
+    }
+
+    // Escuchar eventos
     window.addEventListener('currencyChanged', () => {
-        renderPackages();
-        // Si había un monto personalizado, limpiarlo
+        updateCurrencyDisplay();
+        // Limpiar el input y el estado
         if (customAmountInput) {
             customAmountInput.value = '';
         }
-        selectedPackageData = null;
-        isCustomAmountSelected = false;
-        updateButtonState();
+        isValidAmount = false;
+        currentAmount = null;
+        selectButton.disabled = true;
+        selectButton.textContent = 'Continuar al Pago';
+        errorMessage.classList.remove('visible');
+        validMessage.classList.remove('visible');
     });
     
-    document.addEventListener('siteConfigLoaded', renderPackages, { once: true });
+    document.addEventListener('siteConfigLoaded', updateCurrencyDisplay, { once: true });
 
-    // 🎯 Event listeners para el input personalizado
+    // Event listeners del input
     if (customAmountInput) {
-        customAmountInput.addEventListener('input', handleCustomAmountChange);
-        customAmountInput.addEventListener('blur', function() {
-            // Si el valor es inválido, limpiar
-            const value = parseFloat(this.value);
-            if (!isNaN(value) && (value < 10 || !Number.isInteger(value))) {
-                this.value = '';
-                handleCustomAmountChange();
-            }
-        });
+        customAmountInput.addEventListener('input', handleInputChange);
+        customAmountInput.addEventListener('blur', handleBlur);
+        customAmountInput.addEventListener('keydown', handleKeyDown);
+        
+        // Enfocar el input al cargar la página
+        setTimeout(() => {
+            customAmountInput.focus();
+        }, 500);
     }
 
-    // 🎯 Lógica de Pago Directo al enviar el formulario
+    // 🎯 Lógica de Pago
     rechargeForm.addEventListener('submit', (e) => { 
         e.preventDefault();
 
-        if (!selectedPackageData) {
-            alert('Por favor, selecciona un paquete o ingresa un monto válido (mínimo $10 USD).');
+        if (!isValidAmount || !currentAmount) {
+            alert('Por favor, ingresa un monto válido (mínimo 10 USD, solo números enteros).');
             return;
         }
         
@@ -269,24 +213,41 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Calcular los precios en ambas monedas
+        const exchangeRate = getExchangeRate();
+        let usdAmount, vesAmount;
+        
+        if (currentCurrency === 'USD') {
+            usdAmount = currentAmount;
+            vesAmount = currentAmount * exchangeRate;
+        } else {
+            vesAmount = currentAmount;
+            usdAmount = currentAmount / exchangeRate;
+        }
+
+        const packageName = currentCurrency === 'USD' 
+            ? `Saldo $${currentAmount} GKUSD` 
+            : `Saldo Bs. ${currentAmount} GKUSD`;
+
         // Crear el objeto de transacción
         const transactionItem = {
             id: 'WALLET_RECHARGE_' + Date.now(), 
             game: 'Recarga de Saldo',
             playerId: 'N/A',
-            packageName: selectedPackageData.name,
-            priceUSD: selectedPackageData.usd, 
-            priceVES: selectedPackageData.ves, 
+            packageName: packageName,
+            priceUSD: usdAmount.toFixed(2), 
+            priceVES: vesAmount.toFixed(2), 
             requiresAssistance: false,
             google_id: googleId,
-            isCustom: selectedPackageData.isCustom || false,
-            customAmount: selectedPackageData.customAmount || null
+            isCustom: true,
+            customAmount: currentAmount,
+            currency: currentCurrency
         };
 
         localStorage.setItem('transactionDetails', JSON.stringify([transactionItem]));
         window.location.href = 'payment.html';
     });
 
-    // Renderizado inicial
-    renderPackages();
+    // Inicializar
+    updateCurrencyDisplay();
 });
