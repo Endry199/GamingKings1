@@ -5,6 +5,93 @@ const axios = require('axios');
 // 🔧 Configuración de modo simulación
 const SIMULATION_MODE = process.env.SIMULATION_MODE === 'true';
 
+// 📧 Función para enviar correo con los PINs
+async function sendPinsEmail(sessionToken, pins, quantity, packageName, totalCost, transactionId) {
+    try {
+        // Obtener la URL base (para llamadas internas)
+        const baseUrl = process.env.URL || 'http://localhost:8888';
+        
+        const response = await fetch(`${baseUrl}/.netlify/functions/send-pins-email`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sessionToken}`
+            },
+            body: JSON.stringify({
+                pins: pins,
+                quantity: quantity,
+                packageName: packageName,
+                totalCost: totalCost,
+                transactionId: transactionId
+            })
+        });
+
+        const data = await response.json();
+        console.log(`📧 Respuesta de send-pins-email:`, data);
+        return { success: response.ok, ...data };
+    } catch (error) {
+        console.error("❌ Error al llamar a send-pins-email:", error.message);
+        return { success: false, error: error.message };
+    }
+}
+
+// 🔍 Función para extraer PINs de cualquier formato de respuesta
+function extractPinsFromResponse(responseData) {
+    if (!responseData) return [];
+    
+    console.log("🔍 Extrayendo PINs de:", JSON.stringify(responseData, null, 2));
+    
+    // 1. Verificar si hay pins en data.api_data.pins (formato de RecargasAmérica)
+    if (responseData.data?.api_data?.pins && Array.isArray(responseData.data.api_data.pins)) {
+        console.log("✅ PINs encontrados en data.api_data.pins");
+        return responseData.data.api_data.pins;
+    }
+    
+    // 2. Verificar si hay pins en data.pins
+    if (responseData.data?.pins && Array.isArray(responseData.data.pins)) {
+        console.log("✅ PINs encontrados en data.pins");
+        return responseData.data.pins;
+    }
+    
+    // 3. Verificar si hay pins directamente en responseData.pins
+    if (responseData.pins && Array.isArray(responseData.pins)) {
+        console.log("✅ PINs encontrados en responseData.pins");
+        return responseData.pins;
+    }
+    
+    // 4. Verificar si hay pins en api_data.pins
+    if (responseData.api_data?.pins && Array.isArray(responseData.api_data.pins)) {
+        console.log("✅ PINs encontrados en api_data.pins");
+        return responseData.api_data.pins;
+    }
+    
+    // 5. Verificar si responseData.data es un array de PINs
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+        console.log("✅ PINs encontrados en responseData.data (array)");
+        return responseData.data;
+    }
+    
+    // 6. Verificar si responseData.result es un array
+    if (responseData.result && Array.isArray(responseData.result)) {
+        console.log("✅ PINs encontrados en responseData.result");
+        return responseData.result;
+    }
+    
+    // 7. Si es un solo PIN
+    if (responseData.pin) {
+        console.log("✅ PIN único encontrado en responseData.pin");
+        return [responseData.pin];
+    }
+    
+    if (responseData.data?.pin) {
+        console.log("✅ PIN único encontrado en responseData.data.pin");
+        return [responseData.data.pin];
+    }
+    
+    console.warn("⚠️ No se encontraron PINs en la respuesta");
+    return [];
+}
+
 exports.handler = async function(event, context) {
     console.log("--- INICIO DE FUNCIÓN buy-pins ---");
     console.log(`🔧 Modo simulación: ${SIMULATION_MODE ? 'ACTIVADO' : 'DESACTIVADO'}`);
@@ -109,7 +196,7 @@ exports.handler = async function(event, context) {
             const fakePins = [];
             for (let i = 0; i < quantity; i++) {
                 const pinCode = `FF-SIM-${String(Math.floor(100000 + Math.random() * 900000))}-${String(Math.floor(100000 + Math.random() * 900000))}`;
-                fakePins.push({ code: pinCode, status: 'active' });
+                fakePins.push(pinCode);
             }
             
             const newBalance = currentBalance - totalCost;
@@ -136,7 +223,8 @@ exports.handler = async function(event, context) {
 
             // 📧 Enviar correo con los PINs
             console.log(`📧 Enviando correo de simulación a ${userEmail}...`);
-            await sendPinsEmail(sessionToken, fakePins, quantity, productName, totalCost, transactionId);
+            const emailResult = await sendPinsEmail(sessionToken, fakePins, quantity, productName, totalCost, transactionId);
+            console.log(`📧 Resultado del envío de correo:`, emailResult);
 
             return {
                 statusCode: 200,
@@ -149,7 +237,8 @@ exports.handler = async function(event, context) {
                     product: productName || 'Free Fire',
                     new_balance: newBalance.toFixed(2),
                     transaction_id: transactionId,
-                    simulation: true
+                    simulation: true,
+                    email_sent: emailResult.success || false
                 })
             };
         }
@@ -227,7 +316,14 @@ exports.handler = async function(event, context) {
 
         const responseData = response.data;
         
-        if (responseData && (responseData.status === 'success' || responseData.success === true)) {
+        // Verificar si la respuesta fue exitosa
+        const isSuccess = responseData && (responseData.status === 'success' || responseData.success === true);
+        
+        if (isSuccess) {
+            // 🎯 Extraer los PINs usando la función mejorada
+            const pins = extractPinsFromResponse(responseData);
+            console.log(`🎮 PINs extraídos: ${pins.length}`, pins);
+
             // Descontar saldo
             const newBalance = currentBalance - totalCost;
             
@@ -235,22 +331,6 @@ exports.handler = async function(event, context) {
                 .from('saldos')
                 .update({ saldo_usd: newBalance.toFixed(2) })
                 .eq('user_id', googleId);
-
-            // Extraer los PINs
-            let pins = [];
-            if (responseData.pins) {
-                pins = responseData.pins;
-            } else if (responseData.data && Array.isArray(responseData.data)) {
-                pins = responseData.data;
-            } else if (responseData.result && Array.isArray(responseData.result)) {
-                pins = responseData.result;
-            }
-
-            if (pins.length === 0 && responseData.pin) {
-                pins = [{ code: responseData.pin }];
-            }
-
-            console.log(`🎮 PINs extraídos: ${pins.length}`);
 
             // Registrar transacción
             await supabase
@@ -271,10 +351,13 @@ exports.handler = async function(event, context) {
 
             // 📧 Enviar correo con los PINs
             console.log(`📧 Enviando correo a ${userEmail} con ${pins.length} PINs...`);
-            const emailResult = await sendPinsEmail(sessionToken, pins, quantity, productName, totalCost, transactionId);
-
-            if (!emailResult.success) {
-                console.warn("⚠️ El correo no se pudo enviar, pero la compra fue exitosa.");
+            let emailResult = { success: false };
+            
+            if (pins.length > 0) {
+                emailResult = await sendPinsEmail(sessionToken, pins, quantity, productName, totalCost, transactionId);
+                console.log(`📧 Resultado del envío de correo:`, emailResult);
+            } else {
+                console.warn("⚠️ No hay PINs para enviar por correo.");
             }
 
             return {
@@ -289,7 +372,7 @@ exports.handler = async function(event, context) {
                     new_balance: newBalance.toFixed(2),
                     transaction_id: transactionId,
                     provider_response: responseData,
-                    email_sent: emailResult.success
+                    email_sent: emailResult.success || false
                 })
             };
 
@@ -320,29 +403,3 @@ exports.handler = async function(event, context) {
         };
     }
 };
-
-// 📧 Función auxiliar para enviar correo con los PINs
-async function sendPinsEmail(sessionToken, pins, quantity, packageName, totalCost, transactionId) {
-    try {
-        const response = await fetch(`${process.env.URL || 'http://localhost:8888'}/.netlify/functions/send-pins-email`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${sessionToken}`
-            },
-            body: JSON.stringify({
-                pins: pins,
-                quantity: quantity,
-                packageName: packageName,
-                totalCost: totalCost,
-                transactionId: transactionId
-            })
-        });
-
-        const data = await response.json();
-        return { success: response.ok, ...data };
-    } catch (error) {
-        console.error("❌ Error al llamar a send-pins-email:", error.message);
-        return { success: false, error: error.message };
-    }
-}
