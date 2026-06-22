@@ -319,6 +319,17 @@
             color: var(--text-color, #fff);
         }
 
+        .error-text {
+            text-align: center;
+            padding: 20px;
+            color: #ff6b6b;
+        }
+
+        .error-text i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
         /* Responsive */
         @media (max-width: 600px) {
             .ff-header {
@@ -387,8 +398,6 @@
         ];
 
         let userBalance = 0.00;
-        let currentPackageId = null;
-        let currentQuantity = 1;
 
         document.addEventListener("DOMContentLoaded", async () => {
             const token = localStorage.getItem("userSessionToken");
@@ -476,7 +485,6 @@
             
             input.value = newValue;
             
-            // Actualizar el total
             const pkg = ffPackages.find(p => p.id === packageId);
             if (pkg) {
                 updateTotal(packageId, pkg.price);
@@ -523,11 +531,10 @@
                 return;
             }
 
-            // Mostrar modal de carga
             showLoadingModal();
 
             try {
-                // Primero descontar el saldo (deduct-wallet-balance)
+                // 1. Descontar saldo
                 const deductResponse = await fetch('/.netlify/functions/deduct-wallet-balance', {
                     method: 'POST',
                     headers: {
@@ -552,7 +559,7 @@
                     throw new Error(deductData.message || "Error al descontar saldo de la Wallet.");
                 }
 
-                // Si el descuento fue exitoso, comprar los PINs
+                // 2. Comprar los PINs con precio y nombre
                 const buyResponse = await fetch('/.netlify/functions/buy-pins', {
                     method: 'POST',
                     headers: {
@@ -561,15 +568,31 @@
                     },
                     body: JSON.stringify({
                         productId: providerId,
-                        quantity: quantity
+                        quantity: quantity,
+                        price: price,
+                        productName: packageName
                     })
                 });
 
-                const buyData = await buyResponse.json();
+                // Leer la respuesta como texto primero
+                const responseText = await buyResponse.text();
+                console.log("📥 Respuesta cruda de buy-pins:", responseText);
+
+                let buyData;
+                try {
+                    buyData = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error("❌ Error al parsear JSON:", parseError);
+                    console.error("Respuesta recibida (primeros 200 chars):", responseText.substring(0, 200));
+                    throw new Error("El servidor devolvió una respuesta inválida. Por favor, intenta de nuevo.");
+                }
 
                 if (!buyResponse.ok) {
-                    // Si falla la compra, revertir el saldo (opcional)
                     throw new Error(buyData.message || "Error al comprar los PINs.");
+                }
+
+                if (!buyData.success) {
+                    throw new Error(buyData.message || "Error al procesar la compra.");
                 }
 
                 // Mostrar los PINs en el modal
@@ -579,9 +602,9 @@
                 await fetchUserBalance(token);
 
             } catch (error) {
-                console.error("Error en la transacción:", error);
+                console.error("❌ Error en la transacción:", error);
                 closeModal();
-                alert(`Hubo un problema procesando tu compra: ${error.message}`);
+                showErrorModal(error.message);
             }
         }
 
@@ -593,6 +616,25 @@
                 <div class="loading-text">
                     <div class="loading-spinner"></div>
                     <p>Procesando tu compra... Por favor espera.</p>
+                    <p style="font-size: 0.8rem; color: #888;">Esto puede tomar unos segundos</p>
+                </div>
+            `;
+            
+            modal.classList.add('active');
+        }
+
+        function showErrorModal(errorMessage) {
+            const modal = document.getElementById('pins-modal');
+            const body = document.getElementById('modal-body');
+            
+            body.innerHTML = `
+                <div class="error-text">
+                    <i class="fas fa-exclamation-circle" style="color: #ff6b6b;"></i>
+                    <h2 style="color: #ff6b6b;">Error en la Compra</h2>
+                    <p style="color: var(--text-color);">${errorMessage}</p>
+                    <button onclick="closePinsModal()" class="buy-btn" style="width: auto; padding: 10px 30px; margin-top: 15px;">
+                        <i class="fas fa-times"></i> Cerrar
+                    </button>
                 </div>
             `;
             
@@ -603,28 +645,60 @@
             const modal = document.getElementById('pins-modal');
             const body = document.getElementById('modal-body');
             
-            let pinsList = '';
-            const pins = data.pins || data.provider_response?.pins || data.provider_response?.data || [];
+            // Extraer PINs de diferentes formatos de respuesta
+            let pins = [];
+            if (data.pins) {
+                pins = data.pins;
+            } else if (data.provider_response?.pins) {
+                pins = data.provider_response.pins;
+            } else if (data.provider_response?.data) {
+                pins = data.provider_response.data;
+            } else if (data.data && Array.isArray(data.data)) {
+                pins = data.data;
+            } else if (data.result && Array.isArray(data.result)) {
+                pins = data.result;
+            } else if (Array.isArray(data)) {
+                pins = data;
+            } else if (data.pin) {
+                pins = [{ code: data.pin }];
+            }
+
+            // Verificar si es modo simulación
+            const isSimulation = data.simulation === true;
+            const simulationBadge = isSimulation ? 
+                '<span style="background: #f1c40f; color: #000; padding: 2px 10px; border-radius: 10px; font-size: 0.7rem; margin-left: 10px;">MODO SIMULACIÓN</span>' : '';
             
-            if (pins.length === 0) {
-                pinsList = '<p style="text-align:center; color: #f1c40f;">No se recibieron PINs. Contacta con soporte.</p>';
-            } else {
-                pinsList = pins.map((pin, index) => `
-                    <div class="pin-item">
-                        <span><strong>PIN #${index + 1}</strong></span>
-                        <span class="pin-code">${pin.code || pin.pin || pin}</span>
-                        <button class="copy-btn" onclick="copyPin('${pin.code || pin.pin || pin}')">
-                            <i class="fas fa-copy"></i> Copiar
-                        </button>
+            let pinsList = '';
+            
+            if (!pins || pins.length === 0) {
+                pinsList = `
+                    <div style="text-align:center; padding: 20px;">
+                        <p style="color: #f1c40f;">⚠️ No se recibieron PINs del proveedor.</p>
+                        <p style="color: #888; font-size: 0.9rem;">Los PINs han sido enviados a tu correo electrónico.</p>
+                        ${isSimulation ? '<p style="color: #f1c40f; font-size: 0.8rem;">🔧 Esto es un PIN de simulación para pruebas.</p>' : ''}
                     </div>
-                `).join('');
+                `;
+            } else {
+                pinsList = pins.map((pin, index) => {
+                    const pinCode = pin.code || pin.pin || pin;
+                    return `
+                        <div class="pin-item">
+                            <span><strong>PIN #${index + 1}</strong></span>
+                            <span class="pin-code">${pinCode}</span>
+                            <button class="copy-btn" onclick="copyPin('${pinCode}')">
+                                <i class="fas fa-copy"></i> Copiar
+                            </button>
+                        </div>
+                    `;
+                }).join('');
             }
 
             body.innerHTML = `
-                <div class="modal-success-icon">✅</div>
-                <h2 class="modal-title">¡Compra Exitosa!</h2>
+                <div class="modal-success-icon">${isSimulation ? '🔧' : '✅'}</div>
+                <h2 class="modal-title">${isSimulation ? 'Compra en Modo Simulación' : '¡Compra Exitosa!'} ${simulationBadge}</h2>
                 <p style="text-align:center; color: var(--text-color); margin-bottom: 20px;">
                     Has comprado <strong>${quantity}</strong> PIN(s) de <strong>${packageName}</strong>
+                    ${isSimulation ? '<br><span style="color: #f1c40f; font-size: 0.9rem;">🔧 Modo simulación activo - PINs generados para pruebas</span>' : ''}
                 </p>
                 <div id="pins-list">${pinsList}</div>
                 <div style="text-align: center; margin-top: 20px;">
@@ -652,7 +726,6 @@
             navigator.clipboard.writeText(code).then(() => {
                 alert('¡PIN copiado al portapapeles!');
             }).catch(() => {
-                // Fallback
                 const textArea = document.createElement('textarea');
                 textArea.value = code;
                 document.body.appendChild(textArea);
