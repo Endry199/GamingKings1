@@ -4,9 +4,9 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Free Fire Diamonds - GamingKings</title>
-    <link rel="stylesheet\" href="style.css\">
-    <link rel="stylesheet\" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css\">
-    <link rel="shortcut icon" href="images/favicon.ico\" type="image/x-icon\">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
 
     <style>
         /* --- ESTILOS ENBEBIDOS (CSS) --- */
@@ -99,7 +99,7 @@
             padding: 25px 15px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: translateY 0.3s, border-color 0.3s;
+            transition: transform 0.3s, border-color 0.3s;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -181,18 +181,18 @@
         let userBalance = 0.00;
 
         document.addEventListener("DOMContentLoaded", async () => {
-            // 🎯 BLINDAJE 1: Revisar ambas variaciones de nombres de clave por si acaso
-            const token = localStorage.getItem("sessionToken") || localStorage.getItem("session_token");
+            // 🎯 CORRECCIÓN: Usar la misma clave que script.js
+            const token = localStorage.getItem("userSessionToken");
             
             if (!token) {
                 console.log("❌ Sesión no detectada en localStorage. Redireccionando...");
+                // Guardamos la URL actual para redirigir después del login
                 localStorage.setItem("redirectAfterLogin", window.location.pathname);
                 window.location.href = "login.html";
                 return;
             }
 
             console.log("✅ Token detectado en el frontend, validando con el servidor...");
-            // Intentamos cargar el saldo. Si el token es inválido en Supabase, la función nos redirigirá de forma segura.
             await fetchUserBalance(token);
             renderPackages();
         });
@@ -202,7 +202,7 @@
                 const response = await fetch('/.netlify/functions/get-user-balance', {
                     method: 'GET',
                     headers: {
-                        'Authorization': `Bearer ${token}` // Asegúrate de que coincida con lo que espera tu get-user-balance.js
+                        'Authorization': `Bearer ${token}`
                     }
                 });
 
@@ -210,15 +210,17 @@
                     const data = await response.json();
                     console.log("📊 Datos de saldo recibidos del servidor:", data);
                     
-                    // Mapeamos correctamente según lo que devuelve get-user-balance.js (data.saldo)
                     userBalance = parseFloat(data.saldo || 0);
                     document.getElementById('user-balance-display').innerText = `$${userBalance.toFixed(2)}`;
+                } else if (response.status === 401) {
+                    console.error("❌ Token expirado o inválido. Redirigiendo a login...");
+                    localStorage.removeItem("userSessionToken");
+                    localStorage.removeItem("userData");
+                    localStorage.setItem("redirectAfterLogin", window.location.pathname);
+                    window.location.href = "login.html";
                 } else {
                     console.error(`❌ El servidor respondió con estado: ${response.status}`);
-                    // Si el backend da 401 o 500 debido a un token expirado o inválido en Supabase, limpiamos y mandamos a login
-                    localStorage.removeItem("sessionToken");
-                    localStorage.removeItem("session_token");
-                    window.location.href = "login.html";
+                    document.getElementById('user-balance-display').innerText = "$--.--";
                 }
             } catch (error) {
                 console.error("❌ Error de red al intentar conectar con get-user-balance:", error);
@@ -255,7 +257,14 @@
             const confirmacion = confirm(`¿Confirmas la compra de ${packageName} por $${price.toFixed(2)}? El código del PIN se enviará a tu correo electrónico.`);
             if (!confirmacion) return;
 
-            const token = localStorage.getItem("sessionToken") || localStorage.getItem("session_token");
+            const token = localStorage.getItem("userSessionToken");
+
+            if (!token) {
+                alert("Debes iniciar sesión para realizar una compra.");
+                localStorage.setItem("redirectAfterLogin", window.location.pathname);
+                window.location.href = "login.html";
+                return;
+            }
 
             try {
                 alert("Procesando tu orden con el proveedor... Por favor espera.");
@@ -267,8 +276,8 @@
                         'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                        deductionAmount: price,
-                        cartDetails: { item: packageName, id: packageId }
+                        amountUSD: price,
+                        cartDetails: JSON.stringify([{ item: packageName, id: packageId, game: 'Free Fire' }])
                     })
                 });
 

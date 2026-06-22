@@ -122,8 +122,8 @@ function checkUserSessionAndRenderUI() {
 }
 
 /**
- * Función de Callback llamada por el SDK de Google al iniciar sesión.
- * 🎯 SOLUCIÓN SIMPLE: Redirige a la página desde la que se inició sesión.
+ * 🎯 FUNCIÓN CORREGIDA: Callback llamada por el SDK de Google al iniciar sesión.
+ * Redirige a la página desde la que se inició sesión o a index.html como fallback.
  */
 window.handleCredentialResponse = async (response) => {
     const idToken = response.credential;
@@ -146,13 +146,12 @@ window.handleCredentialResponse = async (response) => {
             
             // Login Exitoso: Guardar la sesión
             localStorage.setItem('userSessionToken', data.sessionToken);
-            // El backend ya garantiza que 'balance' existe
             localStorage.setItem('userData', JSON.stringify(data.user)); 
             
-            // 🎯 SOLUCIÓN SIMPLE: Obtener la URL de redirección o usar la página actual
+            // 🎯 SOLUCIÓN COMPLETA: Obtener la URL de redirección
             let redirectUrl = localStorage.getItem('redirectAfterLogin');
             
-            // Si no hay URL guardada, usar la página actual
+            // Si no hay URL guardada, determinar la página actual
             if (!redirectUrl) {
                 // Obtener el nombre del archivo actual desde la URL
                 const currentPath = window.location.pathname;
@@ -162,14 +161,14 @@ window.handleCredentialResponse = async (response) => {
                 if (fileName === 'login.html' || fileName === '') {
                     redirectUrl = 'index.html';
                 } else {
-                    // Si estamos en cualquier otra página, redirigir a esa misma página
+                    // Si estamos en cualquier otra página (freefire.html, etc.), redirigir a esa misma página
                     redirectUrl = fileName || 'index.html';
                 }
             }
 
             // Eliminar la URL de redirección para que no se use en el futuro
             localStorage.removeItem('redirectAfterLogin');
-            console.log(`Redirigiendo a: ${redirectUrl}`);
+            console.log(`🔄 Redirigiendo a: ${redirectUrl}`);
 
             // Mostrar el mensaje de bienvenida
             const userName = data.user.name || 'Usuario';
@@ -177,8 +176,6 @@ window.handleCredentialResponse = async (response) => {
             // Usamos un pequeño timeout para asegurarnos de que el alert se muestre antes de la recarga
             setTimeout(() => {
                 alert(`¡Bienvenido(a), ${userName}! Has iniciado sesión correctamente.`);
-                
-                // 🎯 REDIRECCIÓN FINAL
                 window.location.href = redirectUrl;
             }, 50);
 
@@ -189,7 +186,7 @@ window.handleCredentialResponse = async (response) => {
             
             // Si falla, re-inicializar el botón
             if (window.google && window.google.accounts && window.google.accounts.id) {
-                initGoogleSignIn(true); // Forzar la renderización del botón
+                initGoogleSignIn(true);
             }
         }
 
