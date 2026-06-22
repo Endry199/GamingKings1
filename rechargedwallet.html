@@ -86,7 +86,7 @@
         /* Columna de Información del Producto (Izquierda) */
         .product-info {
             flex: 1 1 55%;
-            min-width: 300px; /* Se mantiene para desktop/tablet */
+            min-width: 300px;
         }
 
         /* Imagen/Banner del Producto */
@@ -111,7 +111,7 @@
             padding: 30px;
             border-radius: 12px;
             box-shadow: 0 4px 20px var(--shadow-dark);
-            min-width: 300px; /* Se mantiene para desktop/tablet */
+            min-width: 300px;
         }
 
         .section-title {
@@ -122,7 +122,6 @@
             font-weight: 700;
         }
         
-        /* ESTILO PARA EL MENSAJE DE WHATSAPP (Aunque no se usa aquí, se mantiene por similitud) */
         .whatsapp-message-box p {
             margin: 0;
             color: #d1d1d1;
@@ -132,7 +131,7 @@
             color: var(--accent-green);
         }
 
-        /* Estilos del Formulario (Inputs/Botones) */
+        /* Estilos del Formulario */
         .form-group label {
             display: block;
             margin-bottom: 8px;
@@ -170,6 +169,7 @@
             cursor: pointer;
             transition: opacity 0.3s;
             box-sizing: border-box;
+            margin-top: 15px;
         }
 
         .recharge-button:hover:not(:disabled) {
@@ -188,57 +188,72 @@
             color: var(--accent-green);
             text-decoration: none;
         }
-        
-        /* ======================================================= */
-        /* === ESTILOS ESPECÍFICOS DE HEADER Y PÁGINA DE RECARGA === */
-        /* ======================================================= */
-        
-        /* --- Estilos del Contenedor de Billetera en el Header --- */
 
-        /* El botón '+' de recarga */
-        .recharge-btn {
+        /* --- ESTILOS PARA EL INPUT DE MONTO PERSONALIZADO --- */
+        .custom-amount-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .custom-amount-section label {
+            display: block;
+            font-weight: 600;
+            color: var(--secondary-text);
+            margin-bottom: 10px;
+        }
+
+        .custom-amount-input-group {
             display: flex;
             align-items: center;
-            justify-content: center;
-            width: 28px;
-            height: 28px;
-            background-color: var(--primary-blue);
-            color: var(--button-text-color);
-            border-radius: 50%;
-            text-decoration: none;
-            font-size: 0.8em;
+            gap: 10px;
+        }
+
+        .custom-amount-input-group .currency-symbol {
+            font-size: 1.5em;
             font-weight: bold;
-            transition: background-color 0.3s ease;
-            border: none;
-            cursor: pointer;
+            color: var(--accent-green);
         }
 
-        .recharge-btn:hover {
-            background-color: var(--hover-blue);
+        .custom-amount-input-group input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            font-size: 1.2em;
+            font-weight: bold;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+            min-width: 150px;
         }
 
-        /* --- Ajustes de Layout para la Página de Recarga (rechargedwallet.html) --- */
-
-        /* Ajustamos el contenedor izquierdo para que se vea bien como una tarjeta */
-        .product-main .product-info {
-            background-color: var(--card-bg);
-            padding: 20px; 
-            border-radius: 12px;
-            /* Estos estilos sobrescriben la definición base de .product-info para este caso */
-        }
-        
-        /* Sobrescribir el tamaño del título de la billetera */
-        .product-main .product-info .product-title {
-            font-size: 1.8em; 
-            color: var(--primary-blue);
+        .custom-amount-input-group input:focus {
+            border-color: var(--primary-blue);
+            outline: none;
         }
 
-        /* Estilo del botón de recarga (para cuando está deshabilitado al inicio) */
-        .recharge-button:disabled {
-            background: var(--border-color);
-            cursor: not-allowed;
-            opacity: 0.7;
+        .custom-amount-input-group input::placeholder {
             color: var(--secondary-text);
+            font-weight: normal;
+            opacity: 0.5;
+        }
+
+        .custom-amount-input-group input:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .custom-amount-info {
+            font-size: 0.85em;
+            color: var(--secondary-text);
+            margin-top: 8px;
+        }
+
+        .custom-amount-info .min-amount {
+            color: var(--accent-green);
+            font-weight: bold;
         }
 
         /* Mensaje de carga */
@@ -272,7 +287,6 @@
                 grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
             }
             
-             /* Ajustes Responsivos para móviles pequeños (del CSS original de product.html) */
             @media (max-width: 600px) {
                 .package-options {
                     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
@@ -290,6 +304,19 @@
 
                 .package-price {
                     font-size: 1.2em;
+                }
+
+                .custom-amount-input-group {
+                    flex-wrap: wrap;
+                }
+
+                .custom-amount-input-group .currency-symbol {
+                    font-size: 1.2em;
+                }
+
+                .custom-amount-input-group input {
+                    font-size: 1em;
+                    min-width: 100px;
                 }
             }
         }
@@ -379,7 +406,7 @@
                 <img src="images/gamingkings_logo.png" alt="GamingKings" class="product-banner-image">
                 <div class="text-content">
                     <h1 class="product-title">Recarga tu Billetera Virtual</h1>
-                    <p class="secondary-text">Elige el monto que deseas añadir a tu saldo GamingKings para compras rápidas y sin fricciones. ¡Serás redirigido a pago inmediatamente!</p>
+                    <p class="secondary-text">Elige un monto rápido o ingresa el tuyo propio. El saldo mínimo de recarga es <strong>$10 USD</strong>.</p>
                     <p class="secondary-text">El saldo de tu billetera es la forma más rápida de comprar en nuestro sitio sin tener que ingresar tus datos bancarios en cada transacción.</p>
                 </div>
             </div>
@@ -387,11 +414,28 @@
             <div class="product-form-container">
                 <form id="recharge-wallet-form">
                     
-                    <p class="section-title">Paso 1: Selecciona el Monto</p>
+                    <p class="section-title">Paso 1: Selecciona o Ingresa el Monto</p>
                     
                     <div class="package-options" id="recharge-package-options-grid"> 
                         <p id="packages-loading">Cargando opciones...</p>
+                    </div>
+
+                    <!-- 🆕 SECCIÓN DE MONTO PERSONALIZADO -->
+                    <div class="custom-amount-section">
+                        <label for="custom-amount-input">O ingresa un monto personalizado:</label>
+                        <div class="custom-amount-input-group">
+                            <span class="currency-symbol" id="custom-currency-symbol">$</span>
+                            <input type="number" id="custom-amount-input" 
+                                   placeholder="Ej: 25" 
+                                   min="10" 
+                                   step="1"
+                                   disabled>
                         </div>
+                        <p class="custom-amount-info">
+                            💰 Monto mínimo: <span class="min-amount">$10 USD</span> · 
+                            Solo números enteros (sin decimales)
+                        </p>
+                    </div>
                     
                     <button type="submit" class="recharge-button" id="select-package-btn" disabled>
                         Continuar al Pago
@@ -412,15 +456,9 @@
     <script src="script.js"></script>
     
     <script>
-        // Esto asegura que la lógica de carga de paquetes (load-recharge-packages.js) 
-        // y la visualización del header (script.js) inicien siempre en VES, 
-        // sobrescribiendo la última moneda seleccionada si es necesario.
+        // Forzar moneda VES para la recarga de billetera
         localStorage.setItem('selectedCurrency', 'VES');
         console.log('Moneda por defecto forzada a VES para la recarga de billetera.');
-        
-        // Opcional: Si 'script.js' tiene una función global para actualizar la UI del selector de moneda,
-        // puedes llamarla aquí para que el selector visual en el header también cambie inmediatamente.
-        // Ejemplo: if (typeof updateCurrencyDisplay === 'function') { updateCurrencyDisplay('VES'); }
     </script>
     
     <script src="load-recharge-packages.js"></script> 

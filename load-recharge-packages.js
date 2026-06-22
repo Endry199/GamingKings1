@@ -1,4 +1,4 @@
-// load-recharge-packages.js (FINAL: Lectura de ID desde localStorage)
+// load-recharge-packages.js (CON MONTO PERSONALIZADO)
 
 // =========================================================================
 // === UTILITY: Obtener Google ID desde localStorage ===
@@ -6,7 +6,6 @@
 
 /**
  * Utilidad para obtener el google_id del usuario desde localStorage.
- * Asume que el objeto 'userData' guardado en localStorage contiene la propiedad 'google_id'.
  * @returns {string|null} El google_id si existe, o null.
  */
 function getUserId() {
@@ -14,7 +13,6 @@ function getUserId() {
     if (userDataJson) {
         try {
             const userData = JSON.parse(userDataJson);
-            // 🎯 CLAVE: Acceder a la propiedad google_id
             return userData.google_id || null; 
         } catch (e) {
             console.error("Error al parsear userData de localStorage:", e);
@@ -32,43 +30,62 @@ document.addEventListener('DOMContentLoaded', () => {
     const packageGrid = document.getElementById('recharge-package-options-grid');
     const rechargeForm = document.getElementById('recharge-wallet-form');
     const selectButton = document.getElementById('select-package-btn');
+    const customAmountInput = document.getElementById('custom-amount-input');
+    const customCurrencySymbol = document.getElementById('custom-currency-symbol');
+    
     let selectedPackageData = null;
+    let isCustomAmountSelected = false;
 
-    // Paquetes de saldo (Hardcodeados para el ejemplo, idealmente desde Supabase)
+    // Paquetes de saldo predefinidos (ahora con valores más variados)
     const RECHARGE_PACKAGES = [
-        { name: 'Saldo $5 GKUSD', usd: '5.00' },
-        { name: 'Saldo $10 GKUSD', usd: '10.00' }, 
-        { name: 'Saldo $20 GKUSD', usd: '20.00' },
+        { name: 'Saldo $10 GKUSD', usd: '10.00' },
+        { name: 'Saldo $15 GKUSD', usd: '15.00' },
+        { name: 'Saldo $25 GKUSD', usd: '25.00' },
         { name: 'Saldo $50 GKUSD', usd: '50.00' },
         { name: 'Saldo $100 GKUSD', usd: '100.00' },
         { name: 'Saldo $200 GKUSD', usd: '200.00' }
     ];
 
     /**
-     * 🎯 OBTENER TASA: Obtiene la tasa de cambio del Dólar guardada en la configuración CSS.
-     * @returns {number} La tasa de VES/USD. Por defecto 38.00.
+     * Obtiene la tasa de cambio del Dólar desde la configuración CSS.
      */
     function getExchangeRate() {
         const rootStyle = getComputedStyle(document.documentElement);
-        // Lee la variable CSS, elimina comillas si existen, y convierte a float.
         let rate = rootStyle.getPropertyValue('--tasa-dolar')?.trim().replace(/['"]/g, ''); 
-        // Usamos 38.00 como fallback si no se puede leer la variable
         return parseFloat(rate) || 38.00; 
     }
 
     /**
-     * Renders the package options based on the current currency.
+     * Actualiza el símbolo de moneda en el input personalizado
+     */
+    function updateCustomCurrencySymbol() {
+        const currentCurrency = window.getCurrentCurrency ? window.getCurrentCurrency() : 'USD';
+        const symbol = currentCurrency === 'USD' ? '$' : 'Bs.';
+        if (customCurrencySymbol) {
+            customCurrencySymbol.textContent = symbol;
+        }
+    }
+
+    /**
+     * Renderiza los paquetes predefinidos
      */
     function renderPackages() {
         if (!packageGrid) return;
         
-        packageGrid.innerHTML = ''; // Limpiar mensaje de carga
+        packageGrid.innerHTML = '';
         
-        const currentCurrency = window.getCurrentCurrency ? window.getCurrentCurrency() : 'USD'; 
-        const exchangeRate = getExchangeRate(); 
+        const currentCurrency = window.getCurrentCurrency ? window.getCurrentCurrency() : 'USD';
+        const exchangeRate = getExchangeRate();
+        updateCustomCurrencySymbol();
+        
+        // Habilitar el input personalizado
+        if (customAmountInput) {
+            customAmountInput.disabled = false;
+            customAmountInput.value = '';
+            customAmountInput.placeholder = currentCurrency === 'USD' ? 'Ej: 25' : 'Ej: 950';
+        }
         
         RECHARGE_PACKAGES.forEach((pkg) => {
-            
             const usdPrice = parseFloat(pkg.usd);
             const calculatedVesPrice = (usdPrice * exchangeRate).toFixed(2);
             
@@ -91,89 +108,185 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         attachPackageEventListeners();
-
-        if (selectedPackageData) {
-            const currentSelected = Array.from(packageGrid.children).find(
-                opt => opt.dataset.packageName === selectedPackageData.name
-            );
-            if (currentSelected) {
-                currentSelected.classList.add('selected');
-                selectButton.disabled = false;
-                selectButton.textContent = `Pagar Recarga de ${selectedPackageData.name}`;
-            }
-        } else {
-             selectButton.disabled = true;
-             selectButton.textContent = 'Continuar al Pago';
-        }
+        updateButtonState();
     }
 
     /**
-     * Attaches click listeners to the dynamically created package options.
+     * Attaches click listeners to the package options.
      */
     function attachPackageEventListeners() {
         const packageOptions = document.querySelectorAll('.package-option');
         
         packageOptions.forEach(opt => {
             opt.addEventListener('click', function() {
-                // 1. Deseleccionar todos
+                // Deseleccionar todos los paquetes
                 packageOptions.forEach(o => o.classList.remove('selected'));
                 
-                // 2. Seleccionar el actual
+                // Seleccionar el actual
                 this.classList.add('selected');
                 
-                // 3. Actualizar datos seleccionados, incluyendo el precio VES calculado
+                // Limpiar el input personalizado
+                if (customAmountInput) {
+                    customAmountInput.value = '';
+                    isCustomAmountSelected = false;
+                }
+                
+                // Actualizar datos seleccionados
                 selectedPackageData = {
                     name: this.dataset.packageName,
                     usd: this.dataset.priceUsd,
-                    ves: this.dataset.priceVes 
+                    ves: this.dataset.priceVes,
+                    isCustom: false
                 };
                 
-                // 4. Habilitar y actualizar el botón
-                selectButton.disabled = false;
-                selectButton.textContent = `Pagar Recarga de ${selectedPackageData.name}`;
+                updateButtonState();
             });
         });
     }
 
-    // Escuchar el evento global de cambio de moneda y carga de configuración
-    window.addEventListener('currencyChanged', renderPackages); 
-    document.addEventListener('siteConfigLoaded', renderPackages, { once: true });
+    /**
+     * Maneja el cambio en el input de monto personalizado
+     */
+    function handleCustomAmountChange() {
+        if (!customAmountInput) return;
+        
+        const value = customAmountInput.value.trim();
+        
+        // Si el campo está vacío, deseleccionar todo
+        if (value === '') {
+            // Deseleccionar paquetes
+            document.querySelectorAll('.package-option').forEach(o => o.classList.remove('selected'));
+            selectedPackageData = null;
+            isCustomAmountSelected = false;
+            updateButtonState();
+            return;
+        }
+        
+        const amount = parseFloat(value);
+        const currentCurrency = window.getCurrentCurrency ? window.getCurrentCurrency() : 'USD';
+        
+        // Validar: mínimo 10, sin decimales
+        if (isNaN(amount) || amount < 10 || !Number.isInteger(amount)) {
+            // Si es inválido, deseleccionar
+            document.querySelectorAll('.package-option').forEach(o => o.classList.remove('selected'));
+            selectedPackageData = null;
+            isCustomAmountSelected = false;
+            updateButtonState();
+            return;
+        }
+        
+        // Deseleccionar paquetes predefinidos
+        document.querySelectorAll('.package-option').forEach(o => o.classList.remove('selected'));
+        
+        // Calcular el precio en la moneda actual
+        let usdAmount = amount;
+        let vesAmount = amount;
+        
+        if (currentCurrency === 'VES') {
+            const exchangeRate = getExchangeRate();
+            usdAmount = (amount / exchangeRate);
+            vesAmount = amount;
+        } else {
+            usdAmount = amount;
+            vesAmount = amount * getExchangeRate();
+        }
+        
+        // Crear el objeto de paquete personalizado
+        const packageName = currentCurrency === 'USD' 
+            ? `Saldo $${amount} GKUSD` 
+            : `Saldo Bs. ${amount} GKUSD`;
+        
+        selectedPackageData = {
+            name: packageName,
+            usd: usdAmount.toFixed(2),
+            ves: vesAmount.toFixed(2),
+            isCustom: true,
+            customAmount: amount
+        };
+        
+        isCustomAmountSelected = true;
+        updateButtonState();
+    }
+
+    /**
+     * Actualiza el estado del botón de continuar
+     */
+    function updateButtonState() {
+        if (selectedPackageData) {
+            selectButton.disabled = false;
+            const displayName = selectedPackageData.isCustom 
+                ? selectedPackageData.name 
+                : selectedPackageData.name;
+            selectButton.textContent = `Pagar Recarga de ${displayName}`;
+        } else {
+            selectButton.disabled = true;
+            selectButton.textContent = 'Continuar al Pago';
+        }
+    }
+
+    /**
+     * Escucha el evento de cambio de moneda
+     */
+    window.addEventListener('currencyChanged', () => {
+        renderPackages();
+        // Si había un monto personalizado, limpiarlo
+        if (customAmountInput) {
+            customAmountInput.value = '';
+        }
+        selectedPackageData = null;
+        isCustomAmountSelected = false;
+        updateButtonState();
+    });
     
+    document.addEventListener('siteConfigLoaded', renderPackages, { once: true });
+
+    // 🎯 Event listeners para el input personalizado
+    if (customAmountInput) {
+        customAmountInput.addEventListener('input', handleCustomAmountChange);
+        customAmountInput.addEventListener('blur', function() {
+            // Si el valor es inválido, limpiar
+            const value = parseFloat(this.value);
+            if (!isNaN(value) && (value < 10 || !Number.isInteger(value))) {
+                this.value = '';
+                handleCustomAmountChange();
+            }
+        });
+    }
+
     // 🎯 Lógica de Pago Directo al enviar el formulario
     rechargeForm.addEventListener('submit', (e) => { 
         e.preventDefault();
 
         if (!selectedPackageData) {
-            alert('Por favor, selecciona un paquete de saldo.');
+            alert('Por favor, selecciona un paquete o ingresa un monto válido (mínimo $10 USD).');
             return;
         }
         
-        // 🟢 PASO 1: Obtener el ID del usuario desde localStorage
         const googleId = getUserId();
         
         if (!googleId) {
-            // Mostrar error si no se encuentra el ID o la sesión (porque no se guardó o no se logueó)
             alert('Error: No se encontró la sesión o el ID de usuario. Por favor, inicia sesión para recargar.');
             return;
         }
 
-        // 🟢 PASO 2: Crear el objeto de transacción 
+        // Crear el objeto de transacción
         const transactionItem = {
             id: 'WALLET_RECHARGE_' + Date.now(), 
             game: 'Recarga de Saldo',
-            playerId: 'N/A', // No aplica para recarga
+            playerId: 'N/A',
             packageName: selectedPackageData.name,
             priceUSD: selectedPackageData.usd, 
             priceVES: selectedPackageData.ves, 
             requiresAssistance: false,
-            // 🎯 CLAVE: Añadir el google_id obtenido de localStorage
-            google_id: googleId 
+            google_id: googleId,
+            isCustom: selectedPackageData.isCustom || false,
+            customAmount: selectedPackageData.customAmount || null
         };
 
-        // 🟢 PASO 3: Guardar el array de transacción en localStorage
         localStorage.setItem('transactionDetails', JSON.stringify([transactionItem]));
-
-        // 🟢 PASO 4: Redirigir inmediatamente a payment.html para procesar el pago.
         window.location.href = 'payment.html';
     });
+
+    // Renderizado inicial
+    renderPackages();
 });
