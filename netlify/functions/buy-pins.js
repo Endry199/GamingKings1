@@ -349,7 +349,7 @@ exports.handler = async function(event, context) {
                     }
                 });
 
-            // 📧 Enviar correo con los PINs
+            // 📧 Enviar correo con los PINsaaaa
             console.log(`📧 Enviando correo a ${userEmail} con ${pins.length} PINs...`);
             let emailResult = { success: false };
             
