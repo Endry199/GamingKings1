@@ -122,8 +122,11 @@ function checkUserSessionAndRenderUI() {
 }
 
 /**
- * 🎯 FUNCIÓN CORREGIDA: Callback llamada por el SDK de Google al iniciar sesión.
- * Redirige a la página desde la que se inició sesión o a index.html como fallback.
+// script.js (SOLO LA FUNCIÓN handleCredentialResponse)
+// ... (código previo de script.js)
+
+/**
+ * Función de Callback llamada por el SDK de Google al iniciar sesión.
  */
 window.handleCredentialResponse = async (response) => {
     const idToken = response.credential;
@@ -146,37 +149,29 @@ window.handleCredentialResponse = async (response) => {
             
             // Login Exitoso: Guardar la sesión
             localStorage.setItem('userSessionToken', data.sessionToken);
+            // El backend ya garantiza que 'balance' existe
             localStorage.setItem('userData', JSON.stringify(data.user)); 
             
-            // 🎯 SOLUCIÓN COMPLETA: Obtener la URL de redirección
-            let redirectUrl = localStorage.getItem('redirectAfterLogin');
-            
-            // Si no hay URL guardada, determinar la página actual
-            if (!redirectUrl) {
-                // Obtener el nombre del archivo actual desde la URL
-                const currentPath = window.location.pathname;
-                const fileName = currentPath.substring(currentPath.lastIndexOf('/') + 1);
-                
-                // Si estamos en login.html o en la raíz, ir a index.html
-                if (fileName === 'login.html' || fileName === '') {
-                    redirectUrl = 'index.html';
-                } else {
-                    // Si estamos en cualquier otra página (freefire.html, etc.), redirigir a esa misma página
-                    redirectUrl = fileName || 'index.html';
-                }
-            }
+            // 🚨 MODIFICACIÓN CLAVE PARA LA REDIRECCIÓN 🚨
+            const redirectUrl = localStorage.getItem('redirectAfterLogin');
+            const finalRedirect = redirectUrl || 'index.html'; // Usar la URL guardada o index.html como fallback
 
-            // Eliminar la URL de redirección para que no se use en el futuro
-            localStorage.removeItem('redirectAfterLogin');
-            console.log(`🔄 Redirigiendo a: ${redirectUrl}`);
+            // Si se usó una URL de redirección, la eliminamos para que no se use en el futuro
+            if (redirectUrl) {
+                localStorage.removeItem('redirectAfterLogin');
+                console.log(`Redirigiendo de vuelta a: ${finalRedirect}`);
+            }
+            // ----------------------------------------------
 
             // Mostrar el mensaje de bienvenida
             const userName = data.user.name || 'Usuario';
             
             // Usamos un pequeño timeout para asegurarnos de que el alert se muestre antes de la recarga
             setTimeout(() => {
-                alert(`¡Bienvenido(a), ${userName}! Has iniciado sesión correctamente.`);
-                window.location.href = redirectUrl;
+                    alert(`¡Bienvenido(a), ${userName}! Has iniciado sesión correctamente.`);
+                    
+                    // 🎯 REDIRECCIÓN FINAL: Usa la URL determinada (payment.html o index.html)
+                    window.location.href = finalRedirect; 
             }, 50);
 
         } else {
@@ -186,7 +181,7 @@ window.handleCredentialResponse = async (response) => {
             
             // Si falla, re-inicializar el botón
             if (window.google && window.google.accounts && window.google.accounts.id) {
-                initGoogleSignIn(true);
+                    initGoogleSignIn(true); // Forzar la renderización del botón
             }
         }
 
@@ -196,6 +191,7 @@ window.handleCredentialResponse = async (response) => {
     }
 };
 
+// ... (resto del código de script.js)
 /**
  * Inicializa el SDK de Google y dibuja el botón.
  * @param {boolean} forceRender Si es true, fuerza la renderización aunque haya sesión.
