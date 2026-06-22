@@ -55,39 +55,30 @@
     </div>
 
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-        <script>
-    // Esta función es la que se ejecuta cuando process-google-login devuelve éxito (código 200)
-    function handleLoginSuccess(responseJSON) {
-        console.log("✅ Autenticación exitosa:", responseJSON);
-
-        // 1. Guardas el token tal cual como lo tienes implementado
-        // (Asegúrate de guardar tanto sessionToken como session_token si usas ambas en tu script.js)
-        localStorage.setItem("sessionToken", responseJSON.sessionToken);
-        localStorage.setItem("session_token", responseJSON.sessionToken); 
-        
-        // Guardamos también los datos del usuario si tu app lo requiere
-        if (responseJSON.user) {
-            localStorage.setItem("user_data", JSON.stringify(responseJSON.user));
-        }
-
-        // 2. 🎯 AQUÍ ESTÁ EL TRUCO CLAVE PARA REFRESCAR Y REDIRECCIONAR:
-        const urlDestino = localStorage.getItem("redirectAfterLogin");
-
-        if (urlDestino) {
-            console.log(`➡️ Redirigiendo al usuario a su destino previo: ${urlDestino}`);
-            // Borramos la variable para que no se quede atrapada en el próximo login
-            localStorage.removeItem("redirectAfterLogin");
-            // Redirección directa
-            window.location.href = urlDestino;
-        } else {
-            console.log("➡️ No hay destino previo. Redirigiendo a la página principal por defecto.");
-            window.location.href = "index.html";
-        }
-    }
-
-    // NOTA: Integra la llamada a 'handleLoginSuccess' dentro de tu función actual 
-    // que procesa el fetch a /.netlify/functions/process-google-login cuando 'response.ok' sea true.
-</script>
+    
     <script src="script.js"></script>
+
+    <script>
+        window.onload = function () {
+            // Inicializar el cliente de Google Identity Services
+            google.accounts.id.initialize({
+                // Reemplaza esto con tu Client ID real de Google Cloud Console si no es este
+                client_id: "721755353118-6f688hsn3gq9df9e38m2be979k6ne3f2.apps.googleusercontent.com", 
+                // 🎯 CLAVE: Le decimos a Google que cuando el usuario se loguee, ejecute la función de tu script.js
+                callback: handleCredentialResponse 
+            });
+
+            // Pintar el botón en el contenedor con un diseño pro
+            google.accounts.id.renderButton(
+                document.getElementById("google-login-btn"),
+                { 
+                    theme: "filled_blue", 
+                    size: "large", 
+                    text: "signin_with",
+                    shape: "pill"
+                }
+            );
+        };
+    </script>
 </body>
 </html>
