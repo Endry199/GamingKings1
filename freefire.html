@@ -519,7 +519,6 @@
         function extractPins(data) {
             if (!data) return [];
             
-            // Buscar en diferentes formatos
             if (data.pins && Array.isArray(data.pins) && data.pins.length > 0) {
                 return data.pins;
             }
@@ -548,7 +547,6 @@
                 return [{ code: data.pin }];
             }
             
-            // Si es un array directamente
             if (Array.isArray(data)) {
                 return data;
             }
@@ -556,6 +554,7 @@
             return [];
         }
 
+        // 🔴 FUNCIÓN CORREGIDA: PRIMERO COMPRAR, LUEGO DESCONTAR
         async function processPurchase(packageId, price, packageName, providerId) {
             const input = document.getElementById(`qty-${packageId}`);
             const quantity = parseInt(input ? input.value : 1);
@@ -567,6 +566,7 @@
 
             const totalCost = price * quantity;
 
+            // Verificar saldo ANTES de intentar comprar
             if (userBalance < totalCost) {
                 alert(`Saldo insuficiente. Requieres $${totalCost.toFixed(2)} y posees $${userBalance.toFixed(2)}. ¡Por favor recarga tu Wallet!`);
                 window.location.href = "rechargedwallet.html";
@@ -587,36 +587,8 @@
 
             showLoadingModal();
 
-            const balanceBeforePurchase = userBalance;
-
             try {
-                // 1. Descontar saldo
-                const deductResponse = await fetch('/.netlify/functions/deduct-wallet-balance', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        amountUSD: totalCost,
-                        cartDetails: JSON.stringify([{ 
-                            item: packageName, 
-                            id: packageId, 
-                            game: 'Free Fire',
-                            quantity: quantity,
-                            provider_id: providerId
-                        }])
-                    })
-                });
-
-                const deductData = await deductResponse.json();
-
-                if (!deductResponse.ok) {
-                    await restoreBalance(token);
-                    throw new Error(deductData.message || "Error al descontar saldo de la Wallet.");
-                }
-
-                // 2. Comprar los PINs
+                // 🔴 PASO 1: PRIMERO COMPRAR LOS PINs (sin descontar saldo)
                 const buyResponse = await fetch('/.netlify/functions/buy-pins', {
                     method: 'POST',
                     headers: {
@@ -639,21 +611,51 @@
                     buyData = JSON.parse(responseText);
                 } catch (parseError) {
                     console.error("❌ Error al parsear JSON:", parseError);
-                    await restoreBalance(token);
                     throw new Error("El servidor devolvió una respuesta inválida. Por favor, intenta de nuevo.");
                 }
 
-                if (!buyResponse.ok) {
-                    await restoreBalance(token);
-                    throw new Error(buyData.message || "Error al comprar los PINs.");
+                // Si la compra falló, mostrar error SIN descontar saldo
+                if (!buyResponse.ok || !buyData.success) {
+                    const errorMsg = buyData.message || "Error al comprar los PINs.";
+                    console.error("❌ Error en buy-pins:", errorMsg);
+                    
+                    // Verificar si es error de saldo del proveedor
+                    if (buyData.provider_error?.includes('saldo') || errorMsg.includes('saldo insuficiente')) {
+                        throw new Error("El proveedor no tiene saldo suficiente. Por favor, contacta con soporte.\n\n✅ Tu saldo NO ha sido descontado.");
+                    }
+                    
+                    throw new Error(errorMsg + "\n\n✅ Tu saldo NO ha sido descontado.");
                 }
 
-                if (!buyData.success) {
-                    await restoreBalance(token);
-                    throw new Error(buyData.message || "Error al procesar la compra.");
+                // ✅ PASO 2: LA COMPRA FUE EXITOSA - AHORA DESCONTAR SALDO
+                console.log("✅ Compra exitosa, descontando saldo...");
+
+                const deductResponse = await fetch('/.netlify/functions/deduct-wallet-balance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        amountUSD: totalCost,
+                        cartDetails: JSON.stringify([{ 
+                            item: packageName, 
+                            id: packageId, 
+                            game: 'Free Fire',
+                            quantity: quantity,
+                            provider_id: providerId
+                        }])
+                    })
+                });
+
+                const deductData = await deductResponse.json();
+
+                if (!deductResponse.ok) {
+                    // Error al descontar saldo - esto es grave porque la compra ya se hizo
+                    console.error("❌ Error al descontar saldo:", deductData);
+                    throw new Error("La compra se realizó pero hubo un error al descontar tu saldo. Por favor, contacta con soporte.\n\nID de transacción: " + (buyData.transaction_id || 'N/A'));
                 }
 
-                // ✅ Compra exitosa
                 // Extraer los PINs
                 const pins = extractPins(buyData);
                 console.log("🎮 PINs extraídos:", pins);
@@ -661,42 +663,18 @@
                 // Mostrar los PINs en el modal
                 showPinsModal(buyData, packageName, quantity, pins);
 
-                // Actualizar el saldo
+                // Actualizar el saldo mostrado
                 await fetchUserBalance(token);
 
             } catch (error) {
                 console.error("❌ Error en la transacción:", error);
                 closeModal();
                 
-                // Restaurar saldo si es necesario
-                if (userBalance < balanceBeforePurchase) {
-                    console.log("🔄 Restaurando saldo después de error...");
-                    await restoreBalance(token);
-                    document.getElementById('user-balance-display').innerText = `$${userBalance.toFixed(2)}`;
-                }
+                // El saldo NO se descontó porque la compra falló o hubo error
+                // Solo actualizamos el saldo mostrado para asegurar que está correcto
+                await fetchUserBalance(token);
                 
                 showErrorModal(error.message);
-            }
-        }
-
-        async function restoreBalance(token) {
-            try {
-                const response = await fetch('/.netlify/functions/get-user-balance', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    userBalance = parseFloat(data.saldo || 0);
-                    console.log("🔄 Saldo restaurado:", userBalance);
-                } else {
-                    console.warn("⚠️ No se pudo restaurar el saldo desde el servidor.");
-                }
-            } catch (error) {
-                console.error("❌ Error al restaurar saldo:", error);
             }
         }
 
@@ -719,14 +697,18 @@
             const modal = document.getElementById('pins-modal');
             const body = document.getElementById('modal-body');
             
+            // Verificar si el mensaje ya contiene la nota de saldo
+            const hasBalanceNote = errorMessage.includes('saldo NO ha sido descontado') || 
+                                   errorMessage.includes('Tu saldo no ha sido descontado');
+            
+            const displayMessage = errorMessage;
+            const balanceNote = hasBalanceNote ? '' : '\n\n✅ Tu saldo NO ha sido descontado.';
+            
             body.innerHTML = `
                 <div class="error-text">
                     <i class="fas fa-exclamation-circle" style="color: #ff6b6b;"></i>
                     <h2 style="color: #ff6b6b;">Error en la Compra</h2>
-                    <p style="color: var(--text-color);">${errorMessage}</p>
-                    <p style="color: #ff6b6b; font-size: 0.9rem; margin-top: 10px;">
-                        <i class="fas fa-info-circle"></i> Tu saldo no ha sido descontado.
-                    </p>
+                    <p style="color: var(--text-color); white-space: pre-line;">${displayMessage}${balanceNote}</p>
                     <button onclick="closePinsModal()" class="buy-btn" style="width: auto; padding: 10px 30px; margin-top: 15px;">
                         <i class="fas fa-times"></i> Cerrar
                     </button>
@@ -748,7 +730,6 @@
             
             let pinsList = '';
             
-            // Si no hay PINs, mostrar mensaje
             if (!pins || pins.length === 0) {
                 pinsList = `
                     <div style="text-align:center; padding: 20px;">
@@ -760,7 +741,6 @@
             } else {
                 pinsList = pins.map((pin, index) => {
                     const pinCode = pin.code || pin.pin || pin;
-                    // Si es un string, usarlo directamente
                     const finalPin = typeof pinCode === 'string' ? pinCode : JSON.stringify(pinCode);
                     return `
                         <div class="pin-item">
@@ -774,7 +754,6 @@
                 }).join('');
             }
 
-            // Mensaje de email
             let emailMessage = '';
             if (!emailSent) {
                 emailMessage = `
