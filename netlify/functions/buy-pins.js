@@ -8,7 +8,6 @@ const SIMULATION_MODE = process.env.SIMULATION_MODE === 'true';
 // 📧 Función para enviar correo con los PINs
 async function sendPinsEmail(sessionToken, pins, quantity, packageName, totalCost, transactionId) {
     try {
-        // Obtener la URL base (para llamadas internas)
         const baseUrl = process.env.URL || 'http://localhost:8888';
         
         const response = await fetch(`${baseUrl}/.netlify/functions/send-pins-email`, {
@@ -155,7 +154,7 @@ exports.handler = async function(event, context) {
     }
 
     try {
-        // 4. Verificar usuario autenticado
+        // 4. Verificar usuario autenticado y obtener saldo (SOLO PARA VERIFICAR, NO DESCONTAMOS AÚN)
         const { data: userData, error: authError } = await supabase
             .from('usuarios')
             .select('google_id, nombre, email, saldos!left(saldo_usd)')
@@ -173,13 +172,15 @@ exports.handler = async function(event, context) {
         const googleId = userData.google_id;
         const userEmail = userData.email;
         const currentBalance = parseFloat(userData.saldos?.saldo_usd || 0);
-        console.log(`Saldo actual: $${currentBalance}, Costo total: $${totalCost}`);
+        console.log(`💰 Saldo actual: $${currentBalance}, Costo total: $${totalCost}`);
 
+        // Verificar saldo suficiente ANTES de hacer cualquier cosa
         if (currentBalance < totalCost) {
+            console.log(`❌ Saldo insuficiente. Actual: $${currentBalance}, Requerido: $${totalCost}`);
             return { 
                 statusCode: 403, 
                 body: JSON.stringify({ 
-                    message: "Saldo insuficiente.", 
+                    message: "Saldo insuficiente en tu wallet.", 
                     balance: currentBalance,
                     required: totalCost
                 }) 
@@ -199,12 +200,18 @@ exports.handler = async function(event, context) {
                 fakePins.push(pinCode);
             }
             
+            // ✅ AHORA SÍ descontamos el saldo (solo en simulación)
             const newBalance = currentBalance - totalCost;
             
-            await supabase
+            const { error: updateError } = await supabase
                 .from('saldos')
                 .update({ saldo_usd: newBalance.toFixed(2) })
                 .eq('user_id', googleId);
+
+            if (updateError) {
+                console.error("❌ Error al actualizar saldo:", updateError);
+                throw new Error("Error al actualizar el saldo.");
+            }
 
             await supabase
                 .from('transacciones')
@@ -243,6 +250,10 @@ exports.handler = async function(event, context) {
             };
         }
 
+        // =========================================================
+        // 🔴 MODO PRODUCCIÓN - PRIMERO COMPRAMOS, LUEGO DESCONTAMOS
+        // =========================================================
+
         // 6. Configurar la API de RecargasAmérica
         const API_URL = 'https://panel.recargasamerica.com/api/v1/buy/pins';
         const API_TOKEN = process.env.RECARGAS_AMERICA_API_TOKEN;
@@ -263,7 +274,7 @@ exports.handler = async function(event, context) {
 
         console.log(`📤 Enviando solicitud a RecargasAmérica:`, JSON.stringify(payload, null, 2));
 
-        // 7. Hacer la solicitud a la API
+        // 7. Hacer la solicitud a la API (PRIMERO)
         let response;
         try {
             response = await axios.post(API_URL, payload, {
@@ -280,23 +291,29 @@ exports.handler = async function(event, context) {
             console.error("Status:", axiosError.response?.status);
             console.error("Data:", axiosError.response?.data);
             
+            // ⚠️ IMPORTANTE: NO descontamos el saldo porque la compra falló
+            
             if (axiosError.code === 'ECONNABORTED') {
                 return {
                     statusCode: 504,
                     body: JSON.stringify({
                         success: false,
-                        message: "El proveedor está tardando demasiado en responder. Por favor, intenta de nuevo."
+                        message: "El proveedor está tardando demasiado en responder. Por favor, intenta de nuevo.",
+                        balance_unchanged: true
                     })
                 };
             }
             
-            if (axiosError.response?.data?.error === 'Saldo insuficiente.') {
+            // Error específico de saldo insuficiente en el proveedor
+            if (axiosError.response?.data?.error === 'Saldo insuficiente.' || 
+                axiosError.response?.data?.message?.includes('saldo')) {
                 return {
                     statusCode: 402,
                     body: JSON.stringify({
                         success: false,
-                        message: "El proveedor no tiene saldo suficiente. Por favor, contacta con soporte.",
-                        provider_error: axiosError.response?.data
+                        message: "El proveedor no tiene saldo suficiente para completar la compra. Por favor, contacta con soporte.",
+                        provider_error: axiosError.response?.data,
+                        balance_unchanged: true // Indicamos que el saldo NO se descontó
                     })
                 };
             }
@@ -306,7 +323,8 @@ exports.handler = async function(event, context) {
                 body: JSON.stringify({
                     success: false,
                     message: "Error al comunicarse con el proveedor.",
-                    provider_error: axiosError.response?.data || axiosError.message
+                    provider_error: axiosError.response?.data || axiosError.message,
+                    balance_unchanged: true
                 })
             };
         }
@@ -319,64 +337,8 @@ exports.handler = async function(event, context) {
         // Verificar si la respuesta fue exitosa
         const isSuccess = responseData && (responseData.status === 'success' || responseData.success === true);
         
-        if (isSuccess) {
-            // 🎯 Extraer los PINs usando la función mejorada
-            const pins = extractPinsFromResponse(responseData);
-            console.log(`🎮 PINs extraídos: ${pins.length}`, pins);
-
-            // Descontar saldo
-            const newBalance = currentBalance - totalCost;
-            
-            await supabase
-                .from('saldos')
-                .update({ saldo_usd: newBalance.toFixed(2) })
-                .eq('user_id', googleId);
-
-            // Registrar transacción
-            await supabase
-                .from('transacciones')
-                .insert({
-                    user_id: googleId,
-                    monto: -totalCost,
-                    tipo: 'compra_pin',
-                    descripcion: `Compra de ${quantity} PIN(s) - ${productName || 'Free Fire'}`,
-                    metadatos: {
-                        product_id: productId,
-                        quantity: quantity,
-                        provider_response: responseData,
-                        transaction_id: transactionId,
-                        pins: pins
-                    }
-                });
-
-            // 📧 Enviar correo con los PINsaaaa
-            console.log(`📧 Enviando correo a ${userEmail} con ${pins.length} PINs...`);
-            let emailResult = { success: false };
-            
-            if (pins.length > 0) {
-                emailResult = await sendPinsEmail(sessionToken, pins, quantity, productName, totalCost, transactionId);
-                console.log(`📧 Resultado del envío de correo:`, emailResult);
-            } else {
-                console.warn("⚠️ No hay PINs para enviar por correo.");
-            }
-
-            return {
-                statusCode: 200,
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    success: true,
-                    message: "Compra realizada con éxito. Los PINs han sido enviados a tu correo.",
-                    pins: pins,
-                    quantity: quantity,
-                    product: productName || 'Free Fire',
-                    new_balance: newBalance.toFixed(2),
-                    transaction_id: transactionId,
-                    provider_response: responseData,
-                    email_sent: emailResult.success || false
-                })
-            };
-
-        } else {
+        if (!isSuccess) {
+            // ⚠️ IMPORTANTE: La compra falló, NO descontamos el saldo
             const errorMessage = responseData?.message || responseData?.error || "Error al procesar la compra.";
             console.error("❌ Error en RecargasAmérica:", errorMessage);
             
@@ -385,10 +347,87 @@ exports.handler = async function(event, context) {
                 body: JSON.stringify({
                     success: false,
                     message: errorMessage,
-                    provider_response: responseData
+                    provider_response: responseData,
+                    balance_unchanged: true // Indicamos que el saldo NO se descontó
                 })
             };
         }
+
+        // ✅ LA COMPRA FUE EXITOSA - AHORA SÍ descontamos el saldo
+        console.log("✅ Compra exitosa, procediendo a descontar saldo...");
+        
+        // Extraer los PINs
+        const pins = extractPinsFromResponse(responseData);
+        console.log(`🎮 PINs extraídos: ${pins.length}`, pins);
+
+        // Descontar saldo (SOLO AHORA, después de confirmar la compra)
+        const newBalance = currentBalance - totalCost;
+        
+        const { error: updateError } = await supabase
+            .from('saldos')
+            .update({ saldo_usd: newBalance.toFixed(2) })
+            .eq('user_id', googleId);
+
+        if (updateError) {
+            console.error("❌ Error al actualizar saldo:", updateError);
+            // La compra ya se realizó, pero no pudimos descontar el saldo
+            // Esto es crítico, debemos notificarlo
+            return {
+                statusCode: 500,
+                body: JSON.stringify({
+                    success: false,
+                    message: "La compra se realizó pero hubo un error al actualizar tu saldo. Por favor, contacta con soporte.",
+                    pins: pins,
+                    transaction_id: transactionId,
+                    balance_error: true
+                })
+            };
+        }
+
+        // Registrar transacción
+        await supabase
+            .from('transacciones')
+            .insert({
+                user_id: googleId,
+                monto: -totalCost,
+                tipo: 'compra_pin',
+                descripcion: `Compra de ${quantity} PIN(s) - ${productName || 'Free Fire'}`,
+                metadatos: {
+                    product_id: productId,
+                    quantity: quantity,
+                    provider_response: responseData,
+                    transaction_id: transactionId,
+                    pins: pins
+                }
+            });
+
+        // 📧 Enviar correo con los PINs
+        console.log(`📧 Enviando correo a ${userEmail} con ${pins.length} PINs...`);
+        let emailResult = { success: false };
+        
+        if (pins.length > 0) {
+            emailResult = await sendPinsEmail(sessionToken, pins, quantity, productName, totalCost, transactionId);
+            console.log(`📧 Resultado del envío de correo:`, emailResult);
+        } else {
+            console.warn("⚠️ No hay PINs para enviar por correo.");
+        }
+
+        return {
+            statusCode: 200,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                success: true,
+                message: "Compra realizada con éxito. Los PINs han sido enviados a tu correo.",
+                pins: pins,
+                quantity: quantity,
+                product: productName || 'Free Fire',
+                new_balance: newBalance.toFixed(2),
+                transaction_id: transactionId,
+                provider_response: responseData,
+                email_sent: emailResult.success || false,
+                balance_deducted: true
+            })
+        };
 
     } catch (error) {
         console.error("❌ Error FATAL:", error.message);
@@ -398,7 +437,8 @@ exports.handler = async function(event, context) {
             statusCode: 500,
             body: JSON.stringify({ 
                 message: "Error interno del servidor.", 
-                error: error.message 
+                error: error.message,
+                balance_unchanged: true
             })
         };
     }
