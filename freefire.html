@@ -26,6 +26,8 @@
             padding: 15px 5%;
             background-color: var(--card-bg, #1a1a1e);
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .back-btn {
@@ -88,7 +90,7 @@
 
         .packages-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 25px;
             margin-top: 20px;
         }
@@ -96,7 +98,7 @@
         .package-card {
             background-color: var(--card-bg, #1a1a1e);
             border-radius: 12px;
-            padding: 25px 15px;
+            padding: 25px 20px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.05);
             transition: transform 0.3s, border-color 0.3s;
@@ -129,11 +131,68 @@
             margin: 15px 0;
         }
 
+        .quantity-selector {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 10px 0 15px 0;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 15px;
+            border-radius: 8px;
+        }
+
+        .quantity-selector label {
+            font-size: 0.9rem;
+            color: var(--text-color, #fff);
+        }
+
+        .quantity-selector input {
+            width: 60px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(167, 40, 133, 0.3);
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .quantity-selector input:focus {
+            outline: none;
+            border-color: var(--primary-color, #a72885);
+        }
+
+        .quantity-selector .qty-btn {
+            background: var(--primary-color, #a72885);
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .quantity-selector .qty-btn:hover {
+            background: #891f6c;
+        }
+
+        .total-price {
+            font-size: 1.1rem;
+            color: #f1c40f;
+            margin-bottom: 10px;
+        }
+
         .buy-btn {
             background-color: var(--primary-color, #a72885);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 12px 20px;
             border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
@@ -143,6 +202,138 @@
 
         .buy-btn:hover {
             background-color: #891f6c;
+        }
+
+        .buy-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Modal de Pines */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--card-bg, #1a1a1e);
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            border: 1px solid rgba(167, 40, 133, 0.3);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #f1c40f;
+        }
+
+        .pin-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .pin-code {
+            font-family: monospace;
+            font-size: 1.1rem;
+            color: #2ecc71;
+            font-weight: bold;
+        }
+
+        .copy-btn {
+            background: var(--primary-color, #a72885);
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .copy-btn:hover {
+            background: #891f6c;
+        }
+
+        .modal-success-icon {
+            font-size: 4rem;
+            color: #2ecc71;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: var(--primary-color, #a72885);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            text-align: center;
+            padding: 30px;
+        }
+
+        .loading-text p {
+            margin-top: 15px;
+            color: var(--text-color, #fff);
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .ff-header {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+            
+            .balance-box {
+                justify-content: center;
+            }
+            
+            .packages-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -164,29 +355,46 @@
     <main class="ff-container">
         <h1 class="ff-title"><i class="fire-icon fas fa-fire"></i> Diamantes Free Fire (PINs)</h1>
         
-        <div class="packages-grid" id="packages-container">
-            </div>
+        <div class="packages-grid" id="packages-container"></div>
     </main>
 
+    <!-- Modal para mostrar los PINs -->
+    <div class="modal-overlay" id="pins-modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closePinsModal()">&times;</button>
+            <div id="modal-body">
+                <div class="modal-success-icon">🎮</div>
+                <h2 class="modal-title" id="modal-title">¡Compra Exitosa!</h2>
+                <div id="pins-list"></div>
+                <div id="modal-footer" style="text-align: center; margin-top: 20px;">
+                    <button onclick="closePinsModal()" class="buy-btn" style="width: auto; padding: 10px 30px;">
+                        <i class="fas fa-check"></i> Aceptar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 <script>
+        // Mapeo de productos con sus IDs de proveedor
         const ffPackages = [
-            { id: "ff_100", name: "100 + 10 Diamantes", price: 0.84, sku: "FF100" },
-            { id: "ff_310", name: "310 + 31 Diamantes", price: 2.80, sku: "FF310" },
-            { id: "ff_520", name: "520 + 52 Diamantes", price: 3.82, sku: "FF520" },
-            { id: "ff_1060", name: "1060 + 106 Diamantes", price: 7.09, sku: "FF1060" },
-            { id: "ff_2180", name: "2180 + 218 Diamantes", price: 14.02, sku: "FF2180" },
-            { id: "ff_5600", name: "5600 + 560 Diamantes", price: 35.62, sku: "FF5600" }
+            { id: 1, name: "100 + 10 Diamantes", price: 0.84, sku: "FF100", provider_id: 1 },
+            { id: 2, name: "310 + 31 Diamantes", price: 2.80, sku: "FF310", provider_id: 2 },
+            { id: 3, name: "520 + 52 Diamantes", price: 3.82, sku: "FF520", provider_id: 3 },
+            { id: 4, name: "1060 + 106 Diamantes", price: 7.09, sku: "FF1060", provider_id: 4 },
+            { id: 5, name: "2180 + 218 Diamantes", price: 14.02, sku: "FF2180", provider_id: 5 },
+            { id: 6, name: "5600 + 560 Diamantes", price: 35.62, sku: "FF5600", provider_id: 6 }
         ];
 
         let userBalance = 0.00;
+        let currentPackageId = null;
+        let currentQuantity = 1;
 
         document.addEventListener("DOMContentLoaded", async () => {
-            // 🎯 CORRECCIÓN: Usar la misma clave que script.js
             const token = localStorage.getItem("userSessionToken");
             
             if (!token) {
                 console.log("❌ Sesión no detectada en localStorage. Redireccionando...");
-                // Guardamos la URL actual para redirigir después del login
                 localStorage.setItem("redirectAfterLogin", window.location.pathname);
                 window.location.href = "login.html";
                 return;
@@ -238,23 +446,72 @@
                 card.innerHTML = `
                     <div class="package-icon"><i class="fas fa-gem"></i></div>
                     <div class="package-name">${pkg.name}</div>
-                    <div class="package-price">$${pkg.price.toFixed(2)}</div>
-                    <button class="buy-btn" onclick="processPurchase('${pkg.id}', ${pkg.price}, '${pkg.name}')">
-                        Comprar PIN
+                    <div class="package-price">$${pkg.price.toFixed(2)} c/u</div>
+                    
+                    <div class="quantity-selector">
+                        <label>Cantidad:</label>
+                        <button class="qty-btn" onclick="changeQuantity(${pkg.id}, -1)">-</button>
+                        <input type="number" id="qty-${pkg.id}" value="1" min="1" max="10" 
+                               onchange="updateTotal(${pkg.id}, ${pkg.price})">
+                        <button class="qty-btn" onclick="changeQuantity(${pkg.id}, 1)">+</button>
+                    </div>
+                    
+                    <div class="total-price" id="total-${pkg.id}">Total: $${pkg.price.toFixed(2)}</div>
+                    
+                    <button class="buy-btn" onclick="processPurchase(${pkg.id}, ${pkg.price}, '${pkg.name}', ${pkg.provider_id})">
+                        <i class="fas fa-shopping-cart"></i> Comprar PINs
                     </button>
                 `;
                 container.appendChild(card);
             });
         }
 
-        async function processPurchase(packageId, price, packageName) {
-            if (userBalance < price) {
-                alert(`Saldo insuficiente. Requieres $${price.toFixed(2)} y posees $${userBalance.toFixed(2)}. ¡Por favor recarga tu Wallet!`);
+        function changeQuantity(packageId, delta) {
+            const input = document.getElementById(`qty-${packageId}`);
+            if (!input) return;
+            
+            let newValue = parseInt(input.value) + delta;
+            if (newValue < 1) newValue = 1;
+            if (newValue > 10) newValue = 10;
+            
+            input.value = newValue;
+            
+            // Actualizar el total
+            const pkg = ffPackages.find(p => p.id === packageId);
+            if (pkg) {
+                updateTotal(packageId, pkg.price);
+            }
+        }
+
+        function updateTotal(packageId, price) {
+            const input = document.getElementById(`qty-${packageId}`);
+            const totalElement = document.getElementById(`total-${packageId}`);
+            
+            if (input && totalElement) {
+                const quantity = parseInt(input.value) || 1;
+                const total = price * quantity;
+                totalElement.textContent = `Total: $${total.toFixed(2)}`;
+            }
+        }
+
+        async function processPurchase(packageId, price, packageName, providerId) {
+            const input = document.getElementById(`qty-${packageId}`);
+            const quantity = parseInt(input ? input.value : 1);
+            
+            if (quantity < 1 || quantity > 10) {
+                alert("La cantidad debe ser entre 1 y 10.");
+                return;
+            }
+
+            const totalCost = price * quantity;
+
+            if (userBalance < totalCost) {
+                alert(`Saldo insuficiente. Requieres $${totalCost.toFixed(2)} y posees $${userBalance.toFixed(2)}. ¡Por favor recarga tu Wallet!`);
                 window.location.href = "rechargedwallet.html";
                 return;
             }
 
-            const confirmacion = confirm(`¿Confirmas la compra de ${packageName} por $${price.toFixed(2)}? El código del PIN se enviará a tu correo electrónico.`);
+            const confirmacion = confirm(`¿Confirmas la compra de ${quantity} PIN(s) de ${packageName} por $${totalCost.toFixed(2)}?`);
             if (!confirmacion) return;
 
             const token = localStorage.getItem("userSessionToken");
@@ -266,9 +523,11 @@
                 return;
             }
 
-            try {
-                alert("Procesando tu orden con el proveedor... Por favor espera.");
+            // Mostrar modal de carga
+            showLoadingModal();
 
+            try {
+                // Primero descontar el saldo (deduct-wallet-balance)
                 const deductResponse = await fetch('/.netlify/functions/deduct-wallet-balance', {
                     method: 'POST',
                     headers: {
@@ -276,8 +535,14 @@
                         'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                        amountUSD: price,
-                        cartDetails: JSON.stringify([{ item: packageName, id: packageId, game: 'Free Fire' }])
+                        amountUSD: totalCost,
+                        cartDetails: JSON.stringify([{ 
+                            item: packageName, 
+                            id: packageId, 
+                            game: 'Free Fire',
+                            quantity: quantity,
+                            provider_id: providerId
+                        }])
                     })
                 });
 
@@ -287,14 +552,130 @@
                     throw new Error(deductData.message || "Error al descontar saldo de la Wallet.");
                 }
 
-                alert(`¡Compra exitosa! Se ha descontado $${price.toFixed(2)}. El PIN y tu factura están en camino a tu correo.`);
+                // Si el descuento fue exitoso, comprar los PINs
+                const buyResponse = await fetch('/.netlify/functions/buy-pins', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        productId: providerId,
+                        quantity: quantity
+                    })
+                });
+
+                const buyData = await buyResponse.json();
+
+                if (!buyResponse.ok) {
+                    // Si falla la compra, revertir el saldo (opcional)
+                    throw new Error(buyData.message || "Error al comprar los PINs.");
+                }
+
+                // Mostrar los PINs en el modal
+                showPinsModal(buyData, packageName, quantity);
+
+                // Actualizar el saldo
                 await fetchUserBalance(token);
 
             } catch (error) {
                 console.error("Error en la transacción:", error);
+                closeModal();
                 alert(`Hubo un problema procesando tu compra: ${error.message}`);
             }
         }
+
+        function showLoadingModal() {
+            const modal = document.getElementById('pins-modal');
+            const body = document.getElementById('modal-body');
+            
+            body.innerHTML = `
+                <div class="loading-text">
+                    <div class="loading-spinner"></div>
+                    <p>Procesando tu compra... Por favor espera.</p>
+                </div>
+            `;
+            
+            modal.classList.add('active');
+        }
+
+        function showPinsModal(data, packageName, quantity) {
+            const modal = document.getElementById('pins-modal');
+            const body = document.getElementById('modal-body');
+            
+            let pinsList = '';
+            const pins = data.pins || data.provider_response?.pins || data.provider_response?.data || [];
+            
+            if (pins.length === 0) {
+                pinsList = '<p style="text-align:center; color: #f1c40f;">No se recibieron PINs. Contacta con soporte.</p>';
+            } else {
+                pinsList = pins.map((pin, index) => `
+                    <div class="pin-item">
+                        <span><strong>PIN #${index + 1}</strong></span>
+                        <span class="pin-code">${pin.code || pin.pin || pin}</span>
+                        <button class="copy-btn" onclick="copyPin('${pin.code || pin.pin || pin}')">
+                            <i class="fas fa-copy"></i> Copiar
+                        </button>
+                    </div>
+                `).join('');
+            }
+
+            body.innerHTML = `
+                <div class="modal-success-icon">✅</div>
+                <h2 class="modal-title">¡Compra Exitosa!</h2>
+                <p style="text-align:center; color: var(--text-color); margin-bottom: 20px;">
+                    Has comprado <strong>${quantity}</strong> PIN(s) de <strong>${packageName}</strong>
+                </p>
+                <div id="pins-list">${pinsList}</div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <p style="color: #2ecc71; font-weight: bold;">
+                        <i class="fas fa-check-circle"></i> Los PINs han sido enviados a tu correo
+                    </p>
+                    <button onclick="closePinsModal()" class="buy-btn" style="width: auto; padding: 10px 30px; margin-top: 10px;">
+                        <i class="fas fa-check"></i> Aceptar
+                    </button>
+                </div>
+            `;
+            
+            modal.classList.add('active');
+        }
+
+        function closePinsModal() {
+            document.getElementById('pins-modal').classList.remove('active');
+        }
+
+        function closeModal() {
+            closePinsModal();
+        }
+
+        function copyPin(code) {
+            navigator.clipboard.writeText(code).then(() => {
+                alert('¡PIN copiado al portapapeles!');
+            }).catch(() => {
+                // Fallback
+                const textArea = document.createElement('textarea');
+                textArea.value = code;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('¡PIN copiado al portapapeles!');
+            });
+        }
+
+        // Cerrar modal con Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closePinsModal();
+            }
+        });
+
+        // Cerrar modal al hacer clic fuera
+        document.getElementById('pins-modal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                closePinsModal();
+            }
+        });
     </script>
 </body>
 </html>
