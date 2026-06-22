@@ -207,7 +207,7 @@ exports.handler = async function(event, context) {
             };
 
         } else {
-            // La API del proveedor devolvió un error
+            // La API del proveedor devolvió un erroraaaa
             console.error("❌ Error en RecargasAmérica:", response.data);
             return {
                 statusCode: 400,
