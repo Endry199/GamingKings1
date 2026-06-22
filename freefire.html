@@ -272,6 +272,7 @@
             font-size: 1.1rem;
             color: #2ecc71;
             font-weight: bold;
+            word-break: break-all;
         }
 
         .copy-btn {
@@ -282,6 +283,8 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 0.8rem;
+            flex-shrink: 0;
+            margin-left: 10px;
         }
 
         .copy-btn:hover {
@@ -328,6 +331,16 @@
         .error-text i {
             font-size: 3rem;
             margin-bottom: 15px;
+        }
+
+        .email-warning {
+            background: rgba(241, 196, 15, 0.15);
+            border: 1px solid #f1c40f;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 15px 0;
+            color: #f1c40f;
+            font-size: 0.9rem;
         }
 
         /* Responsive */
@@ -502,6 +515,47 @@
             }
         }
 
+        // Función para extraer PINs de cualquier formato de respuesta
+        function extractPins(data) {
+            if (!data) return [];
+            
+            // Buscar en diferentes formatos
+            if (data.pins && Array.isArray(data.pins) && data.pins.length > 0) {
+                return data.pins;
+            }
+            
+            if (data.provider_response?.api_data?.pins && Array.isArray(data.provider_response.api_data.pins)) {
+                return data.provider_response.api_data.pins;
+            }
+            
+            if (data.provider_response?.data?.pins && Array.isArray(data.provider_response.data.pins)) {
+                return data.provider_response.data.pins;
+            }
+            
+            if (data.provider_response?.pins && Array.isArray(data.provider_response.pins)) {
+                return data.provider_response.pins;
+            }
+            
+            if (data.data && Array.isArray(data.data)) {
+                return data.data;
+            }
+            
+            if (data.result && Array.isArray(data.result)) {
+                return data.result;
+            }
+            
+            if (data.pin) {
+                return [{ code: data.pin }];
+            }
+            
+            // Si es un array directamente
+            if (Array.isArray(data)) {
+                return data;
+            }
+            
+            return [];
+        }
+
         async function processPurchase(packageId, price, packageName, providerId) {
             const input = document.getElementById(`qty-${packageId}`);
             const quantity = parseInt(input ? input.value : 1);
@@ -533,7 +587,6 @@
 
             showLoadingModal();
 
-            // Guardamos el saldo actual para restaurarlo en caso de error
             const balanceBeforePurchase = userBalance;
 
             try {
@@ -559,12 +612,11 @@
                 const deductData = await deductResponse.json();
 
                 if (!deductResponse.ok) {
-                    // Si hay error al descontar, restauramos el saldo mostrado
                     await restoreBalance(token);
                     throw new Error(deductData.message || "Error al descontar saldo de la Wallet.");
                 }
 
-                // 2. Comprar los PINs con precio y nombre
+                // 2. Comprar los PINs
                 const buyResponse = await fetch('/.netlify/functions/buy-pins', {
                     method: 'POST',
                     headers: {
@@ -579,7 +631,6 @@
                     })
                 });
 
-                // Leer la respuesta como texto primero
                 const responseText = await buyResponse.text();
                 console.log("📥 Respuesta cruda de buy-pins:", responseText);
 
@@ -588,39 +639,39 @@
                     buyData = JSON.parse(responseText);
                 } catch (parseError) {
                     console.error("❌ Error al parsear JSON:", parseError);
-                    // Si hay error al parsear, restauramos el saldo
                     await restoreBalance(token);
                     throw new Error("El servidor devolvió una respuesta inválida. Por favor, intenta de nuevo.");
                 }
 
                 if (!buyResponse.ok) {
-                    // Si la compra falla, restauramos el saldo
                     await restoreBalance(token);
                     throw new Error(buyData.message || "Error al comprar los PINs.");
                 }
 
                 if (!buyData.success) {
-                    // Si la compra no fue exitosa, restauramos el saldo
                     await restoreBalance(token);
                     throw new Error(buyData.message || "Error al procesar la compra.");
                 }
 
-                // ✅ Compra exitosa - Mostrar los PINs en el modal
-                showPinsModal(buyData, packageName, quantity);
+                // ✅ Compra exitosa
+                // Extraer los PINs
+                const pins = extractPins(buyData);
+                console.log("🎮 PINs extraídos:", pins);
 
-                // Actualizar el saldo (la función fetchUserBalance ya actualiza userBalance)
+                // Mostrar los PINs en el modal
+                showPinsModal(buyData, packageName, quantity, pins);
+
+                // Actualizar el saldo
                 await fetchUserBalance(token);
 
             } catch (error) {
                 console.error("❌ Error en la transacción:", error);
                 closeModal();
                 
-                // Asegurar que el saldo se restaure en caso de error
-                // Si el saldo actual es menor que el saldo antes de la compra, restaurarlo
+                // Restaurar saldo si es necesario
                 if (userBalance < balanceBeforePurchase) {
                     console.log("🔄 Restaurando saldo después de error...");
                     await restoreBalance(token);
-                    // Actualizar la UI con el saldo restaurado
                     document.getElementById('user-balance-display').innerText = `$${userBalance.toFixed(2)}`;
                 }
                 
@@ -628,10 +679,8 @@
             }
         }
 
-        // Función para restaurar el saldo en caso de error
         async function restoreBalance(token) {
             try {
-                // Obtener el saldo actual desde el servidor
                 const response = await fetch('/.netlify/functions/get-user-balance', {
                     method: 'GET',
                     headers: {
@@ -687,56 +736,61 @@
             modal.classList.add('active');
         }
 
-        function showPinsModal(data, packageName, quantity) {
+        function showPinsModal(data, packageName, quantity, pins) {
             const modal = document.getElementById('pins-modal');
             const body = document.getElementById('modal-body');
             
-            // Extraer PINs de diferentes formatos de respuesta
-            let pins = [];
-            if (data.pins) {
-                pins = data.pins;
-            } else if (data.provider_response?.pins) {
-                pins = data.provider_response.pins;
-            } else if (data.provider_response?.data) {
-                pins = data.provider_response.data;
-            } else if (data.data && Array.isArray(data.data)) {
-                pins = data.data;
-            } else if (data.result && Array.isArray(data.result)) {
-                pins = data.result;
-            } else if (Array.isArray(data)) {
-                pins = data;
-            } else if (data.pin) {
-                pins = [{ code: data.pin }];
-            }
-
-            // Verificar si es modo simulación
-            const isSimulation = data.simulation === true;
+            const isSimulation = data.simulation === true || data.provider_response?.sandbox === true;
+            const emailSent = data.email_sent !== false;
+            
             const simulationBadge = isSimulation ? 
                 '<span style="background: #f1c40f; color: #000; padding: 2px 10px; border-radius: 10px; font-size: 0.7rem; margin-left: 10px;">MODO SIMULACIÓN</span>' : '';
             
             let pinsList = '';
             
+            // Si no hay PINs, mostrar mensaje
             if (!pins || pins.length === 0) {
                 pinsList = `
                     <div style="text-align:center; padding: 20px;">
                         <p style="color: #f1c40f;">⚠️ No se recibieron PINs del proveedor.</p>
                         <p style="color: #888; font-size: 0.9rem;">Los PINs han sido enviados a tu correo electrónico.</p>
-                        ${isSimulation ? '<p style="color: #f1c40f; font-size: 0.8rem;">🔧 Esto es un PIN de simulación para pruebas.</p>' : ''}
+                        ${isSimulation ? '<p style="color: #f1c40f; font-size: 0.8rem;">🔧 Esto es una simulación para pruebas.</p>' : ''}
                     </div>
                 `;
             } else {
                 pinsList = pins.map((pin, index) => {
                     const pinCode = pin.code || pin.pin || pin;
+                    // Si es un string, usarlo directamente
+                    const finalPin = typeof pinCode === 'string' ? pinCode : JSON.stringify(pinCode);
                     return `
                         <div class="pin-item">
                             <span><strong>PIN #${index + 1}</strong></span>
-                            <span class="pin-code">${pinCode}</span>
-                            <button class="copy-btn" onclick="copyPin('${pinCode}')">
+                            <span class="pin-code">${finalPin}</span>
+                            <button class="copy-btn" onclick="copyPin('${finalPin.replace(/'/g, "\\'")}')">
                                 <i class="fas fa-copy"></i> Copiar
                             </button>
                         </div>
                     `;
                 }).join('');
+            }
+
+            // Mensaje de email
+            let emailMessage = '';
+            if (!emailSent) {
+                emailMessage = `
+                    <div class="email-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        No se pudo enviar el correo automáticamente. 
+                        Por favor, contacta a soporte para recibir tus PINs.
+                        <br><small>ID de Transacción: ${data.transaction_id || 'N/A'}</small>
+                    </div>
+                `;
+            } else {
+                emailMessage = `
+                    <p style="color: #2ecc71; font-weight: bold;">
+                        <i class="fas fa-check-circle"></i> Los PINs han sido enviados a tu correo electrónico
+                    </p>
+                `;
             }
 
             body.innerHTML = `
@@ -748,9 +802,7 @@
                 </p>
                 <div id="pins-list">${pinsList}</div>
                 <div style="text-align: center; margin-top: 20px;">
-                    <p style="color: #2ecc71; font-weight: bold;">
-                        <i class="fas fa-check-circle"></i> Los PINs han sido enviados a tu correo
-                    </p>
+                    ${emailMessage}
                     <button onclick="closePinsModal()" class="buy-btn" style="width: auto; padding: 10px 30px; margin-top: 10px;">
                         <i class="fas fa-check"></i> Aceptar
                     </button>
