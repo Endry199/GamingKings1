@@ -611,7 +611,7 @@
                     buyData = JSON.parse(responseText);
                 } catch (parseError) {
                     console.error("❌ Error al parsear JSON:", parseError);
-                    throw new Error("El servidor devolvió una respuesta inválida. Por favor, intenta de nuevo.");
+                    throw new Error("El servidor devolvió una respuesta inválida. Por favor, intenta de nuevo.\n\n✅ Tu saldo NO ha sido descontado.");
                 }
 
                 // Si la compra falló, mostrar error SIN descontar saldo
@@ -620,7 +620,25 @@
                     console.error("❌ Error en buy-pins:", errorMsg);
                     
                     // Verificar si es error de saldo del proveedor
-                    if (buyData.provider_error?.includes('saldo') || errorMsg.includes('saldo insuficiente')) {
+                    const providerError = buyData.provider_error;
+                    let isProviderBalanceError = false;
+                    
+                    // Verificar diferentes formatos de error
+                    if (providerError) {
+                        if (typeof providerError === 'string') {
+                            isProviderBalanceError = providerError.includes('saldo') || providerError.includes('Saldo');
+                        } else if (typeof providerError === 'object') {
+                            const errorStr = JSON.stringify(providerError).toLowerCase();
+                            isProviderBalanceError = errorStr.includes('saldo') || errorStr.includes('insuficiente');
+                        }
+                    }
+                    
+                    // También verificar el mensaje principal
+                    if (errorMsg.toLowerCase().includes('saldo') || errorMsg.toLowerCase().includes('insuficiente')) {
+                        isProviderBalanceError = true;
+                    }
+                    
+                    if (isProviderBalanceError) {
                         throw new Error("El proveedor no tiene saldo suficiente. Por favor, contacta con soporte.\n\n✅ Tu saldo NO ha sido descontado.");
                     }
                     
@@ -653,7 +671,7 @@
                 if (!deductResponse.ok) {
                     // Error al descontar saldo - esto es grave porque la compra ya se hizo
                     console.error("❌ Error al descontar saldo:", deductData);
-                    throw new Error("La compra se realizó pero hubo un error al descontar tu saldo. Por favor, contacta con soporte.\n\nID de transacción: " + (buyData.transaction_id || 'N/A'));
+                    throw new Error("⚠️ La compra se realizó pero hubo un error al descontar tu saldo. Por favor, contacta con soporte.\n\nID de transacción: " + (buyData.transaction_id || 'N/A'));
                 }
 
                 // Extraer los PINs
@@ -699,16 +717,19 @@
             
             // Verificar si el mensaje ya contiene la nota de saldo
             const hasBalanceNote = errorMessage.includes('saldo NO ha sido descontado') || 
-                                   errorMessage.includes('Tu saldo no ha sido descontado');
+                                   errorMessage.includes('Tu saldo no ha sido descontado') ||
+                                   errorMessage.includes('✅ Tu saldo');
             
-            const displayMessage = errorMessage;
-            const balanceNote = hasBalanceNote ? '' : '\n\n✅ Tu saldo NO ha sido descontado.';
+            // Si el mensaje no tiene la nota, agregarla (a menos que sea un error crítico de descuento)
+            let displayMessage = errorMessage;
+            let showBalanceNote = !hasBalanceNote && !errorMessage.includes('La compra se realizó');
             
             body.innerHTML = `
                 <div class="error-text">
                     <i class="fas fa-exclamation-circle" style="color: #ff6b6b;"></i>
                     <h2 style="color: #ff6b6b;">Error en la Compra</h2>
-                    <p style="color: var(--text-color); white-space: pre-line;">${displayMessage}${balanceNote}</p>
+                    <p style="color: var(--text-color); white-space: pre-line;">${displayMessage}</p>
+                    ${showBalanceNote ? '<p style="color: #2ecc71; font-weight: bold; margin-top: 10px;">✅ Tu saldo NO ha sido descontado.</p>' : ''}
                     <button onclick="closePinsModal()" class="buy-btn" style="width: auto; padding: 10px 30px; margin-top: 15px;">
                         <i class="fas fa-times"></i> Cerrar
                     </button>
