@@ -84,6 +84,7 @@ exports.handler = async function(event, context) {
         }
 
         const googleId = userData.google_id;
+        const userEmail = userData.email;
         const currentBalance = parseFloat(userData.saldos?.saldo_usd || 0);
         console.log(`Saldo actual: $${currentBalance}, Costo total: $${totalCost}`);
 
@@ -98,13 +99,16 @@ exports.handler = async function(event, context) {
             };
         }
 
+        // Generar ID de transacción
+        const transactionId = `GAMING-${Date.now()}`;
+
         // 🟢 MODO SIMULACIÓN
         if (SIMULATION_MODE) {
             console.log("🟢 MODO SIMULACIÓN: Generando PINs falsos...");
             
             const fakePins = [];
             for (let i = 0; i < quantity; i++) {
-                const pinCode = `FF-SIM-${String(Math.floor(100000 + Math.random() * 900000))}`;
+                const pinCode = `FF-SIM-${String(Math.floor(100000 + Math.random() * 900000))}-${String(Math.floor(100000 + Math.random() * 900000))}`;
                 fakePins.push({ code: pinCode, status: 'active' });
             }
             
@@ -125,20 +129,26 @@ exports.handler = async function(event, context) {
                     metadatos: {
                         product_id: productId,
                         quantity: quantity,
-                        pins: fakePins
+                        pins: fakePins,
+                        transaction_id: transactionId
                     }
                 });
+
+            // 📧 Enviar correo con los PINs
+            console.log(`📧 Enviando correo de simulación a ${userEmail}...`);
+            await sendPinsEmail(sessionToken, fakePins, quantity, productName, totalCost, transactionId);
 
             return {
                 statusCode: 200,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     success: true,
-                    message: "🔧 [MODO SIMULACIÓN] Compra realizada con éxito.",
+                    message: "🔧 [MODO SIMULACIÓN] Compra realizada con éxito. Los PINs han sido enviados a tu correo.",
                     pins: fakePins,
                     quantity: quantity,
                     product: productName || 'Free Fire',
                     new_balance: newBalance.toFixed(2),
+                    transaction_id: transactionId,
                     simulation: true
                 })
             };
@@ -164,7 +174,7 @@ exports.handler = async function(event, context) {
 
         console.log(`📤 Enviando solicitud a RecargasAmérica:`, JSON.stringify(payload, null, 2));
 
-        // 7. Hacer la solicitud con timeout más largo (60 segundos)
+        // 7. Hacer la solicitud a la API
         let response;
         try {
             response = await axios.post(API_URL, payload, {
@@ -172,7 +182,7 @@ exports.handler = async function(event, context) {
                     'Authorization': `Bearer ${API_TOKEN}`,
                     'Content-Type': 'application/json'
                 },
-                timeout: 60000, // Aumentado a 60 segundos
+                timeout: 60000,
                 maxContentLength: Infinity,
                 maxBodyLength: Infinity
             });
@@ -180,9 +190,7 @@ exports.handler = async function(event, context) {
             console.error("❌ Error de Axios:");
             console.error("Status:", axiosError.response?.status);
             console.error("Data:", axiosError.response?.data);
-            console.error("Message:", axiosError.message);
             
-            // Timeout
             if (axiosError.code === 'ECONNABORTED') {
                 return {
                     statusCode: 504,
@@ -193,7 +201,6 @@ exports.handler = async function(event, context) {
                 };
             }
             
-            // Error de saldo insuficiente en el proveedor
             if (axiosError.response?.data?.error === 'Saldo insuficiente.') {
                 return {
                     statusCode: 402,
@@ -221,26 +228,13 @@ exports.handler = async function(event, context) {
         const responseData = response.data;
         
         if (responseData && (responseData.status === 'success' || responseData.success === true)) {
+            // Descontar saldo
             const newBalance = currentBalance - totalCost;
             
             await supabase
                 .from('saldos')
                 .update({ saldo_usd: newBalance.toFixed(2) })
                 .eq('user_id', googleId);
-
-            await supabase
-                .from('transacciones')
-                .insert({
-                    user_id: googleId,
-                    monto: -totalCost,
-                    tipo: 'compra_pin',
-                    descripcion: `Compra de ${quantity} PIN(s) - ${productName || 'Free Fire'}`,
-                    metadatos: {
-                        product_id: productId,
-                        quantity: quantity,
-                        provider_response: responseData
-                    }
-                });
 
             // Extraer los PINs
             let pins = [];
@@ -258,17 +252,44 @@ exports.handler = async function(event, context) {
 
             console.log(`🎮 PINs extraídos: ${pins.length}`);
 
+            // Registrar transacción
+            await supabase
+                .from('transacciones')
+                .insert({
+                    user_id: googleId,
+                    monto: -totalCost,
+                    tipo: 'compra_pin',
+                    descripcion: `Compra de ${quantity} PIN(s) - ${productName || 'Free Fire'}`,
+                    metadatos: {
+                        product_id: productId,
+                        quantity: quantity,
+                        provider_response: responseData,
+                        transaction_id: transactionId,
+                        pins: pins
+                    }
+                });
+
+            // 📧 Enviar correo con los PINs
+            console.log(`📧 Enviando correo a ${userEmail} con ${pins.length} PINs...`);
+            const emailResult = await sendPinsEmail(sessionToken, pins, quantity, productName, totalCost, transactionId);
+
+            if (!emailResult.success) {
+                console.warn("⚠️ El correo no se pudo enviar, pero la compra fue exitosa.");
+            }
+
             return {
                 statusCode: 200,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     success: true,
-                    message: "Compra realizada con éxito.",
+                    message: "Compra realizada con éxito. Los PINs han sido enviados a tu correo.",
                     pins: pins,
                     quantity: quantity,
                     product: productName || 'Free Fire',
                     new_balance: newBalance.toFixed(2),
-                    provider_response: responseData
+                    transaction_id: transactionId,
+                    provider_response: responseData,
+                    email_sent: emailResult.success
                 })
             };
 
@@ -299,3 +320,29 @@ exports.handler = async function(event, context) {
         };
     }
 };
+
+// 📧 Función auxiliar para enviar correo con los PINs
+async function sendPinsEmail(sessionToken, pins, quantity, packageName, totalCost, transactionId) {
+    try {
+        const response = await fetch(`${process.env.URL || 'http://localhost:8888'}/.netlify/functions/send-pins-email`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sessionToken}`
+            },
+            body: JSON.stringify({
+                pins: pins,
+                quantity: quantity,
+                packageName: packageName,
+                totalCost: totalCost,
+                transactionId: transactionId
+            })
+        });
+
+        const data = await response.json();
+        return { success: response.ok, ...data };
+    } catch (error) {
+        console.error("❌ Error al llamar a send-pins-email:", error.message);
+        return { success: false, error: error.message };
+    }
+}

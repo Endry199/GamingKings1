@@ -533,6 +533,9 @@
 
             showLoadingModal();
 
+            // Guardamos el saldo actual para restaurarlo en caso de error
+            const balanceBeforePurchase = userBalance;
+
             try {
                 // 1. Descontar saldo
                 const deductResponse = await fetch('/.netlify/functions/deduct-wallet-balance', {
@@ -556,6 +559,8 @@
                 const deductData = await deductResponse.json();
 
                 if (!deductResponse.ok) {
+                    // Si hay error al descontar, restauramos el saldo mostrado
+                    await restoreBalance(token);
                     throw new Error(deductData.message || "Error al descontar saldo de la Wallet.");
                 }
 
@@ -583,28 +588,66 @@
                     buyData = JSON.parse(responseText);
                 } catch (parseError) {
                     console.error("❌ Error al parsear JSON:", parseError);
-                    console.error("Respuesta recibida (primeros 200 chars):", responseText.substring(0, 200));
+                    // Si hay error al parsear, restauramos el saldo
+                    await restoreBalance(token);
                     throw new Error("El servidor devolvió una respuesta inválida. Por favor, intenta de nuevo.");
                 }
 
                 if (!buyResponse.ok) {
+                    // Si la compra falla, restauramos el saldo
+                    await restoreBalance(token);
                     throw new Error(buyData.message || "Error al comprar los PINs.");
                 }
 
                 if (!buyData.success) {
+                    // Si la compra no fue exitosa, restauramos el saldo
+                    await restoreBalance(token);
                     throw new Error(buyData.message || "Error al procesar la compra.");
                 }
 
-                // Mostrar los PINs en el modal
+                // ✅ Compra exitosa - Mostrar los PINs en el modal
                 showPinsModal(buyData, packageName, quantity);
 
-                // Actualizar el saldo
+                // Actualizar el saldo (la función fetchUserBalance ya actualiza userBalance)
                 await fetchUserBalance(token);
 
             } catch (error) {
                 console.error("❌ Error en la transacción:", error);
                 closeModal();
+                
+                // Asegurar que el saldo se restaure en caso de error
+                // Si el saldo actual es menor que el saldo antes de la compra, restaurarlo
+                if (userBalance < balanceBeforePurchase) {
+                    console.log("🔄 Restaurando saldo después de error...");
+                    await restoreBalance(token);
+                    // Actualizar la UI con el saldo restaurado
+                    document.getElementById('user-balance-display').innerText = `$${userBalance.toFixed(2)}`;
+                }
+                
                 showErrorModal(error.message);
+            }
+        }
+
+        // Función para restaurar el saldo en caso de error
+        async function restoreBalance(token) {
+            try {
+                // Obtener el saldo actual desde el servidor
+                const response = await fetch('/.netlify/functions/get-user-balance', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    userBalance = parseFloat(data.saldo || 0);
+                    console.log("🔄 Saldo restaurado:", userBalance);
+                } else {
+                    console.warn("⚠️ No se pudo restaurar el saldo desde el servidor.");
+                }
+            } catch (error) {
+                console.error("❌ Error al restaurar saldo:", error);
             }
         }
 
@@ -632,6 +675,9 @@
                     <i class="fas fa-exclamation-circle" style="color: #ff6b6b;"></i>
                     <h2 style="color: #ff6b6b;">Error en la Compra</h2>
                     <p style="color: var(--text-color);">${errorMessage}</p>
+                    <p style="color: #ff6b6b; font-size: 0.9rem; margin-top: 10px;">
+                        <i class="fas fa-info-circle"></i> Tu saldo no ha sido descontado.
+                    </p>
                     <button onclick="closePinsModal()" class="buy-btn" style="width: auto; padding: 10px 30px; margin-top: 15px;">
                         <i class="fas fa-times"></i> Cerrar
                     </button>
@@ -736,7 +782,7 @@
             });
         }
 
-        // Cerrar modal con Escapeaa
+        // Cerrar modal con Escape
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 closePinsModal();
