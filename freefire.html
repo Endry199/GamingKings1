@@ -168,8 +168,7 @@
             </div>
     </main>
 
-    <script>
-        // 1. Array de productos solicitados
+<script>
         const ffPackages = [
             { id: "ff_100", name: "100 + 10 Diamantes", price: 0.84, sku: "FF100" },
             { id: "ff_310", name: "310 + 31 Diamantes", price: 2.80, sku: "FF310" },
@@ -181,49 +180,52 @@
 
         let userBalance = 0.00;
 
-        // 2. Proteger la ruta: Verificar sesión al cargar
         document.addEventListener("DOMContentLoaded", async () => {
-            const token = localStorage.getItem("sessionToken");
+            // 🎯 BLINDAJE 1: Revisar ambas variaciones de nombres de clave por si acaso
+            const token = localStorage.getItem("sessionToken") || localStorage.getItem("session_token");
             
             if (!token) {
-                console.log("Sesión no detectada. Redireccionando a login.html...");
-                // Guardamos a dónde quería ir el usuario para el redireccionamiento posterior
+                console.log("❌ Sesión no detectada en localStorage. Redireccionando...");
                 localStorage.setItem("redirectAfterLogin", window.location.pathname);
                 window.location.href = "login.html";
                 return;
             }
 
-            // Si está autenticado, cargamos su saldo real y pintamos la tienda
+            console.log("✅ Token detectado en el frontend, validando con el servidor...");
+            // Intentamos cargar el saldo. Si el token es inválido en Supabase, la función nos redirigirá de forma segura.
             await fetchUserBalance(token);
             renderPackages();
         });
 
-        // 3. Obtener el saldo del usuario llamando a tu Netlify Function existente
         async function fetchUserBalance(token) {
             try {
                 const response = await fetch('/.netlify/functions/get-user-balance', {
                     method: 'GET',
                     headers: {
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': `Bearer ${token}` // Asegúrate de que coincida con lo que espera tu get-user-balance.js
                     }
                 });
 
                 if (response.ok) {
                     const data = await response.json();
+                    console.log("📊 Datos de saldo recibidos del servidor:", data);
+                    
+                    // Mapeamos correctamente según lo que devuelve get-user-balance.js (data.saldo)
                     userBalance = parseFloat(data.saldo || 0);
                     document.getElementById('user-balance-display').innerText = `$${userBalance.toFixed(2)}`;
-                } else if (response.status === 401) {
-                    // Token expirado o inválido
+                } else {
+                    console.error(`❌ El servidor respondió con estado: ${response.status}`);
+                    // Si el backend da 401 o 500 debido a un token expirado o inválido en Supabase, limpiamos y mandamos a login
                     localStorage.removeItem("sessionToken");
+                    localStorage.removeItem("session_token");
                     window.location.href = "login.html";
                 }
             } catch (error) {
-                console.error("Error al obtener el saldo:", error);
-                document.getElementById('user-balance-display').innerText = "$ERROR";
+                console.error("❌ Error de red al intentar conectar con get-user-balance:", error);
+                document.getElementById('user-balance-display').innerText = "$--.--";
             }
         }
 
-        // 4. Renderizar las tarjetas de paquetes en el HTML
         function renderPackages() {
             const container = document.getElementById("packages-container");
             container.innerHTML = "";
@@ -243,7 +245,6 @@
             });
         }
 
-        // 5. Procesar la compra usando el Wallet de saldo
         async function processPurchase(packageId, price, packageName) {
             if (userBalance < price) {
                 alert(`Saldo insuficiente. Requieres $${price.toFixed(2)} y posees $${userBalance.toFixed(2)}. ¡Por favor recarga tu Wallet!`);
@@ -252,16 +253,13 @@
             }
 
             const confirmacion = confirm(`¿Confirmas la compra de ${packageName} por $${price.toFixed(2)}? El código del PIN se enviará a tu correo electrónico.`);
-            
             if (!confirmacion) return;
 
-            const token = localStorage.getItem("sessionToken");
+            const token = localStorage.getItem("sessionToken") || localStorage.getItem("session_token");
 
             try {
-                // Indicador visual de procesamiento básico
                 alert("Procesando tu orden con el proveedor... Por favor espera.");
 
-                // Paso A: Descontar de tu wallet usando tu función 'deduct-wallet-balance'
                 const deductResponse = await fetch('/.netlify/functions/deduct-wallet-balance', {
                     method: 'POST',
                     headers: {
@@ -280,20 +278,7 @@
                     throw new Error(deductData.message || "Error al descontar saldo de la Wallet.");
                 }
 
-                // Paso B: Aquí mandas la petición a tu endpoint que conecta con Recargas América (POST /api/v1/buy/pins)
-                // Y desde allí mismo ejecutas el envío del correo usando Nodemailer con los "pins" que te regrese la API.
-                // EJEMPLO:
-                /*
-                const apiResponse = await fetch('/.netlify/functions/process-provider-pin', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ packageId: packageId })
-                });
-                */
-
                 alert(`¡Compra exitosa! Se ha descontado $${price.toFixed(2)}. El PIN y tu factura están en camino a tu correo.`);
-                
-                // Actualizamos el saldo en pantalla volviendo a consultar
                 await fetchUserBalance(token);
 
             } catch (error) {
