@@ -55,9 +55,7 @@
     </div>
 
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    
-    <script src="script.js"></script>
-    <script>
+        <script>
     // Esta función es la que se ejecuta cuando process-google-login devuelve éxito (código 200)
     function handleLoginSuccess(responseJSON) {
         console.log("✅ Autenticación exitosa:", responseJSON);
@@ -90,5 +88,6 @@
     // NOTA: Integra la llamada a 'handleLoginSuccess' dentro de tu función actual 
     // que procesa el fetch a /.netlify/functions/process-google-login cuando 'response.ok' sea true.
 </script>
+    <script src="script.js"></script>
 </body>
 </html>
