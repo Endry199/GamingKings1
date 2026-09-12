@@ -268,4 +268,3 @@ $('#registerForm').addEventListener('submit', async event => { event.preventDefa
 supabase.auth.onAuthStateChange(async (event, session) => { if (session?.user && !state.awaitingOtp && ['SIGNED_IN', 'INITIAL_SESSION'].includes(event)) await enterApp(session.user); });
 const { data: { session } } = await supabase.auth.getSession();
 if (session?.user) await enterApp(session.user);
-//aaaa
