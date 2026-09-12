@@ -3,7 +3,7 @@ import nodemailer from 'nodemailer';
 import crypto from 'node:crypto';
 
 export const supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
-export const headers = { 'Access-Control-Allow-Origin': process.env.SITE_URL || '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Content-Type': 'application/json' };
+export const headers = { 'Access-Control-Allow-Origin': process.env.SITE_URL || '*', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Content-Type': 'application/json' };
 export const json = (statusCode, body) => ({ statusCode, headers, body: JSON.stringify(body) });
 export const options = () => ({ statusCode: 204, headers });
 export const readBody = event => JSON.parse(event.body || '{}');

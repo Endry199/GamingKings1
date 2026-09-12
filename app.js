@@ -40,7 +40,10 @@ function setButtonLoading(button, loading, label = 'Procesando') {
 
 async function callFunction(name, body) {
   authLog('Llamando función Netlify.', { name });
-  const response = await fetch(`/.netlify/functions/${name}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers = { 'Content-Type': 'application/json' };
+  if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+  const response = await fetch(`/.netlify/functions/${name}`, { method: 'POST', headers, body: JSON.stringify(body) });
   const data = await response.json().catch(() => ({}));
   authLog('Respuesta de función Netlify.', { name, status: response.status, ok: response.ok, error: data.error || null });
   if (!response.ok) throw new Error(data.error || 'No se pudo completar la operación.');
@@ -183,7 +186,9 @@ function openProductDetail(productId) {
     if (!freeFire) { showToast('Paquete seleccionado. La recarga estará disponible próximamente.'); return; }
     $('#freeFireCheck').classList.remove('hidden');
     $('#freeFireCheck').dataset.packageName = selectedPackage?.nombre_paquete || '';
+    $('#freeFireCheck').dataset.productId = '';
     $('#freeFireCheck').dataset.validatedId = '';
+    $('#freeFireCheck').dataset.validatedPackageName = '';
     $('#freeFireStatus').className = 'form-message';
     $('#freeFireStatus').textContent = 'Selecciona Validar cuenta antes de confirmar.';
     $('#confirmFreeFire').classList.add('hidden');
@@ -191,6 +196,7 @@ function openProductDetail(productId) {
   if (freeFire) {
     $('#playerIdInput')?.addEventListener('input', () => {
       $('#freeFireCheck').dataset.validatedId = '';
+      $('#freeFireCheck').dataset.validatedPackageName = '';
       $('#confirmFreeFire').classList.add('hidden');
       $('#freeFireStatus').className = 'form-message';
       $('#freeFireStatus').textContent = 'La cuenta cambió. Valídala nuevamente.';
@@ -203,22 +209,43 @@ function openProductDetail(productId) {
       setButtonLoading($('#validateFreeFire'), true, 'Validando cuenta');
       try {
         const result = await callFunction('validate-free-fire', { serviceUserId, packageName });
+        if ($('#playerIdInput')?.value.trim() !== serviceUserId || $('#freeFireCheck').dataset.packageName !== packageName) return;
         if (!result.valid) { $('#freeFireStatus').className = 'form-message invalid-account'; $('#freeFireStatus').textContent = 'Cuenta no validada. Revisa el ID.'; $('#confirmFreeFire').classList.add('hidden'); return; }
         $('#freeFireStatus').className = 'form-message valid-account';
         $('#freeFireStatus').textContent = result.accountName ? `Cuenta válida: ${result.accountName}` : 'Cuenta válida.';
+        $('#freeFireCheck').dataset.productId = result.productId;
         $('#freeFireCheck').dataset.validatedId = serviceUserId;
+        $('#freeFireCheck').dataset.validatedPackageName = packageName;
         $('#confirmFreeFire').classList.remove('hidden');
       } catch (error) { $('#freeFireStatus').textContent = error.message; } finally { setButtonLoading($('#validateFreeFire'), false); }
     });
-    $('#confirmFreeFire').addEventListener('click', () => {
+    $('#confirmFreeFire').addEventListener('click', async () => {
       const currentId = $('#playerIdInput')?.value.trim();
-      if (currentId !== $('#freeFireCheck').dataset.validatedId) {
+      const packageName = $('#freeFireCheck').dataset.packageName;
+      if (currentId !== $('#freeFireCheck').dataset.validatedId || packageName !== $('#freeFireCheck').dataset.validatedPackageName) {
         $('#confirmFreeFire').classList.add('hidden');
         $('#freeFireStatus').className = 'form-message';
         $('#freeFireStatus').textContent = 'La cuenta cambió. Valídala nuevamente.';
         return;
       }
-      showToast('Cuenta validada. La compra quedará conectada en el siguiente paso.');
+      const productId = $('#freeFireCheck').dataset.productId;
+      if (!productId || !packageName) {
+        $('#confirmFreeFire').classList.add('hidden');
+        $('#freeFireStatus').textContent = 'Selecciona y valida un paquete antes de comprar.';
+        return;
+      }
+      setButtonLoading($('#confirmFreeFire'), true, 'Comprando');
+      try {
+        const result = await callFunction('buy-free-fire', { serviceUserId: currentId, packageName, productId });
+        const transactionId = result.transaction?.transaction_id;
+        $('#freeFireStatus').className = 'form-message valid-account';
+        $('#freeFireStatus').textContent = transactionId ? `Recarga enviada. Orden #${transactionId}.` : 'Recarga enviada correctamente.';
+        $('#confirmFreeFire').classList.add('hidden');
+        showToast('Recarga enviada correctamente.');
+      } catch (error) {
+        $('#freeFireStatus').className = 'form-message invalid-account';
+        $('#freeFireStatus').textContent = error.message;
+      } finally { setButtonLoading($('#confirmFreeFire'), false); }
     });
   }
   openModal('productModal');
