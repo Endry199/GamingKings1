@@ -83,8 +83,12 @@ export async function handler(event) {
     const providerBalance = Number(wallet.data?.balance);
     const providerPrice = Number(product.price || 0);
     console.info('[buy-free-fire] provider wallet checked', { status: walletResponse.status, ok: walletResponse.ok, balanceAvailable: Number.isFinite(providerBalance), lowBalance: Number.isFinite(providerBalance) && providerBalance < 5 });
-    if (!walletResponse.ok || !wallet.success || !Number.isFinite(providerBalance)) return json(503, { error: 'No se pudo comprobar la disponibilidad. Inténtalo en unos minutos.' });
+    if (!walletResponse.ok || !wallet.success || !Number.isFinite(providerBalance)) {
+      console.error('[buy-free-fire] provider wallet unavailable', { status: walletResponse.status, ok: walletResponse.ok, success: wallet.success, error: wallet.error || null });
+      return json(503, { error: 'No se pudo comprobar la disponibilidad. Inténtalo en unos minutos.' });
+    }
     if (providerBalance < 5 || providerBalance < providerPrice) {
+      console.warn('[buy-free-fire] provider balance too low', { providerBalance, providerPrice, threshold: 5, productId: product.id, productName: product.name, customerId: authData.user.id });
       try { await sendTelegram(`⚠️ ALERTA DE SALDO\nSaldo Recargas América insuficiente o bajo: $${providerBalance.toFixed(2)}\nProducto: ${product.name}\nCliente: ${authData.user.email || authData.user.id}`); } catch (error) { console.error('[buy-free-fire] low balance Telegram failed', { message: error.message }); }
       return json(503, { error: 'Sin stock disponible en este momento. Inténtalo en unos minutos.' });
     }
