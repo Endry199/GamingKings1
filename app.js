@@ -238,6 +238,7 @@ function jumpMiniGame() { if (gameRunning && gamePlayerY === 0) gameVelocity = 1
 
 $$('.switch').forEach(button => button.addEventListener('click', () => setAuthMode(button.dataset.auth)));
 $$('[data-close]').forEach(button => button.addEventListener('click', () => closeModal(button.dataset.close)));
+$$('[data-open]').forEach(button => button.addEventListener('click', event => { event.preventDefault(); openModal(button.dataset.open); }));
 $$('.currency').forEach(button => button.addEventListener('click', () => setCurrency(button.dataset.currency)));
 $('[data-close="productModal"]')?.addEventListener('click', () => closeModal('productModal'));
 $('#carouselPrev')?.addEventListener('click', () => moveCarousel(-1));
