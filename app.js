@@ -461,22 +461,15 @@ function resetBreakoutLevel() {
   const board = $('.breakout-board');
   if (!board) return;
   const columns = 12;
-  const rows = Math.min(4 + gameLevel, 8);
-  const formations = [
-    (column, row) => Math.abs(column - 5.5) <= row * .9 + 1,
-    (column, row) => row === 0 || row === 1 || column === 0 || column === 11 || (row > 1 && column > 1 && column < 11),
-    (column, row) => Math.abs(column - 5.5) < 4 - Math.abs(row - 2.5) * .7,
-    (column, row) => ((column + row) % 3 !== 1) && (row < 6 - Math.abs(column - 5.5) * .35),
-    (column, row) => Math.abs(column - 5.5) < 1.8 + row * .35 || Math.abs(column - 5.5) > 4.6 - row * .35
-  ];
-  const formation = formations[Math.floor(Math.random() * formations.length)];
+  const rows = Math.min(6 + Math.floor(gameLevel / 2), 9);
   gameBlocks = [];
   gamePowerUps = [];
   for (let row = 0; row < rows; row += 1) for (let column = 0; column < columns; column += 1) {
-    if (!formation(column, row) || Math.random() < .1) continue;
+    const edgeGap = row > 1 && (column === 0 || column === columns - 1) && Math.random() < .35;
+    if (edgeGap || Math.random() < .05) continue;
     const roll = Math.random();
-    const type = row === 0 && column % 5 === 0 ? 'solid' : roll < .18 ? 'hard' : 'normal';
-    const shape = ['round', 'diamond', 'cut', 'hex'][Math.floor(Math.random() * 4)];
+    const type = row === 0 && column % 4 === 0 ? 'solid' : roll < .16 ? 'hard' : 'normal';
+    const shape = row % 2 === 0 ? 'brick' : 'brick-soft';
     gameBlocks.push({ row, column, type, shape, hits: type === 'hard' ? 2 : type === 'solid' ? Infinity : 1, alive: true });
   }
   gamePaddleWidth = basePaddleWidth;
