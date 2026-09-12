@@ -295,6 +295,20 @@ $$('.switch').forEach(button => button.addEventListener('click', () => setAuthMo
 $('#rememberSession').checked = rememberSessionEnabled();
 $('#rememberSession').addEventListener('change', event => setRememberSession(event.target.checked));
 $('#registerPassword').addEventListener('input', updatePasswordStrength);
+$('#forgotPassword').addEventListener('click', () => { $('#resetMessage').textContent = ''; openModal('resetModal'); $('#resetEmail').focus(); });
+$('#sendResetCode').addEventListener('click', async () => {
+  const email = $('#resetEmail').value.trim();
+  if (!email) { $('#resetMessage').textContent = 'Escribe tu correo primero.'; return; }
+  $('#sendResetCode').disabled = true;
+  try { await callFunction('send-otp', { email, purpose: 'reset' }); $('#resetMessage').textContent = 'Código enviado. Revisa también la carpeta de spam.'; } catch (error) { $('#resetMessage').textContent = error.message; } finally { $('#sendResetCode').disabled = false; }
+});
+$('#resetForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  if ($('#resetPassword').value !== $('#resetPasswordConfirm').value) { $('#resetMessage').textContent = 'Las contraseñas no coinciden.'; return; }
+  const button = event.currentTarget.querySelector('button[type="submit"]');
+  button.disabled = true;
+  try { await callFunction('reset-password', { email: $('#resetEmail').value.trim(), code: $('#resetCode').value.trim(), password: $('#resetPassword').value }); closeModal('resetModal'); showToast('Contraseña actualizada. Ya puedes iniciar sesión.'); } catch (error) { $('#resetMessage').textContent = error.message; } finally { button.disabled = false; }
+});
 $$('[data-close]').forEach(button => button.addEventListener('click', () => closeModal(button.dataset.close)));
 $$('[data-open]').forEach(button => button.addEventListener('click', event => { event.preventDefault(); openModal(button.dataset.open); }));
 $$('.currency').forEach(button => button.addEventListener('click', () => setCurrency(button.dataset.currency)));

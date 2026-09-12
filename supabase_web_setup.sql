@@ -39,11 +39,17 @@ create table if not exists public.email_verification_codes (
   id uuid primary key default gen_random_uuid(),
   email text not null,
   code_hash text not null,
-  purpose text not null check (purpose in ('register', 'login')),
+  purpose text not null check (purpose in ('register', 'login', 'reset')),
   created_at timestamptz not null default now(),
   expires_at timestamptz not null,
   used_at timestamptz null
 );
+
+alter table public.email_verification_codes
+  drop constraint if exists email_verification_codes_purpose_check;
+alter table public.email_verification_codes
+  add constraint email_verification_codes_purpose_check
+  check (purpose in ('register', 'login', 'reset'));
 
 create index if not exists email_verification_codes_lookup_idx
   on public.email_verification_codes (email, purpose, expires_at);
