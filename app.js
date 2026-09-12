@@ -453,6 +453,7 @@ function buildSkyGame() {
   const game = $('#miniGame');
   game.classList.add('sky-climb');
   game.innerHTML = '<div class="game-hud"><span>NIVEL <strong id="gameLevel">1</strong></span><span>PUNTOS <strong id="gameScore">0000</strong></span><span>VIDAS <strong id="gameLives">♥♥♥</strong></span></div><div class="breakout-board"><div class="breakout-blocks"></div><div class="breakout-powerups"></div><div id="gameCountdown" class="game-countdown"></div><div class="breakout-ball"></div><div class="breakout-paddle"></div></div><button id="startGame" class="game-start">Jugar breakout <span>→</span></button><p class="game-tip">Mueve la barra con el dedo o las flechas</p>';
+  $('#startGame').addEventListener('click', startMiniGame);
   gameLevel = 1; gameLives = 3; gameScore = 0;
   resetBreakoutLevel();
 }
@@ -607,7 +608,6 @@ renderPaymentMethods();
 $('[data-close="productModal"]')?.addEventListener('click', () => closeModal('productModal'));
 $('#carouselPrev')?.addEventListener('click', () => moveCarousel(-1));
 $('#carouselNext')?.addEventListener('click', () => moveCarousel(1));
-$('#startGame')?.addEventListener('click', startMiniGame);
 $('#miniGame')?.addEventListener('keydown', event => { if (['ArrowLeft', 'ArrowRight', ' '].includes(event.key)) event.preventDefault(); if (event.key === 'ArrowLeft') gameKeys.left = true; if (event.key === 'ArrowRight') gameKeys.right = true; if (event.key === ' ') jumpMiniGame(); });
 $('#miniGame')?.addEventListener('keyup', event => { if (event.key === 'ArrowLeft') gameKeys.left = false; if (event.key === 'ArrowRight') gameKeys.right = false; });
 document.addEventListener('keydown', event => { if (!$('#miniGame')?.matches(':focus')) return; if (event.key === 'ArrowLeft') gameKeys.left = true; if (event.key === 'ArrowRight') gameKeys.right = true; });
