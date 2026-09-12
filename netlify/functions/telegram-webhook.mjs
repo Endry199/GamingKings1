@@ -33,4 +33,4 @@ export async function handler(event) {
 }
 
 async function answerTelegram(callbackId, text) { await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callback_query_id: callbackId, text }) }); }
-//aaaa
+//aaaaaa
