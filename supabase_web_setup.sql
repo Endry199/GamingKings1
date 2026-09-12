@@ -44,6 +44,7 @@ alter table public.transactions add column if not exists provider_order_id text;
 alter table public.transactions add column if not exists provider_status text;
 alter table public.transactions add column if not exists amount_charged numeric;
 alter table public.transactions add column if not exists details jsonb;
+create index if not exists transactions_user_created_idx on public.transactions (google_id, created_at desc);
 
 create or replace function public.delete_old_transactions()
 returns void

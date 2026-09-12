@@ -276,7 +276,9 @@ async function loadRate() {
 
 async function loadTransactions() {
   authLog('Cargando transacciones.', { userId: state.user?.id });
-  const { data, error } = await supabase.from('transactions').select('*').eq('google_id', state.user.id).order('created_at', { ascending: false });
+  const retentionStart = new Date();
+  retentionStart.setMonth(retentionStart.getMonth() - 1);
+  const { data, error } = await supabase.from('transactions').select('id,id_transaccion,"finalPrice",base_amount,currency,"paymentMethod",status,google_id,email,created_at,completed_at,completed_by,game,product_name,service_user_id,provider_status,amount_charged,details').eq('google_id', state.user.id).gte('created_at', retentionStart.toISOString()).order('created_at', { ascending: false }).limit(100);
   if (error) { authLog('Error cargando transacciones.', { message: error.message, code: error.code, details: error.details }); throw error; }
   state.transactions = data || [];
   ensureTransactionControls();
