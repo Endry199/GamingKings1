@@ -257,7 +257,7 @@ function paymentOptions() {
 function renderPaymentMethods() {
   const container = $('#paymentMethods');
   if (!container) return;
-  container.innerHTML = paymentOptions().map(option => `<button class="payment-method ${state.paymentMethod === option.id ? 'selected' : ''}" data-payment-method="${option.id}"><span class="payment-method-title"><strong>${escapeHtml(option.name)}</strong><span>${state.paymentMethod === option.id ? 'Seleccionado' : 'Ver datos →'}</span></span><span class="payment-details">${option.details.map(detail => `<span>${escapeHtml(detail)}</span>`).join('')}</span></button>`).join('');
+  container.innerHTML = paymentOptions().map(option => `<button class="payment-method ${state.paymentMethod === option.id ? 'selected' : ''}" data-payment-method="${option.id}"><span class="payment-method-title"><strong>${escapeHtml(option.name)}</strong><span>${state.paymentMethod === option.id ? 'Seleccionado' : 'Seleccionar →'}</span></span><span class="payment-details">${option.details.map(detail => `<span>${escapeHtml(detail)}</span>`).join('')}</span></button>`).join('');
   $$('#paymentMethods [data-payment-method]').forEach(button => button.addEventListener('click', () => { state.paymentMethod = button.dataset.paymentMethod; renderPaymentMethods(); }));
 }
 
