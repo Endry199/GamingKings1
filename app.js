@@ -195,7 +195,8 @@ function openProductDetail(productId) {
       setButtonLoading($('#validateFreeFire'), true, 'Validando cuenta');
       try {
         const result = await callFunction('validate-free-fire', { serviceUserId, packageName });
-        if (!result.valid) { $('#freeFireStatus').textContent = 'No pudimos validar esa cuenta. Revisa el ID.'; $('#confirmFreeFire').classList.add('hidden'); return; }
+        if (!result.valid) { $('#freeFireStatus').className = 'form-message invalid-account'; $('#freeFireStatus').textContent = 'Cuenta no validada. Revisa el ID.'; $('#confirmFreeFire').classList.add('hidden'); return; }
+        $('#freeFireStatus').className = 'form-message valid-account';
         $('#freeFireStatus').textContent = result.accountName ? `Cuenta válida: ${result.accountName}` : 'Cuenta válida.';
         $('#confirmFreeFire').classList.remove('hidden');
       } catch (error) { $('#freeFireStatus').textContent = error.message; } finally { setButtonLoading($('#validateFreeFire'), false); }
