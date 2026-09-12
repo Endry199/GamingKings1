@@ -168,12 +168,40 @@ function renderCarousel() {
 
 function moveCarousel(direction) { if (!state.banners.length) return; state.carouselIndex = (state.carouselIndex + direction + state.banners.length) % state.banners.length; renderCarousel(); }
 
+function isFreeFireProduct(product) { return /free\s*fire/i.test(`${product.nombre || ''} ${product.slug || ''}`); }
+
 function openProductDetail(productId) {
   const product = state.products.find(item => item.id === productId);
   if (!product) return;
   const packages = [...(product.paquetes || [])].sort((a, b) => (a.orden || 0) - (b.orden || 0));
-  $('#productDetail').innerHTML = `<div class="detail-banner" style="${product.banner_url ? `background-image:url('${escapeAttr(product.banner_url)}')` : ''}"><div class="detail-logo">${product.logo_url ? `<img src="${escapeAttr(product.logo_url)}" alt="">` : initials(product.nombre)}</div></div><h2>${escapeHtml(product.nombre)}</h2><p class="helper product-description">${escapeHtml(product.descripcion || 'Elige tu paquete y disfruta tu recarga.')}</p>${product.require_id ? '<label class="player-id-label">ID del jugador<input id="playerIdInput" placeholder="Escribe el ID de tu cuenta" autocomplete="off"></label>' : ''}<div class="package-list">${packages.length ? packages.map(pack => `<button class="package-option" data-package-id="${pack.id}"><span><strong>${escapeHtml(pack.nombre_paquete)}</strong><small>${Number(pack.ncoins || 0).toFixed(2)} NCoins</small></span><span>→</span></button>`).join('') : '<div class="empty-state">Este producto aún no tiene paquetes.</div>'}</div>`;
-  $$('#productDetail .package-option').forEach(option => option.addEventListener('click', () => { const needsId = product.require_id && !$('#playerIdInput')?.value.trim(); if (needsId) { $('#playerIdInput').focus(); showToast('Escribe el ID del jugador para continuar.', true); return; } showToast('Paquete seleccionado. La recarga estará disponible próximamente.'); }));
+  const freeFire = isFreeFireProduct(product);
+  $('#productDetail').innerHTML = `<div class="detail-banner" style="${product.banner_url ? `background-image:url('${escapeAttr(product.banner_url)}')` : ''}"><div class="detail-logo">${product.logo_url ? `<img src="${escapeAttr(product.logo_url)}" alt="">` : initials(product.nombre)}</div></div><h2>${escapeHtml(product.nombre)}</h2><p class="helper product-description">${escapeHtml(product.descripcion || 'Elige tu paquete y disfruta tu recarga.')}</p>${product.require_id ? '<label class="player-id-label">ID de cuenta<input id="playerIdInput" placeholder="Escribe el ID de tu cuenta" autocomplete="off"></label>' : ''}<div class="package-list">${packages.length ? packages.map(pack => `<button class="package-option" data-package-id="${pack.id}"><span><strong>${escapeHtml(pack.nombre_paquete)}</strong><small>${Number(pack.ncoins || 0).toFixed(2)} NCoins</small></span><span>→</span></button>`).join('') : '<div class="empty-state">Este producto aún no tiene paquetes.</div>'}</div>${freeFire ? '<div id="freeFireCheck" class="free-fire-check hidden"><p id="freeFireStatus" class="form-message"></p><button id="validateFreeFire" class="button primary full" type="button">Validar cuenta</button><button id="confirmFreeFire" class="button primary full hidden" type="button">Confirmar compra</button></div>' : ''}`;
+  $$('#productDetail .package-option').forEach(option => option.addEventListener('click', () => {
+    const selectedPackage = packages.find(pack => pack.id === option.dataset.packageId);
+    $$('#productDetail .package-option').forEach(item => item.classList.remove('selected'));
+    option.classList.add('selected');
+    if (!freeFire) { showToast('Paquete seleccionado. La recarga estará disponible próximamente.'); return; }
+    $('#freeFireCheck').classList.remove('hidden');
+    $('#freeFireCheck').dataset.packageName = selectedPackage?.nombre_paquete || '';
+    $('#freeFireStatus').textContent = 'Selecciona Validar cuenta antes de confirmar.';
+    $('#confirmFreeFire').classList.add('hidden');
+  }));
+  if (freeFire) {
+    $('#validateFreeFire').addEventListener('click', async () => {
+      const serviceUserId = $('#playerIdInput')?.value.trim();
+      const packageName = $('#freeFireCheck').dataset.packageName;
+      if (!serviceUserId) { $('#playerIdInput').focus(); $('#freeFireStatus').textContent = 'Escribe el ID de cuenta primero.'; return; }
+      if (!packageName) { $('#freeFireStatus').textContent = 'Selecciona un paquete primero.'; return; }
+      setButtonLoading($('#validateFreeFire'), true, 'Validando cuenta');
+      try {
+        const result = await callFunction('validate-free-fire', { serviceUserId, packageName });
+        if (!result.valid) { $('#freeFireStatus').textContent = 'No pudimos validar esa cuenta. Revisa el ID.'; $('#confirmFreeFire').classList.add('hidden'); return; }
+        $('#freeFireStatus').textContent = result.accountName ? `Cuenta válida: ${result.accountName}` : 'Cuenta válida.';
+        $('#confirmFreeFire').classList.remove('hidden');
+      } catch (error) { $('#freeFireStatus').textContent = error.message; } finally { setButtonLoading($('#validateFreeFire'), false); }
+    });
+    $('#confirmFreeFire').addEventListener('click', () => showToast('Cuenta validada. La compra quedará conectada en el siguiente paso.'));
+  }
   openModal('productModal');
 }
 
