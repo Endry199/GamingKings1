@@ -5,6 +5,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const state = { user: null, balance: 0, currency: 'usd', rate: 0, amount: 10, products: [], transactions: [], banners: [], carouselIndex: 0, pendingRegistration: null, awaitingOtp: false };
+let enteredUserId = null;
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
@@ -150,6 +151,8 @@ function renderUser() {
 }
 
 async function enterApp(user) {
+  if (!user?.id || enteredUserId === user.id) return;
+  enteredUserId = user.id;
   state.user = user;
   $('#authView').classList.add('hidden');
   $('#appView').classList.remove('hidden');
@@ -257,7 +260,7 @@ $('#dropzone').addEventListener('dragleave', () => { $('#dropzone').style.border
 $('#dropzone').addEventListener('drop', event => { event.preventDefault(); $('#proofFile').files = event.dataTransfer.files; $('#proofFile').dispatchEvent(new Event('change')); });
 $('#submitProof').addEventListener('click', submitProof);
 $('#profileButton').addEventListener('click', () => openModal('profileModal'));
-$('#logoutButton').addEventListener('click', async () => { await supabase.auth.signOut(); closeModal('profileModal'); $('#appView').classList.add('hidden'); $('#authView').classList.remove('hidden'); });
+$('#logoutButton').addEventListener('click', async () => { await supabase.auth.signOut(); enteredUserId = null; closeModal('profileModal'); $('#appView').classList.add('hidden'); $('#authView').classList.remove('hidden'); });
 $('#profileForm').addEventListener('submit', async event => { event.preventDefault(); const name = $('#profileName').value.trim(); const password = $('#profilePassword').value; const [first_name, ...rest] = name.split(' '); const payload = { data: { first_name, last_name: rest.join(' ') } }; if (password) payload.password = password; const { error } = await supabase.auth.updateUser(payload); if (error) showToast(error.message, true); else { showToast('Perfil actualizado.'); closeModal('profileModal'); } });
 
 $('#googleLogin').addEventListener('click', () => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } }));
@@ -265,6 +268,6 @@ $('#googleRegister').addEventListener('click', () => supabase.auth.signInWithOAu
 $('#loginForm').addEventListener('submit', async event => { event.preventDefault(); const form = new FormData(event.currentTarget); setAuthMessage('Comprobando tus datos...'); state.awaitingOtp = true; const { error } = await supabase.auth.signInWithPassword({ email: form.get('email'), password: form.get('password') }); if (error) { state.awaitingOtp = false; setAuthMessage(error.message, true); return; } try { await callFunction('send-otp', { email: form.get('email'), purpose: 'login' }); state.pendingRegistration = { email: form.get('email'), password: form.get('password'), purpose: 'login' }; await supabase.auth.signOut(); openOtpModal(form.get('email'), 'login'); } catch (otpError) { state.awaitingOtp = false; setAuthMessage(otpError.message, true); await supabase.auth.signOut(); } });
 $('#registerForm').addEventListener('submit', async event => { event.preventDefault(); const form = new FormData(event.currentTarget); if (form.get('password') !== form.get('passwordConfirm')) { setAuthMessage('Las contraseñas no coinciden.', true); return; } try { await callFunction('register-account', { email: form.get('email'), password: form.get('password'), firstName: form.get('firstName'), lastName: form.get('lastName') }); state.pendingRegistration = { email: form.get('email'), password: form.get('password'), purpose: 'register' }; openOtpModal(form.get('email'), 'register'); } catch (error) { setAuthMessage(error.message, true); } });
 
-supabase.auth.onAuthStateChange(async (event, session) => { if (session?.user && !state.awaitingOtp && ['SIGNED_IN', 'INITIAL_SESSION'].includes(event)) await enterApp(session.user); });
+supabase.auth.onAuthStateChange((event, session) => { if (session?.user && ['SIGNED_IN', 'INITIAL_SESSION', 'TOKEN_REFRESHED'].includes(event)) setTimeout(() => enterApp(session.user), 0); });
 const { data: { session } } = await supabase.auth.getSession();
 if (session?.user) await enterApp(session.user);
