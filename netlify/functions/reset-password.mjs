@@ -33,3 +33,6 @@ export async function handler(event) {
     return json(500, { error: `No se pudo restablecer la contraseña (${stage}). ${error?.message || 'Error interno.'}` });
   }
 }
+
+
+//aaaa
