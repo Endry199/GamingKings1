@@ -4,10 +4,13 @@ const emailHtml = (approved, transaction) => `<div style="margin:0;background:#0
 
 export async function handler(event) {
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: 'Method Not Allowed' };
+  let stage = 'request';
   try {
     const update = JSON.parse(event.body || '{}');
     const callback = update.callback_query;
+    console.info('[telegram-webhook] update received', { hasCallback: Boolean(callback?.data), action: callback?.data?.split(':')[0] || null });
     if (!callback?.data) return json(200, { ok: true });
+    stage = 'load_transaction';
     const [action, transactionId] = callback.data.split(':');
     const approved = action === 'approve';
     const { data: transaction, error } = await supabaseAdmin.from('transactions').select('*').eq('id', transactionId).single();
@@ -17,6 +20,7 @@ export async function handler(event) {
       return json(200, { ok: true });
     }
     const status = approved ? 'aprobado' : 'rechazado';
+    stage = 'update_transaction';
     const { error: updateError } = await supabaseAdmin.from('transactions').update({ status, completed_at: new Date().toISOString(), completed_by: 'telegram' }).eq('id', transactionId).eq('status', 'pendiente');
     if (updateError) throw updateError;
     if (approved && transaction.google_id) {
@@ -25,11 +29,11 @@ export async function handler(event) {
       const current = Number(balance?.saldo_ncoins || 0);
       await supabaseAdmin.from('saldos').upsert({ user_id: transaction.google_id, saldo_ncoins: current + amount, ultima_recarga: new Date().toISOString() });
     }
-    if (transaction.email) await mailer().sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to: transaction.email, subject: approved ? 'Tu recarga ya está disponible · Niunx Play' : 'Actualización de tu recarga · Niunx Play', text: approved ? 'Tu recarga fue aprobada.' : 'Tu recarga fue rechazada.', html: emailHtml(approved, transaction) });
+    if (transaction.email) { stage = 'status_email'; await mailer().sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to: transaction.email, subject: approved ? 'Tu recarga ya está disponible · Niunx Play' : 'Actualización de tu recarga · Niunx Play', text: approved ? 'Tu recarga fue aprobada.' : 'Tu recarga fue rechazada.', html: emailHtml(approved, transaction) }); }
     await answerTelegram(callback.id, approved ? 'Pago aprobado y saldo actualizado.' : 'Pago rechazado.');
     await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/editMessageReplyMarkup`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: callback.message.chat.id, message_id: callback.message.message_id, reply_markup: { inline_keyboard: [] } }) });
     return json(200, { ok: true });
-  } catch (error) { return json(500, { error: error.message }); }
+  } catch (error) { console.error('[telegram-webhook]', { stage, name: error?.name, code: error?.code, message: error?.message }); return json(500, { error: `Webhook falló (${stage}). ${error?.message || 'Error interno.'}` }); }
 }
 
 async function answerTelegram(callbackId, text) { await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callback_query_id: callbackId, text }) }); }
