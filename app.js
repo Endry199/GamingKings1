@@ -310,6 +310,7 @@ let gameScore = 0;
 let gamePaddleX = 0;
 let gameBall = { x: 0, y: 0, vx: 3.2, vy: -3.2, radius: 7 };
 let gameBlocks = [];
+const gamePaddleWidth = 96;
 
 function buildSkyGame() {
   const game = $('#miniGame');
@@ -323,11 +324,12 @@ function resetBreakoutLevel() {
   const board = $('.breakout-board');
   if (!board) return;
   const columns = 6;
-  const rows = Math.min(3 + gameLevel, 6);
+  const rows = Math.min(2 + gameLevel, 6);
   gameBlocks = [];
   for (let row = 0; row < rows; row += 1) for (let column = 0; column < columns; column += 1) gameBlocks.push({ row, column, alive: true });
-  gamePaddleX = Math.max(0, (board.clientWidth - 76) / 2);
-  gameBall = { x: board.clientWidth / 2, y: board.clientHeight - 48, vx: (gameLevel % 2 ? 3.2 : -3.2), vy: -3.2 - (gameLevel * .25), radius: 7 };
+  gamePaddleX = Math.max(0, (board.clientWidth - gamePaddleWidth) / 2);
+  const speed = gameLevel === 1 ? 2.35 : 3.2 + ((gameLevel - 1) * .25);
+  gameBall = { x: board.clientWidth / 2, y: board.clientHeight - 48, vx: gameLevel % 2 ? speed : -speed, vy: -(gameLevel === 1 ? 2.5 : speed), radius: 7 };
   renderBreakout();
 }
 
@@ -346,6 +348,9 @@ function renderBreakout() {
 function startMiniGame() {
   if (gameRunning) return;
   if (!$('.breakout-board')) buildSkyGame();
+  gameLevel = 1;
+  gameLives = 3;
+  gameScore = 0;
   resetBreakoutLevel(); gameRunning = true; $('#startGame').classList.add('hidden'); $('#miniGame').focus(); gameFrame = requestAnimationFrame(runBreakout);
 }
 
@@ -358,7 +363,7 @@ function loseBreakoutLife() {
 function runBreakout() {
   if (!gameRunning) return;
   const board = $('.breakout-board');
-  const paddleWidth = 76; const paddleHeight = 10;
+  const paddleWidth = gamePaddleWidth; const paddleHeight = 10;
   const previousX = gameBall.x; const previousY = gameBall.y;
   gameBall.x += gameBall.vx; gameBall.y += gameBall.vy;
   if (gameBall.x - gameBall.radius <= 0 || gameBall.x + gameBall.radius >= board.clientWidth) gameBall.vx *= -1;
@@ -381,7 +386,7 @@ function runBreakout() {
   if (gameRunning) gameFrame = requestAnimationFrame(runBreakout);
 }
 
-function moveBreakoutPaddle(clientX) { const board = $('.breakout-board'); if (!board) return; const rect = board.getBoundingClientRect(); gamePaddleX = Math.max(0, Math.min(board.clientWidth - 76, clientX - rect.left - 38)); }
+function moveBreakoutPaddle(clientX) { const board = $('.breakout-board'); if (!board) return; const rect = board.getBoundingClientRect(); gamePaddleX = Math.max(0, Math.min(board.clientWidth - gamePaddleWidth, clientX - rect.left - gamePaddleWidth / 2)); }
 function jumpMiniGame() { if (gameRunning) gameBall.vy = -Math.abs(gameBall.vy); }
 
 $$('.switch').forEach(button => button.addEventListener('click', () => setAuthMode(button.dataset.auth)));
@@ -413,9 +418,9 @@ $('[data-close="productModal"]')?.addEventListener('click', () => closeModal('pr
 $('#carouselPrev')?.addEventListener('click', () => moveCarousel(-1));
 $('#carouselNext')?.addEventListener('click', () => moveCarousel(1));
 $('#startGame')?.addEventListener('click', startMiniGame);
-$('#miniGame')?.addEventListener('keydown', event => { if ([' ', 'ArrowUp'].includes(event.key)) { event.preventDefault(); jumpMiniGame(); } if (event.key === 'ArrowLeft') { gamePaddleX -= 24; renderBreakout(); } if (event.key === 'ArrowRight') { gamePaddleX += 24; renderBreakout(); } });
-$('#miniGame')?.addEventListener('pointermove', event => moveBreakoutPaddle(event.clientX));
-$('#miniGame')?.addEventListener('pointerdown', event => { moveBreakoutPaddle(event.clientX); if (!gameRunning) startMiniGame(); });
+$('#miniGame')?.addEventListener('keydown', event => { if ([' ', 'ArrowUp'].includes(event.key)) { event.preventDefault(); jumpMiniGame(); } if (event.key === 'ArrowLeft') { gamePaddleX = Math.max(0, gamePaddleX - 24); renderBreakout(); } if (event.key === 'ArrowRight') { const board = $('.breakout-board'); gamePaddleX = Math.min(board.clientWidth - gamePaddleWidth, gamePaddleX + 24); renderBreakout(); } });
+$('#miniGame')?.addEventListener('pointermove', event => { if (event.pointerType === 'touch' || event.pointerType === 'pen') moveBreakoutPaddle(event.clientX); });
+$('#miniGame')?.addEventListener('pointerdown', event => { if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return; moveBreakoutPaddle(event.clientX); if (!gameRunning) startMiniGame(); });
 document.addEventListener('keydown', event => { if (event.key === ' ' && document.activeElement?.id !== 'otpCode') jumpMiniGame(); });
 $$('.nav-link,[data-view]').forEach(button => button.addEventListener('click', () => { const view = button.dataset.view; if (!view) return; $$('.view').forEach(item => item.classList.toggle('active-view', item.id === view)); $$('.nav-link').forEach(item => item.classList.toggle('active', item.dataset.view === view)); }));
 ['openTopUp', 'openTopUpHero', 'openTopUpSmall', 'openTopUpCard'].forEach(id => $(`#${id}`)?.addEventListener('click', () => openModal('topUpModal')));
