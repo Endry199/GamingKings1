@@ -12,6 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/enhancements.css">
+  <link rel="stylesheet" href="/auth-enhancements.css">
 </head>
 <body>
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
@@ -29,12 +30,12 @@
       <div id="loginPanel" class="auth-panel active">
         <p class="kicker">BIENVENIDO DE VUELTA</p><h2>Continúa donde lo dejaste.</h2><p class="helper">Accede a tu wallet y a tus recargas.</p>
         <button id="googleLogin" class="social-button"><span class="google-g">G</span> Continuar con Google</button><div class="divider"><span>o entra con correo</span></div>
-        <form id="loginForm" class="form-stack"><label>Correo electrónico<input type="email" name="email" autocomplete="email" required placeholder="tu@email.com"></label><label>Contraseña<input type="password" name="password" autocomplete="current-password" required placeholder="••••••••"></label><button class="button primary" type="submit">Iniciar sesión <span>→</span></button></form>
+        <form id="loginForm" class="form-stack"><label>Correo electrónico<input type="email" name="email" autocomplete="email" required placeholder="tu@email.com"></label><label>Contraseña<input type="password" name="password" autocomplete="current-password" required placeholder="••••••••"></label><label class="check-row"><input id="rememberSession" type="checkbox" name="rememberSession"><span>Mantener sesión iniciada</span></label><button class="button primary" type="submit">Iniciar sesión <span>→</span></button></form>
       </div>
       <div id="registerPanel" class="auth-panel">
         <p class="kicker">NUEVO EN NIUNX PLAY</p><h2>Haz espacio para más.</h2><p class="helper">Crea tu cuenta y recibe un código de verificación.</p>
         <button id="googleRegister" class="social-button"><span class="google-g">G</span> Registrarme con Google</button><div class="divider"><span>o crea tu cuenta</span></div>
-        <form id="registerForm" class="form-stack"><div class="form-grid"><label>Nombre<input type="text" name="firstName" required placeholder="Tu nombre"></label><label>Apellido<input type="text" name="lastName" required placeholder="Tu apellido"></label></div><label>Correo electrónico<input type="email" name="email" autocomplete="email" required placeholder="tu@email.com"></label><label>Contraseña<input type="password" name="password" minlength="8" autocomplete="new-password" required placeholder="Mínimo 8 caracteres"></label><label>Repite la contraseña<input type="password" name="passwordConfirm" minlength="8" required placeholder="Repite tu contraseña"></label><button class="button primary" type="submit">Crear mi cuenta <span>→</span></button></form>
+        <form id="registerForm" class="form-stack"><div class="form-grid"><label>Nombre<input type="text" name="firstName" required placeholder="Tu nombre"></label><label>Apellido<input type="text" name="lastName" required placeholder="Tu apellido"></label></div><label>Correo electrónico<input type="email" name="email" autocomplete="email" required placeholder="tu@email.com"></label><label>Contraseña<input id="registerPassword" type="password" name="password" minlength="8" autocomplete="new-password" required placeholder="Mínimo 8 caracteres"><span class="password-meter" aria-live="polite"><span class="password-meter-bar"><span id="passwordStrengthBar"></span></span><span id="passwordStrengthLabel">Escribe una contraseña</span></span></label><label>Repite la contraseña<input type="password" name="passwordConfirm" minlength="8" required placeholder="Repite tu contraseña"></label><button class="button primary" type="submit">Crear mi cuenta <span>→</span></button></form>
       </div>
       <p id="authMessage" class="form-message"></p>
       <p class="legal-note">Al continuar aceptas nuestros <a href="#terms">Términos</a> y <a href="#privacy">Política de privacidad</a>.</p>

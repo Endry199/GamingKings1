@@ -1,8 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { authStorage, rememberSessionEnabled, setRememberSession } from './session.js';
 
 const SUPABASE_URL = 'https://oznmqczxpywvdmefermv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96bm1xY3p4cHl3dmRtZWZlcm12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyMDg3NzcsImV4cCI6MjA2ODc4NDc3N30.SxB0TpVWDihU6MZwQIG4fT42D9gvWjFQNga93zxRfbc';
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { storage: authStorage(), autoRefreshToken: true, persistSession: true, detectSessionInUrl: true } });
 
 const state = { user: null, balance: 0, currency: 'usd', rate: 0, amount: 10, products: [], transactions: [], banners: [], carouselIndex: 0, pendingRegistration: null, awaitingOtp: false };
 let enteredUserId = null;
@@ -44,6 +45,28 @@ function setAuthMode(mode) {
   setAuthMessage('');
 }
 
+function passwordStrength(value) {
+  let score = 0;
+  if (value.length >= 8) score += 1;
+  if (value.length >= 12) score += 1;
+  if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1;
+  if (/\d/.test(value)) score += 1;
+  if (/[^A-Za-z0-9]/.test(value)) score += 1;
+  return score;
+}
+
+function updatePasswordStrength() {
+  const input = $('#registerPassword');
+  const bar = $('#passwordStrengthBar');
+  const label = $('#passwordStrengthLabel');
+  if (!input || !bar || !label) return;
+  const score = passwordStrength(input.value);
+  const levels = ['Escribe una contraseña', 'Nivel bajo', 'Nivel bajo', 'Nivel medio', 'Nivel alto', 'Nivel muy alto'];
+  bar.style.width = `${score * 20}%`;
+  bar.dataset.level = score < 3 ? 'low' : score < 5 ? 'medium' : 'high';
+  label.textContent = levels[score];
+}
+
 function openOtpModal(email, purpose) {
   state.pendingRegistration = { email, purpose };
   let modal = $('#otpModal');
@@ -51,7 +74,7 @@ function openOtpModal(email, purpose) {
     modal = document.createElement('div');
     modal.id = 'otpModal';
     modal.className = 'modal-backdrop';
-    modal.innerHTML = `<section class="modal-card otp-card"><p class="eyebrow">VERIFICACIÓN</p><h2>Confirma que eres tú.</h2><p class="helper">Enviamos un código de 6 dígitos a <strong id="otpEmail"></strong>.</p><label class="otp-label">Código de seguridad<input id="otpCode" inputmode="numeric" maxlength="6" placeholder="000000"></label><p id="otpMessage" class="form-message"></p><button id="verifyOtp" class="button primary full">Verificar código <span>→</span></button><button id="resendOtp" class="button ghost full otp-resend">Enviar otro código</button></section>`;
+    modal.innerHTML = `<section class="modal-card otp-card"><p class="eyebrow">VERIFICACIÓN</p><h2>Confirma que eres tú.</h2><p class="helper">Enviamos un código de 6 dígitos a <strong id="otpEmail"></strong>.</p><p class="otp-hint">¿No lo ves? Revisa también la carpeta de spam.</p><label class="otp-label">Código de seguridad<input id="otpCode" inputmode="numeric" maxlength="6" placeholder="000000"></label><p id="otpMessage" class="form-message"></p><button id="verifyOtp" class="button primary full">Verificar código <span>→</span></button><button id="resendOtp" class="button ghost full otp-resend">Enviar otro código</button></section>`;
     document.body.append(modal);
     $('#verifyOtp').addEventListener('click', verifyOtp);
     $('#resendOtp').addEventListener('click', async () => { try { await callFunction('send-otp', { email: state.pendingRegistration.email, purpose: state.pendingRegistration.purpose }); $('#otpMessage').textContent = 'Código enviado nuevamente.'; } catch (error) { $('#otpMessage').textContent = error.message; } });
@@ -258,6 +281,9 @@ function startMiniGame() {
 function jumpMiniGame() { if (gameRunning && gamePlayerY === 0) gameVelocity = 11; }
 
 $$('.switch').forEach(button => button.addEventListener('click', () => setAuthMode(button.dataset.auth)));
+$('#rememberSession').checked = rememberSessionEnabled();
+$('#rememberSession').addEventListener('change', event => setRememberSession(event.target.checked));
+$('#registerPassword').addEventListener('input', updatePasswordStrength);
 $$('[data-close]').forEach(button => button.addEventListener('click', () => closeModal(button.dataset.close)));
 $$('[data-open]').forEach(button => button.addEventListener('click', event => { event.preventDefault(); openModal(button.dataset.open); }));
 $$('.currency').forEach(button => button.addEventListener('click', () => setCurrency(button.dataset.currency)));
@@ -289,7 +315,7 @@ async function startGoogleAuth(source) {
 
 $('#googleLogin').addEventListener('click', () => startGoogleAuth('login'));
 $('#googleRegister').addEventListener('click', () => startGoogleAuth('register'));
-$('#loginForm').addEventListener('submit', async event => { event.preventDefault(); const form = new FormData(event.currentTarget); setAuthMessage('Comprobando tus datos...'); state.awaitingOtp = true; const { error } = await supabase.auth.signInWithPassword({ email: form.get('email'), password: form.get('password') }); if (error) { state.awaitingOtp = false; setAuthMessage(error.message, true); return; } try { await callFunction('send-otp', { email: form.get('email'), purpose: 'login' }); state.pendingRegistration = { email: form.get('email'), password: form.get('password'), purpose: 'login' }; await supabase.auth.signOut(); openOtpModal(form.get('email'), 'login'); } catch (otpError) { state.awaitingOtp = false; setAuthMessage(otpError.message, true); await supabase.auth.signOut(); } });
+$('#loginForm').addEventListener('submit', async event => { event.preventDefault(); setRememberSession($('#rememberSession').checked); const form = new FormData(event.currentTarget); setAuthMessage('Comprobando tus datos...'); state.awaitingOtp = true; const { error } = await supabase.auth.signInWithPassword({ email: form.get('email'), password: form.get('password') }); if (error) { state.awaitingOtp = false; setAuthMessage(error.message, true); return; } try { await callFunction('send-otp', { email: form.get('email'), purpose: 'login' }); state.pendingRegistration = { email: form.get('email'), password: form.get('password'), purpose: 'login' }; await supabase.auth.signOut(); openOtpModal(form.get('email'), 'login'); } catch (otpError) { state.awaitingOtp = false; setAuthMessage(otpError.message, true); await supabase.auth.signOut(); } });
 $('#registerForm').addEventListener('submit', async event => { event.preventDefault(); const form = new FormData(event.currentTarget); if (form.get('password') !== form.get('passwordConfirm')) { setAuthMessage('Las contraseñas no coinciden.', true); return; } try { await callFunction('register-account', { email: form.get('email'), password: form.get('password'), firstName: form.get('firstName'), lastName: form.get('lastName') }); state.pendingRegistration = { email: form.get('email'), password: form.get('password'), purpose: 'register' }; openOtpModal(form.get('email'), 'register'); } catch (error) { setAuthMessage(error.message, true); } });
 
 supabase.auth.onAuthStateChange((event, session) => {
