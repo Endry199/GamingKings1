@@ -309,8 +309,11 @@ let gameLives = 3;
 let gameScore = 0;
 let gamePaddleX = 0;
 let gameBall = { x: 0, y: 0, vx: 3.2, vy: -3.2, radius: 7 };
+let gameBalls = [];
 let gameBlocks = [];
-const gamePaddleWidth = 96;
+const basePaddleWidth = 96;
+let gamePaddleWidth = basePaddleWidth;
+let gamePowerUps = [];
 const gameKeys = { left: false, right: false };
 let gameCountdown = false;
 let gameCountdownTimer;
@@ -318,7 +321,7 @@ let gameCountdownTimer;
 function buildSkyGame() {
   const game = $('#miniGame');
   game.classList.add('sky-climb');
-  game.innerHTML = '<div class="game-hud"><span>NIVEL <strong id="gameLevel">1</strong></span><span>PUNTOS <strong id="gameScore">0000</strong></span><span>VIDAS <strong id="gameLives">♥♥♥</strong></span></div><div class="breakout-board"><div class="breakout-blocks"></div><div id="gameCountdown" class="game-countdown"></div><div class="breakout-ball"></div><div class="breakout-paddle"></div></div><button id="startGame" class="game-start">Jugar breakout <span>→</span></button><p class="game-tip">Mueve la barra con el dedo o las flechas</p>';
+  game.innerHTML = '<div class="game-hud"><span>NIVEL <strong id="gameLevel">1</strong></span><span>PUNTOS <strong id="gameScore">0000</strong></span><span>VIDAS <strong id="gameLives">♥♥♥</strong></span></div><div class="breakout-board"><div class="breakout-blocks"></div><div class="breakout-powerups"></div><div id="gameCountdown" class="game-countdown"></div><div class="breakout-ball"></div><div class="breakout-paddle"></div></div><button id="startGame" class="game-start">Jugar breakout <span>→</span></button><p class="game-tip">Mueve la barra con el dedo o las flechas</p>';
   gameLevel = 1; gameLives = 3; gameScore = 0;
   resetBreakoutLevel();
 }
@@ -329,10 +332,17 @@ function resetBreakoutLevel() {
   const columns = 6;
   const rows = Math.min(2 + gameLevel, 6);
   gameBlocks = [];
-  for (let row = 0; row < rows; row += 1) for (let column = 0; column < columns; column += 1) gameBlocks.push({ row, column, alive: true });
+  gamePowerUps = [];
+  for (let row = 0; row < rows; row += 1) for (let column = 0; column < columns; column += 1) {
+    const roll = Math.random();
+    const type = row === 0 && column % 3 === 0 ? 'solid' : roll < .16 ? 'hard' : 'normal';
+    gameBlocks.push({ row, column, type, hits: type === 'hard' ? 2 : type === 'solid' ? Infinity : 1, alive: true });
+  }
+  gamePaddleWidth = basePaddleWidth;
   gamePaddleX = Math.max(0, (board.clientWidth - gamePaddleWidth) / 2);
   const speed = gameLevel === 1 ? 2.35 : 3.2 + ((gameLevel - 1) * .25);
-  gameBall = { x: board.clientWidth / 2, y: 22, vx: gameLevel % 2 ? speed : -speed, vy: gameLevel === 1 ? 2 : speed, radius: 7 };
+  gameBall = { x: board.clientWidth / 2, y: board.clientHeight - 55, vx: gameLevel % 2 ? speed : -speed, vy: -(gameLevel === 1 ? 2 : speed), radius: 7 };
+  gameBalls = [gameBall];
   renderBreakout();
 }
 
@@ -353,7 +363,7 @@ function beginRoundCountdown() {
     clearInterval(gameCountdownTimer);
     countdown.textContent = '¡YA!';
     gameCountdown = false;
-    gameBall.vy = gameLevel === 1 ? 2 : 2.4 + ((gameLevel - 1) * .2);
+    gameBalls.forEach(ball => { ball.vy = -Math.abs(gameLevel === 1 ? 2 : 2.4 + ((gameLevel - 1) * .2)); });
     setTimeout(() => countdown.classList.remove('visible'), 350);
   }, 700);
 }
@@ -363,10 +373,16 @@ function renderBreakout() {
   const board = $('.breakout-board');
   if (!blocks || !board) return;
   const gap = 6; const blockWidth = (board.clientWidth - gap * 7) / 6; const blockHeight = 16;
-  blocks.innerHTML = gameBlocks.map((block, index) => `<span class="breakout-block ${block.alive ? '' : 'broken'} level-${(block.row + gameLevel) % 4}" data-block="${index}" style="left:${gap + block.column * (blockWidth + gap)}px;top:${24 + block.row * (blockHeight + gap)}px;width:${blockWidth}px;height:${blockHeight}px"></span>`).join('');
+  blocks.innerHTML = gameBlocks.map((block, index) => `<span class="breakout-block ${block.alive ? '' : 'broken'} block-${block.type} level-${(block.row + gameLevel) % 4}" data-block="${index}" style="left:${gap + block.column * (blockWidth + gap)}px;top:${24 + block.row * (blockHeight + gap)}px;width:${blockWidth}px;height:${blockHeight}px"><b>${block.type === 'hard' ? block.hits : block.type === 'solid' ? '◆' : ''}</b></span>`).join('');
   const ball = $('.breakout-ball'); const paddle = $('.breakout-paddle');
-  ball.style.left = `${gameBall.x - gameBall.radius}px`; ball.style.top = `${gameBall.y - gameBall.radius}px`;
+  const primaryBall = gameBalls[0] || gameBall;
+  ball.style.left = `${primaryBall.x - primaryBall.radius}px`; ball.style.top = `${primaryBall.y - primaryBall.radius}px`;
+  document.querySelectorAll('.extra-ball').forEach(item => item.remove());
+  gameBalls.slice(1).forEach(extra => { const extraElement = document.createElement('span'); extraElement.className = 'breakout-ball extra-ball'; extraElement.style.left = `${extra.x - extra.radius}px`; extraElement.style.top = `${extra.y - extra.radius}px`; board.append(extraElement); });
   paddle.style.left = `${gamePaddleX}px`;
+  paddle.style.width = `${gamePaddleWidth}px`;
+  const powerLayer = $('.breakout-powerups');
+  if (powerLayer) powerLayer.innerHTML = gamePowerUps.map((power, index) => `<span class="breakout-powerup power-${power.type}" data-power="${index}" style="left:${power.x}px;top:${power.y}px">${power.type === 'expand' ? '↔' : power.type === 'multi' ? '●●' : '♥'}</span>`).join('');
   $('#gameLevel').textContent = gameLevel; $('#gameScore').textContent = String(gameScore).padStart(4, '0'); $('#gameLives').textContent = `${'♥'.repeat(gameLives)}${'♡'.repeat(3 - gameLives)}`;
 }
 
@@ -393,30 +409,41 @@ function runBreakout() {
   if (gameKeys.right) gamePaddleX += 5.5;
   gamePaddleX = Math.max(0, Math.min(board.clientWidth - paddleWidth, gamePaddleX));
   if (gameCountdown) { renderBreakout(); if (gameRunning) gameFrame = requestAnimationFrame(runBreakout); return; }
-  const previousX = gameBall.x; const previousY = gameBall.y;
-  gameBall.x += gameBall.vx; gameBall.y += gameBall.vy;
-  if (gameBall.x - gameBall.radius <= 0 || gameBall.x + gameBall.radius >= board.clientWidth) gameBall.vx *= -1;
-  if (gameBall.y - gameBall.radius <= 0) { gameBall.y = gameBall.radius; gameBall.vy = Math.abs(gameBall.vy); }
   const paddleY = board.clientHeight - 22;
-  if (gameBall.vy > 0 && gameBall.y + gameBall.radius >= paddleY && gameBall.y - gameBall.radius <= paddleY + paddleHeight && gameBall.x >= gamePaddleX && gameBall.x <= gamePaddleX + paddleWidth) {
-    const hit = (gameBall.x - (gamePaddleX + paddleWidth / 2)) / (paddleWidth / 2); gameBall.vx = hit * 4.5; gameBall.vy = -Math.abs(gameBall.vy);
-  }
   const gap = 6; const blockWidth = (board.clientWidth - gap * 7) / 6; const blockHeight = 16;
-  gameBlocks.forEach((block, index) => {
-    if (!block.alive) return;
-    const x = gap + block.column * (blockWidth + gap); const y = 24 + block.row * (blockHeight + gap);
-    if (gameBall.x + gameBall.radius > x && gameBall.x - gameBall.radius < x + blockWidth && gameBall.y + gameBall.radius > y && gameBall.y - gameBall.radius < y + blockHeight) {
-      block.alive = false; gameScore += 10 * gameLevel; gameBall.vy *= -1;
+  gameBalls.forEach(ball => {
+    ball.x += ball.vx; ball.y += ball.vy;
+    if (ball.x - ball.radius <= 0 || ball.x + ball.radius >= board.clientWidth) { ball.vx *= -1; ball.x = Math.max(ball.radius, Math.min(board.clientWidth - ball.radius, ball.x)); }
+    if (ball.y - ball.radius <= 0) { ball.y = ball.radius; ball.vy = Math.abs(ball.vy); }
+    if (ball.vy > 0 && ball.y + ball.radius >= paddleY && ball.y - ball.radius <= paddleY + paddleHeight && ball.x >= gamePaddleX && ball.x <= gamePaddleX + paddleWidth) {
+      const hit = (ball.x - (gamePaddleX + paddleWidth / 2)) / (paddleWidth / 2); ball.vx = hit * 4.5; ball.vy = -Math.abs(ball.vy);
     }
+    gameBlocks.forEach(block => {
+      if (!block.alive) return;
+      const x = gap + block.column * (blockWidth + gap); const y = 24 + block.row * (blockHeight + gap);
+      if (ball.x + ball.radius > x && ball.x - ball.radius < x + blockWidth && ball.y + ball.radius > y && ball.y - ball.radius < y + blockHeight) {
+        ball.vy *= -1;
+        if (block.type === 'solid') return;
+        block.hits -= 1;
+        if (block.hits <= 0) { block.alive = false; gameScore += 10 * gameLevel; if (Math.random() < .28) gamePowerUps.push({ x: x + blockWidth / 2 - 9, y, type: ['expand', 'multi', 'life'][Math.floor(Math.random() * 3)] }); }
+      }
+    });
   });
-  if (!gameBlocks.some(block => block.alive)) { gameLevel += 1; gameScore += 100; resetBreakoutLevel(); }
-  if (gameBall.y - gameBall.radius > board.clientHeight) loseBreakoutLife();
+  gamePowerUps.forEach(power => { power.y += 1.8; });
+  gamePowerUps = gamePowerUps.filter(power => {
+    const caught = power.y + 18 >= paddleY && power.y <= paddleY + 12 && power.x + 18 >= gamePaddleX && power.x <= gamePaddleX + paddleWidth;
+    if (caught) { if (power.type === 'expand') gamePaddleWidth = Math.min(150, gamePaddleWidth + 28); if (power.type === 'life') gameLives = Math.min(5, gameLives + 1); if (power.type === 'multi' && gameBalls.length < 3) gameBalls.push({ ...gameBalls[0], vx: -gameBalls[0].vx, vy: gameBalls[0].vy }); return false; }
+    return power.y < board.clientHeight;
+  });
+  gameBalls = gameBalls.filter(ball => ball.y - ball.radius <= board.clientHeight);
+  if (!gameBalls.length) loseBreakoutLife();
+  if (!gameBlocks.some(block => block.alive && block.type !== 'solid')) { gameLevel += 1; gameScore += 100; resetBreakoutLevel(); }
   renderBreakout();
   if (gameRunning) gameFrame = requestAnimationFrame(runBreakout);
 }
 
 function moveBreakoutPaddle(clientX) { const board = $('.breakout-board'); if (!board) return; const rect = board.getBoundingClientRect(); gamePaddleX = Math.max(0, Math.min(board.clientWidth - gamePaddleWidth, clientX - rect.left - gamePaddleWidth / 2)); }
-function jumpMiniGame() { if (gameRunning) gameBall.vy = -Math.abs(gameBall.vy); }
+function jumpMiniGame() { if (gameRunning) gameBalls.forEach(ball => { ball.vy = -Math.abs(ball.vy); }); }
 
 $$('.switch').forEach(button => button.addEventListener('click', () => setAuthMode(button.dataset.auth)));
 $('#rememberSession').checked = rememberSessionEnabled();
