@@ -304,63 +304,85 @@ function statusLabel(value) { return ({ pendiente: 'En revisión', aprobado: 'Ap
 
 let gameFrame;
 let gameRunning = false;
-let gamePlayerX = 50;
-let gamePlayerY = 145;
-let gameVelocityY = 0;
-let gameHeight = 0;
-let gamePlatforms = [];
-const gameKeys = { left: false, right: false };
+let gameLevel = 1;
+let gameLives = 3;
+let gameScore = 0;
+let gamePaddleX = 0;
+let gameBall = { x: 0, y: 0, vx: 3.2, vy: -3.2, radius: 7 };
+let gameBlocks = [];
 
 function buildSkyGame() {
   const game = $('#miniGame');
-  game.innerHTML = '<div class="game-hud"><span>ALTURA <strong id="gameHeight">0000</strong></span><span id="gamePower" class="game-power">✦</span></div><div class="sky-stars"></div><div class="game-player">✦</div><div class="game-world"></div><button id="startGame" class="game-start">Comenzar ascenso <span>↑</span></button><p class="game-tip">Salta con espacio o toca la pantalla</p>';
-  gamePlatforms = [
-    { x: 45, y: 166, width: 30, power: false },
-    { x: 12, y: 126, width: 25, power: false },
-    { x: 58, y: 88, width: 27, power: true },
-    { x: 30, y: 48, width: 25, power: false },
-    { x: 68, y: 12, width: 24, power: false }
-  ];
-  renderSkyPlatforms();
-  $('#startGame').addEventListener('click', startMiniGame);
+  game.classList.add('sky-climb');
+  game.innerHTML = '<div class="game-hud"><span>NIVEL <strong id="gameLevel">1</strong></span><span>PUNTOS <strong id="gameScore">0000</strong></span><span>VIDAS <strong id="gameLives">♥♥♥</strong></span></div><div class="breakout-board"><div class="breakout-blocks"></div><div class="breakout-ball"></div><div class="breakout-paddle"></div></div><button id="startGame" class="game-start">Jugar breakout <span>→</span></button><p class="game-tip">Mueve la barra con el dedo, mouse o flechas</p>';
+  gameLevel = 1; gameLives = 3; gameScore = 0;
+  resetBreakoutLevel();
 }
 
-function renderSkyPlatforms() {
-  const world = $('.game-world');
-  if (!world) return;
-  world.innerHTML = gamePlatforms.map((platform, index) => `<span class="sky-cloud ${platform.power ? 'power-cloud' : ''}" data-platform="${index}" style="left:${platform.x}%;top:${platform.y}px;width:${platform.width}%"></span>`).join('');
+function resetBreakoutLevel() {
+  const board = $('.breakout-board');
+  if (!board) return;
+  const columns = 6;
+  const rows = Math.min(3 + gameLevel, 6);
+  gameBlocks = [];
+  for (let row = 0; row < rows; row += 1) for (let column = 0; column < columns; column += 1) gameBlocks.push({ row, column, alive: true });
+  gamePaddleX = Math.max(0, (board.clientWidth - 76) / 2);
+  gameBall = { x: board.clientWidth / 2, y: board.clientHeight - 48, vx: (gameLevel % 2 ? 3.2 : -3.2), vy: -3.2 - (gameLevel * .25), radius: 7 };
+  renderBreakout();
+}
+
+function renderBreakout() {
+  const blocks = $('.breakout-blocks');
+  const board = $('.breakout-board');
+  if (!blocks || !board) return;
+  const gap = 6; const blockWidth = (board.clientWidth - gap * 7) / 6; const blockHeight = 16;
+  blocks.innerHTML = gameBlocks.map((block, index) => `<span class="breakout-block ${block.alive ? '' : 'broken'} level-${(block.row + gameLevel) % 4}" data-block="${index}" style="left:${gap + block.column * (blockWidth + gap)}px;top:${24 + block.row * (blockHeight + gap)}px;width:${blockWidth}px;height:${blockHeight}px"></span>`).join('');
+  const ball = $('.breakout-ball'); const paddle = $('.breakout-paddle');
+  ball.style.left = `${gameBall.x - gameBall.radius}px`; ball.style.top = `${gameBall.y - gameBall.radius}px`;
+  paddle.style.left = `${gamePaddleX}px`;
+  $('#gameLevel').textContent = gameLevel; $('#gameScore').textContent = String(gameScore).padStart(4, '0'); $('#gameLives').textContent = `${'♥'.repeat(gameLives)}${'♡'.repeat(3 - gameLives)}`;
 }
 
 function startMiniGame() {
   if (gameRunning) return;
-  buildSkyGame();
-  gameRunning = true; gameHeight = 0; gamePlayerX = 50; gamePlayerY = 145; gameVelocityY = -10;
-  $('#startGame').classList.add('hidden');
-  $('#miniGame').focus();
-  gameFrame = requestAnimationFrame(runSkyGame);
+  if (!$('.breakout-board')) buildSkyGame();
+  resetBreakoutLevel(); gameRunning = true; $('#startGame').classList.add('hidden'); $('#miniGame').focus(); gameFrame = requestAnimationFrame(runBreakout);
 }
 
-function runSkyGame() {
+function loseBreakoutLife() {
+  gameLives -= 1;
+  if (gameLives <= 0) { gameRunning = false; $('#startGame').textContent = 'Reintentar partida →'; $('#startGame').classList.remove('hidden'); }
+  else { resetBreakoutLevel(); }
+}
+
+function runBreakout() {
   if (!gameRunning) return;
-  const player = $('.game-player');
-  if (gameKeys.left) gamePlayerX -= 1.2;
-  if (gameKeys.right) gamePlayerX += 1.2;
-  gamePlayerX = Math.max(3, Math.min(88, gamePlayerX));
-  const previousBottom = gamePlayerY + 26;
-  gameVelocityY += 0.45;
-  gamePlayerY += gameVelocityY;
-  for (const platform of gamePlatforms) {
-    const landsOnPlatform = gameVelocityY > 0 && previousBottom <= platform.y + 8 && gamePlayerY + 26 >= platform.y && gamePlayerX + 8 > platform.x && gamePlayerX < platform.x + platform.width;
-    if (landsOnPlatform) { gamePlayerY = platform.y - 26; gameVelocityY = platform.power ? -14 : -11; gameHeight += platform.power ? 25 : 10; }
+  const board = $('.breakout-board');
+  const paddleWidth = 76; const paddleHeight = 10;
+  const previousX = gameBall.x; const previousY = gameBall.y;
+  gameBall.x += gameBall.vx; gameBall.y += gameBall.vy;
+  if (gameBall.x - gameBall.radius <= 0 || gameBall.x + gameBall.radius >= board.clientWidth) gameBall.vx *= -1;
+  if (gameBall.y - gameBall.radius <= 0) { gameBall.y = gameBall.radius; gameBall.vy = Math.abs(gameBall.vy); }
+  const paddleY = board.clientHeight - 22;
+  if (gameBall.vy > 0 && gameBall.y + gameBall.radius >= paddleY && gameBall.y - gameBall.radius <= paddleY + paddleHeight && gameBall.x >= gamePaddleX && gameBall.x <= gamePaddleX + paddleWidth) {
+    const hit = (gameBall.x - (gamePaddleX + paddleWidth / 2)) / (paddleWidth / 2); gameBall.vx = hit * 4.5; gameBall.vy = -Math.abs(gameBall.vy);
   }
-  if (gamePlayerY < 70) { const shift = 70 - gamePlayerY; gamePlayerY = 70; gamePlatforms.forEach(platform => { platform.y += shift; }); gameHeight += Math.round(shift); renderSkyPlatforms(); }
-  if (gamePlayerY > 194) { gameRunning = false; $('#startGame').textContent = 'Intentar de nuevo ↑'; $('#startGame').classList.remove('hidden'); }
-  player.style.left = `${gamePlayerX}%`; player.style.top = `${gamePlayerY}px`;
-  $('#gameHeight').textContent = String(gameHeight).padStart(4, '0');
-  if (gameRunning) gameFrame = requestAnimationFrame(runSkyGame);
+  const gap = 6; const blockWidth = (board.clientWidth - gap * 7) / 6; const blockHeight = 16;
+  gameBlocks.forEach((block, index) => {
+    if (!block.alive) return;
+    const x = gap + block.column * (blockWidth + gap); const y = 24 + block.row * (blockHeight + gap);
+    if (gameBall.x + gameBall.radius > x && gameBall.x - gameBall.radius < x + blockWidth && gameBall.y + gameBall.radius > y && gameBall.y - gameBall.radius < y + blockHeight) {
+      block.alive = false; gameScore += 10 * gameLevel; gameBall.vy *= -1;
+    }
+  });
+  if (!gameBlocks.some(block => block.alive)) { gameLevel += 1; gameScore += 100; resetBreakoutLevel(); }
+  if (gameBall.y - gameBall.radius > board.clientHeight) loseBreakoutLife();
+  renderBreakout();
+  if (gameRunning) gameFrame = requestAnimationFrame(runBreakout);
 }
 
-function jumpMiniGame() { if (gameRunning && gameVelocityY > 0) gameVelocityY = -10; }
+function moveBreakoutPaddle(clientX) { const board = $('.breakout-board'); if (!board) return; const rect = board.getBoundingClientRect(); gamePaddleX = Math.max(0, Math.min(board.clientWidth - 76, clientX - rect.left - 38)); }
+function jumpMiniGame() { if (gameRunning) gameBall.vy = -Math.abs(gameBall.vy); }
 
 $$('.switch').forEach(button => button.addEventListener('click', () => setAuthMode(button.dataset.auth)));
 $('#rememberSession').checked = rememberSessionEnabled();
@@ -391,10 +413,9 @@ $('[data-close="productModal"]')?.addEventListener('click', () => closeModal('pr
 $('#carouselPrev')?.addEventListener('click', () => moveCarousel(-1));
 $('#carouselNext')?.addEventListener('click', () => moveCarousel(1));
 $('#startGame')?.addEventListener('click', startMiniGame);
-$('#miniGame')?.addEventListener('keydown', event => { if ([' ', 'ArrowUp'].includes(event.key)) { event.preventDefault(); jumpMiniGame(); } });
-$('#miniGame')?.addEventListener('keydown', event => { if (event.key === 'ArrowLeft') gameKeys.left = true; if (event.key === 'ArrowRight') gameKeys.right = true; });
-$('#miniGame')?.addEventListener('keyup', event => { if (event.key === 'ArrowLeft') gameKeys.left = false; if (event.key === 'ArrowRight') gameKeys.right = false; });
-$('#miniGame')?.addEventListener('pointerdown', jumpMiniGame);
+$('#miniGame')?.addEventListener('keydown', event => { if ([' ', 'ArrowUp'].includes(event.key)) { event.preventDefault(); jumpMiniGame(); } if (event.key === 'ArrowLeft') { gamePaddleX -= 24; renderBreakout(); } if (event.key === 'ArrowRight') { gamePaddleX += 24; renderBreakout(); } });
+$('#miniGame')?.addEventListener('pointermove', event => moveBreakoutPaddle(event.clientX));
+$('#miniGame')?.addEventListener('pointerdown', event => { moveBreakoutPaddle(event.clientX); if (!gameRunning) startMiniGame(); });
 document.addEventListener('keydown', event => { if (event.key === ' ' && document.activeElement?.id !== 'otpCode') jumpMiniGame(); });
 $$('.nav-link,[data-view]').forEach(button => button.addEventListener('click', () => { const view = button.dataset.view; if (!view) return; $$('.view').forEach(item => item.classList.toggle('active-view', item.id === view)); $$('.nav-link').forEach(item => item.classList.toggle('active', item.dataset.view === view)); }));
 ['openTopUp', 'openTopUpHero', 'openTopUpSmall', 'openTopUpCard'].forEach(id => $(`#${id}`)?.addEventListener('click', () => openModal('topUpModal')));
