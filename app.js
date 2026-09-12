@@ -320,7 +320,7 @@ $('#registerForm').addEventListener('submit', async event => { event.preventDefa
 
 supabase.auth.onAuthStateChange((event, session) => {
   authLog('Cambio de estado Auth.', { event, hasSession: Boolean(session), user: userLog(session?.user) });
-  if (session?.user && ['SIGNED_IN', 'INITIAL_SESSION', 'TOKEN_REFRESHED'].includes(event)) setTimeout(() => enterApp(session.user), 0);
+  if (session?.user && !state.awaitingOtp && ['SIGNED_IN', 'INITIAL_SESSION', 'TOKEN_REFRESHED'].includes(event)) setTimeout(() => enterApp(session.user), 0);
 });
 const callbackParams = new URLSearchParams(window.location.search);
 const callbackError = callbackParams.get('error') || callbackParams.get('error_code');
