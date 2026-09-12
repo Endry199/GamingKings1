@@ -183,10 +183,18 @@ function openProductDetail(productId) {
     if (!freeFire) { showToast('Paquete seleccionado. La recarga estará disponible próximamente.'); return; }
     $('#freeFireCheck').classList.remove('hidden');
     $('#freeFireCheck').dataset.packageName = selectedPackage?.nombre_paquete || '';
+    $('#freeFireCheck').dataset.validatedId = '';
+    $('#freeFireStatus').className = 'form-message';
     $('#freeFireStatus').textContent = 'Selecciona Validar cuenta antes de confirmar.';
     $('#confirmFreeFire').classList.add('hidden');
   }));
   if (freeFire) {
+    $('#playerIdInput')?.addEventListener('input', () => {
+      $('#freeFireCheck').dataset.validatedId = '';
+      $('#confirmFreeFire').classList.add('hidden');
+      $('#freeFireStatus').className = 'form-message';
+      $('#freeFireStatus').textContent = 'La cuenta cambió. Valídala nuevamente.';
+    });
     $('#validateFreeFire').addEventListener('click', async () => {
       const serviceUserId = $('#playerIdInput')?.value.trim();
       const packageName = $('#freeFireCheck').dataset.packageName;
@@ -198,10 +206,20 @@ function openProductDetail(productId) {
         if (!result.valid) { $('#freeFireStatus').className = 'form-message invalid-account'; $('#freeFireStatus').textContent = 'Cuenta no validada. Revisa el ID.'; $('#confirmFreeFire').classList.add('hidden'); return; }
         $('#freeFireStatus').className = 'form-message valid-account';
         $('#freeFireStatus').textContent = result.accountName ? `Cuenta válida: ${result.accountName}` : 'Cuenta válida.';
+        $('#freeFireCheck').dataset.validatedId = serviceUserId;
         $('#confirmFreeFire').classList.remove('hidden');
       } catch (error) { $('#freeFireStatus').textContent = error.message; } finally { setButtonLoading($('#validateFreeFire'), false); }
     });
-    $('#confirmFreeFire').addEventListener('click', () => showToast('Cuenta validada. La compra quedará conectada en el siguiente paso.'));
+    $('#confirmFreeFire').addEventListener('click', () => {
+      const currentId = $('#playerIdInput')?.value.trim();
+      if (currentId !== $('#freeFireCheck').dataset.validatedId) {
+        $('#confirmFreeFire').classList.add('hidden');
+        $('#freeFireStatus').className = 'form-message';
+        $('#freeFireStatus').textContent = 'La cuenta cambió. Valídala nuevamente.';
+        return;
+      }
+      showToast('Cuenta validada. La compra quedará conectada en el siguiente paso.');
+    });
   }
   openModal('productModal');
 }
