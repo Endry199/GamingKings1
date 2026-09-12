@@ -68,7 +68,7 @@ function updatePasswordStrength() {
 }
 
 function openOtpModal(email, purpose) {
-  state.pendingRegistration = { email, purpose };
+  state.pendingRegistration = { ...state.pendingRegistration, email, purpose };
   let modal = $('#otpModal');
   if (!modal) {
     modal = document.createElement('div');
