@@ -300,3 +300,5 @@ if (callbackError) authLog('Supabase devolvió un error OAuth en la URL.', { err
 const { data: { session } } = await supabase.auth.getSession();
 authLog('Sesión recuperada al cargar la página.', { hasSession: Boolean(session), user: userLog(session?.user) });
 if (session?.user) await enterApp(session.user);
+
+//aaaaa
