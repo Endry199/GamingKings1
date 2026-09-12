@@ -31,8 +31,8 @@ async function sendInvoice(transaction) {
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to: transaction.email,
     subject: `Factura de recarga · ${transaction.id_transaccion}`,
-    text: `Recarga completada. Producto: Free Fire. Paquete: ${transaction.package_name}. ID: ${transaction.service_user_id}. Monto: ${transaction.base_amount} NCoins. Transacción: ${transaction.id_transaccion}.`,
-    html: `<div style="font-family:Arial,sans-serif;color:#17233f;padding:28px"><h2>Factura de recarga</h2><p>Tu compra fue procesada correctamente.</p><p><strong>Producto:</strong> Free Fire</p><p><strong>Paquete:</strong> ${escapeHtml(transaction.package_name)}</p><p><strong>ID de cuenta:</strong> ${escapeHtml(transaction.service_user_id)}</p><p><strong>Monto:</strong> ${escapeHtml(transaction.base_amount)} NCoins</p><p><strong>Transacción:</strong> ${escapeHtml(transaction.id_transaccion)}</p><p><strong>Estado:</strong> Completada</p></div>`
+    text: `Recarga completada. Producto: Free Fire. Paquete: ${transaction.package_name || transaction.product_name}. ID: ${transaction.service_user_id}. Monto: ${transaction.base_amount} NCoins. Transacción: ${transaction.id_transaccion}.`,
+    html: `<div style="font-family:Arial,sans-serif;color:#17233f;padding:28px"><h2>Factura de recarga</h2><p>Tu compra fue procesada correctamente.</p><p><strong>Producto:</strong> Free Fire</p><p><strong>Paquete:</strong> ${escapeHtml(transaction.package_name || transaction.product_name)}</p><p><strong>ID de cuenta:</strong> ${escapeHtml(transaction.service_user_id)}</p><p><strong>Monto:</strong> ${escapeHtml(transaction.base_amount)} NCoins</p><p><strong>Transacción:</strong> ${escapeHtml(transaction.id_transaccion)}</p><p><strong>Estado:</strong> Completada</p></div>`
   });
 }
 
@@ -98,7 +98,7 @@ export async function handler(event) {
     if (!reservedBalance) return json(402, { error: 'Saldo insuficiente. Recarga tu wallet primero, por favor.' });
 
     const localTransactionId = `RA-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
-    const transactionRecord = { id_transaccion: localTransactionId, finalPrice: ncoinsCost, base_amount: ncoinsCost, currency: 'NCoins', paymentMethod: 'Recarga directa', receipt_url: '', status: 'procesando', google_id: authData.user.id, email: authData.user.email, game: 'Free Fire', product_name: 'Free Fire', package_name: packageName, service_user_id: redemptionId, provider_status: 'VALIDATED', amount_charged: providerPrice };
+    const transactionRecord = { id_transaccion: localTransactionId, finalPrice: ncoinsCost, base_amount: ncoinsCost, currency: 'NCoins', paymentMethod: 'Recarga directa', receipt_url: '', status: 'procesando', google_id: authData.user.id, email: authData.user.email, game: 'Free Fire', product_name: packageName, service_user_id: redemptionId, provider_status: 'VALIDATED', amount_charged: providerPrice };
     const { data: transaction, error: transactionError } = await supabaseAdmin.from('transactions').insert(transactionRecord).select('*').single();
     if (transactionError) {
       await supabaseAdmin.from('saldos').update({ saldo_ncoins: Number(balanceRow.saldo_ncoins) }).eq('user_id', authData.user.id);
