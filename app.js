@@ -8,6 +8,8 @@ const state = { user: null, balance: 0, currency: 'usd', rate: 0, amount: 10, pr
 let enteredUserId = null;
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
+const authLog = (message, details = {}) => console.info(`[Niunx Auth] ${message}`, details);
+const userLog = user => ({ id: user?.id || null, emailDomain: user?.email?.split('@')[1] || null, provider: user?.app_metadata?.provider || null });
 
 function showToast(message, error = false) {
   const toast = $('#toast');
@@ -77,8 +79,9 @@ async function verifyOtp() {
 }
 
 async function loadProducts() {
+  authLog('Cargando productos.');
   const { data, error } = await supabase.from('productos').select('*, paquetes(*)').eq('activo', true).order('orden');
-  if (error) throw error;
+  if (error) { authLog('Error cargando productos.', { message: error.message, code: error.code, details: error.details }); throw error; }
   state.products = data || [];
   $('#productCount').textContent = `${state.products.length} disponibles`;
   $('#productsGrid').innerHTML = state.products.map(product => `<button class="product-card" data-product-id="${product.id}"><div class="product-cover">${product.logo_url ? `<img src="${escapeAttr(product.logo_url)}" alt="${escapeAttr(product.nombre)}">` : initials(product.nombre)}</div><div class="product-info"><h3>${escapeHtml(product.nombre)}</h3><p>${escapeHtml(product.descripcion || 'Recarga disponible en Niunx Play.')}</p><span class="product-action">Ver paquetes →</span></div></button>`).join('') || '<div class="empty-state">Aún no hay productos activos.</div>';
@@ -86,8 +89,9 @@ async function loadProducts() {
 }
 
 async function loadSiteConfiguration() {
+  authLog('Cargando configuración del sitio.');
   const { data, error } = await supabase.from('configuracion_sitio').select('img1,img2,img3,img4').order('id').limit(1).maybeSingle();
-  if (error) throw error;
+  if (error) { authLog('Error cargando configuración.', { message: error.message, code: error.code, details: error.details }); throw error; }
   state.banners = [data?.img1, data?.img2, data?.img3, data?.img4].filter(Boolean);
   renderCarousel();
 }
@@ -114,7 +118,9 @@ function openProductDetail(productId) {
 }
 
 async function loadWallet() {
+  authLog('Cargando saldo.', { userId: state.user?.id });
   const { data, error } = await supabase.from('saldos').select('saldo_ncoins').eq('user_id', state.user.id).maybeSingle();
+  if (error) { authLog('Error cargando saldo.', { message: error.message, code: error.code, details: error.details }); }
   if (error && !error.message.includes('saldo_ncoins')) throw error;
   state.balance = Number(data?.saldo_ncoins || 0);
   $('#headerBalance').textContent = state.balance.toFixed(2);
@@ -122,16 +128,18 @@ async function loadWallet() {
 }
 
 async function loadRate() {
+  authLog('Cargando tasa.');
   const { data, error } = await supabase.from('configuracion_sitio').select('tasa_dolar').order('id').limit(1).maybeSingle();
-  if (error) throw error;
+  if (error) { authLog('Error cargando tasa.', { message: error.message, code: error.code, details: error.details }); throw error; }
   state.rate = Number(data?.tasa_dolar || 0);
   $('#exchangeRate').textContent = state.rate ? `${state.rate.toFixed(2)} Bs / USD` : 'No disponible';
   updateAmount();
 }
 
 async function loadTransactions() {
+  authLog('Cargando transacciones.', { userId: state.user?.id });
   const { data, error } = await supabase.from('transactions').select('*').eq('google_id', state.user.id).order('created_at', { ascending: false }).limit(30);
-  if (error) throw error;
+  if (error) { authLog('Error cargando transacciones.', { message: error.message, code: error.code, details: error.details }); throw error; }
   state.transactions = data || [];
   $('#transactionsList').innerHTML = state.transactions.length ? state.transactions.map(transaction => `<div class="transaction-row"><div><strong>#${escapeHtml(transaction.id_transaccion)}</strong><small>${formatDate(transaction.created_at)}</small></div><div>${escapeHtml(transaction.game || 'Recarga de wallet')}<small>${escapeHtml(transaction.paymentMethod || transaction.payment_method || 'Pago')}</small></div><div><strong>${Number(transaction.base_amount ?? transaction.finalPrice ?? 0).toFixed(2)} NCoins</strong><small>${escapeHtml(transaction.currency || '')}</small></div><div><span class="status ${statusClass(transaction.status)}">${statusLabel(transaction.status)}</span></div></div>`).join('') : '<div class="empty-state">Todavía no tienes transacciones.</div>';
   const latest = state.transactions[0];
@@ -151,13 +159,21 @@ function renderUser() {
 }
 
 async function enterApp(user) {
-  if (!user?.id || enteredUserId === user.id) return;
-  enteredUserId = user.id;
+  if (!user?.id) { authLog('No se puede entrar al panel: no hay usuario.'); return; }
+  if (enteredUserId === user.id) { authLog('Entrada duplicada ignorada.', userLog(user)); return; }
+  authLog('Sesión válida recibida; entrando al panel.', userLog(user));
   state.user = user;
   $('#authView').classList.add('hidden');
   $('#appView').classList.remove('hidden');
   renderUser();
-  try { await Promise.all([loadProducts(), loadSiteConfiguration(), loadWallet(), loadRate(), loadTransactions()]); } catch (error) { showToast(error.message, true); }
+  try {
+    await Promise.all([loadProducts(), loadSiteConfiguration(), loadWallet(), loadRate(), loadTransactions()]);
+    enteredUserId = user.id;
+    authLog('Panel cargado correctamente.', userLog(user));
+  } catch (error) {
+    authLog('La sesión existe, pero falló la carga inicial.', { ...userLog(user), message: error.message, code: error.code });
+    showToast(error.message, true);
+  }
 }
 
 function updateAmount() {
@@ -263,11 +279,24 @@ $('#profileButton').addEventListener('click', () => openModal('profileModal'));
 $('#logoutButton').addEventListener('click', async () => { await supabase.auth.signOut(); enteredUserId = null; closeModal('profileModal'); $('#appView').classList.add('hidden'); $('#authView').classList.remove('hidden'); });
 $('#profileForm').addEventListener('submit', async event => { event.preventDefault(); const name = $('#profileName').value.trim(); const password = $('#profilePassword').value; const [first_name, ...rest] = name.split(' '); const payload = { data: { first_name, last_name: rest.join(' ') } }; if (password) payload.password = password; const { error } = await supabase.auth.updateUser(payload); if (error) showToast(error.message, true); else { showToast('Perfil actualizado.'); closeModal('profileModal'); } });
 
-$('#googleLogin').addEventListener('click', () => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } }));
-$('#googleRegister').addEventListener('click', () => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } }));
+async function startGoogleAuth(source) {
+  authLog('Iniciando OAuth con Google.', { source, origin: window.location.origin });
+  const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+  if (error) authLog('Google rechazó el inicio OAuth.', { message: error.message, code: error.code, status: error.status });
+}
+
+$('#googleLogin').addEventListener('click', () => startGoogleAuth('login'));
+$('#googleRegister').addEventListener('click', () => startGoogleAuth('register'));
 $('#loginForm').addEventListener('submit', async event => { event.preventDefault(); const form = new FormData(event.currentTarget); setAuthMessage('Comprobando tus datos...'); state.awaitingOtp = true; const { error } = await supabase.auth.signInWithPassword({ email: form.get('email'), password: form.get('password') }); if (error) { state.awaitingOtp = false; setAuthMessage(error.message, true); return; } try { await callFunction('send-otp', { email: form.get('email'), purpose: 'login' }); state.pendingRegistration = { email: form.get('email'), password: form.get('password'), purpose: 'login' }; await supabase.auth.signOut(); openOtpModal(form.get('email'), 'login'); } catch (otpError) { state.awaitingOtp = false; setAuthMessage(otpError.message, true); await supabase.auth.signOut(); } });
 $('#registerForm').addEventListener('submit', async event => { event.preventDefault(); const form = new FormData(event.currentTarget); if (form.get('password') !== form.get('passwordConfirm')) { setAuthMessage('Las contraseñas no coinciden.', true); return; } try { await callFunction('register-account', { email: form.get('email'), password: form.get('password'), firstName: form.get('firstName'), lastName: form.get('lastName') }); state.pendingRegistration = { email: form.get('email'), password: form.get('password'), purpose: 'register' }; openOtpModal(form.get('email'), 'register'); } catch (error) { setAuthMessage(error.message, true); } });
 
-supabase.auth.onAuthStateChange((event, session) => { if (session?.user && ['SIGNED_IN', 'INITIAL_SESSION', 'TOKEN_REFRESHED'].includes(event)) setTimeout(() => enterApp(session.user), 0); });
+supabase.auth.onAuthStateChange((event, session) => {
+  authLog('Cambio de estado Auth.', { event, hasSession: Boolean(session), user: userLog(session?.user) });
+  if (session?.user && ['SIGNED_IN', 'INITIAL_SESSION', 'TOKEN_REFRESHED'].includes(event)) setTimeout(() => enterApp(session.user), 0);
+});
+const callbackParams = new URLSearchParams(window.location.search);
+const callbackError = callbackParams.get('error') || callbackParams.get('error_code');
+if (callbackError) authLog('Supabase devolvió un error OAuth en la URL.', { error: callbackError, description: callbackParams.get('error_description') });
 const { data: { session } } = await supabase.auth.getSession();
+authLog('Sesión recuperada al cargar la página.', { hasSession: Boolean(session), user: userLog(session?.user) });
 if (session?.user) await enterApp(session.user);
