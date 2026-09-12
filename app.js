@@ -26,8 +26,10 @@ function setAuthMessage(message, error = false) {
 }
 
 async function callFunction(name, body) {
+  authLog('Llamando función Netlify.', { name });
   const response = await fetch(`/.netlify/functions/${name}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const data = await response.json().catch(() => ({}));
+  authLog('Respuesta de función Netlify.', { name, status: response.status, ok: response.ok, error: data.error || null });
   if (!response.ok) throw new Error(data.error || 'No se pudo completar la operación.');
   return data;
 }
