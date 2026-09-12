@@ -26,6 +26,18 @@ function setAuthMessage(message, error = false) {
   element.style.color = error ? 'var(--danger)' : 'var(--green)';
 }
 
+function setButtonLoading(button, loading, label = 'Procesando') {
+  if (!button) return;
+  if (loading) {
+    button.dataset.originalLabel = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = `<span class="loading-spinner" aria-hidden="true"></span>${label}`;
+  } else {
+    button.disabled = false;
+    if (button.dataset.originalLabel) button.innerHTML = button.dataset.originalLabel;
+  }
+}
+
 async function callFunction(name, body) {
   authLog('Llamando función Netlify.', { name });
   const response = await fetch(`/.netlify/functions/${name}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -89,7 +101,7 @@ function openOtpModal(email, purpose) {
     modal.innerHTML = `<section class="modal-card otp-card"><p class="eyebrow">VERIFICACIÓN</p><h2>Confirma que eres tú.</h2><p class="helper">Enviamos un código de 6 dígitos a <strong id="otpEmail"></strong>.</p><p class="otp-hint">¿No lo ves? Revisa también la carpeta de spam.</p><label class="otp-label">Código de seguridad<input id="otpCode" inputmode="numeric" maxlength="6" placeholder="000000"></label><p id="otpMessage" class="form-message"></p><button id="verifyOtp" class="button primary full">Verificar código <span>→</span></button><button id="resendOtp" class="button ghost full otp-resend">Enviar otro código</button></section>`;
     document.body.append(modal);
     $('#verifyOtp').addEventListener('click', verifyOtp);
-    $('#resendOtp').addEventListener('click', async () => { try { await callFunction('send-otp', { email: state.pendingRegistration.email, purpose: state.pendingRegistration.purpose }); $('#otpMessage').textContent = 'Código enviado nuevamente.'; } catch (error) { $('#otpMessage').textContent = error.message; } });
+    $('#resendOtp').addEventListener('click', async () => { setButtonLoading($('#resendOtp'), true, 'Enviando'); try { await callFunction('send-otp', { email: state.pendingRegistration.email, purpose: state.pendingRegistration.purpose }); $('#otpMessage').textContent = 'Código enviado nuevamente.'; } catch (error) { $('#otpMessage').textContent = error.message; } finally { setButtonLoading($('#resendOtp'), false); } });
   }
   $('#otpEmail').textContent = email;
   $('#otpCode').value = '';
@@ -103,7 +115,7 @@ async function verifyOtp() {
   if (!/^\d{6}$/.test(code)) { $('#otpMessage').textContent = 'Escribe un código válido de 6 dígitos.'; return; }
   const pending = state.pendingRegistration;
   if (!pending) { $('#otpMessage').textContent = 'La verificación expiró. Solicita un código nuevo.'; return; }
-  $('#verifyOtp').disabled = true;
+  setButtonLoading($('#verifyOtp'), true, 'Verificando');
   $('#otpMessage').textContent = 'Verificando...';
   try {
     authLog('Validando código OTP.', { purpose: pending.purpose, emailDomain: pending.email.split('@')[1] || null });
@@ -123,7 +135,7 @@ async function verifyOtp() {
   } catch (error) {
     authLog('Falló la verificación OTP.', { message: error.message, code: error.code, status: error.status });
     $('#otpMessage').textContent = error.message;
-  } finally { $('#verifyOtp').disabled = false; }
+  } finally { setButtonLoading($('#verifyOtp'), false); }
 }
 
 async function loadProducts() {
@@ -266,7 +278,7 @@ async function submitProof() {
   if (!file) return;
   const transactionId = `NX-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
   const path = `${state.user.id}/${transactionId}-${file.name.replace(/[^a-z0-9.]/gi, '-')}`;
-  $('#submitProof').disabled = true;
+  setButtonLoading($('#submitProof'), true, 'Enviando comprobante');
   try {
     const { error: uploadError } = await supabase.storage.from('payment-proofs').upload(path, file, { contentType: file.type, upsert: false });
     if (uploadError) throw uploadError;
@@ -280,7 +292,7 @@ async function submitProof() {
     closeModal('proofModal'); closeModal('topUpModal');
     showToast('Comprobante enviado. Te avisaremos por correo.');
     await loadTransactions();
-  } catch (error) { showToast(error.message, true); } finally { $('#submitProof').disabled = false; }
+  } catch (error) { showToast(error.message, true); } finally { setButtonLoading($('#submitProof'), false); }
 }
 
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character])); }
@@ -292,36 +304,63 @@ function statusLabel(value) { return ({ pendiente: 'En revisión', aprobado: 'Ap
 
 let gameFrame;
 let gameRunning = false;
-let gamePlayerY = 0;
-let gameVelocity = 0;
-let gameScore = 0;
-let gameObstacleX = 100;
+let gamePlayerX = 50;
+let gamePlayerY = 145;
+let gameVelocityY = 0;
+let gameHeight = 0;
+let gamePlatforms = [];
+const gameKeys = { left: false, right: false };
 
-function startMiniGame() {
+function buildSkyGame() {
   const game = $('#miniGame');
-  if (gameRunning) return;
-  gameRunning = true; gameScore = 0; gamePlayerY = 0; gameVelocity = 0; gameObstacleX = 100;
-  $('#startGame').classList.add('hidden');
-  game.focus();
-  const tick = () => {
-    if (!gameRunning) return;
-    gameVelocity -= 0.72; gamePlayerY += gameVelocity;
-    if (gamePlayerY <= 0) { gamePlayerY = 0; gameVelocity = 0; }
-    gameObstacleX -= 1.25;
-    if (gameObstacleX < -8) { gameObstacleX = 100; gameScore += 10; }
-    const player = $('.game-player');
-    const obstacle = $('.game-obstacle') || document.createElement('div');
-    if (!obstacle.classList.contains('game-obstacle')) { obstacle.className = 'game-obstacle'; game.append(obstacle); }
-    player.style.bottom = `${18 + gamePlayerY}px`; obstacle.style.left = `${gameObstacleX}%`;
-    $('.game-score').textContent = String(gameScore).padStart(4, '0');
-    const playerRight = 18 + 9; const obstacleLeft = gameObstacleX;
-    if (obstacleLeft < playerRight && obstacleLeft > 5 && gamePlayerY < 18) { gameRunning = false; $('#startGame').textContent = 'Reintentar →'; $('#startGame').classList.remove('hidden'); }
-    if (gameRunning) gameFrame = requestAnimationFrame(tick);
-  };
-  gameFrame = requestAnimationFrame(tick);
+  game.innerHTML = '<div class="game-hud"><span>ALTURA <strong id="gameHeight">0000</strong></span><span id="gamePower" class="game-power">✦</span></div><div class="sky-stars"></div><div class="game-player">✦</div><div class="game-world"></div><button id="startGame" class="game-start">Comenzar ascenso <span>↑</span></button><p class="game-tip">Salta con espacio o toca la pantalla</p>';
+  gamePlatforms = [
+    { x: 45, y: 166, width: 30, power: false },
+    { x: 12, y: 126, width: 25, power: false },
+    { x: 58, y: 88, width: 27, power: true },
+    { x: 30, y: 48, width: 25, power: false },
+    { x: 68, y: 12, width: 24, power: false }
+  ];
+  renderSkyPlatforms();
+  $('#startGame').addEventListener('click', startMiniGame);
 }
 
-function jumpMiniGame() { if (gameRunning && gamePlayerY === 0) gameVelocity = 11; }
+function renderSkyPlatforms() {
+  const world = $('.game-world');
+  if (!world) return;
+  world.innerHTML = gamePlatforms.map((platform, index) => `<span class="sky-cloud ${platform.power ? 'power-cloud' : ''}" data-platform="${index}" style="left:${platform.x}%;top:${platform.y}px;width:${platform.width}%"></span>`).join('');
+}
+
+function startMiniGame() {
+  if (gameRunning) return;
+  buildSkyGame();
+  gameRunning = true; gameHeight = 0; gamePlayerX = 50; gamePlayerY = 145; gameVelocityY = -10;
+  $('#startGame').classList.add('hidden');
+  $('#miniGame').focus();
+  gameFrame = requestAnimationFrame(runSkyGame);
+}
+
+function runSkyGame() {
+  if (!gameRunning) return;
+  const player = $('.game-player');
+  if (gameKeys.left) gamePlayerX -= 1.2;
+  if (gameKeys.right) gamePlayerX += 1.2;
+  gamePlayerX = Math.max(3, Math.min(88, gamePlayerX));
+  const previousBottom = gamePlayerY + 26;
+  gameVelocityY += 0.45;
+  gamePlayerY += gameVelocityY;
+  for (const platform of gamePlatforms) {
+    const landsOnPlatform = gameVelocityY > 0 && previousBottom <= platform.y + 8 && gamePlayerY + 26 >= platform.y && gamePlayerX + 8 > platform.x && gamePlayerX < platform.x + platform.width;
+    if (landsOnPlatform) { gamePlayerY = platform.y - 26; gameVelocityY = platform.power ? -14 : -11; gameHeight += platform.power ? 25 : 10; }
+  }
+  if (gamePlayerY < 70) { const shift = 70 - gamePlayerY; gamePlayerY = 70; gamePlatforms.forEach(platform => { platform.y += shift; }); gameHeight += Math.round(shift); renderSkyPlatforms(); }
+  if (gamePlayerY > 194) { gameRunning = false; $('#startGame').textContent = 'Intentar de nuevo ↑'; $('#startGame').classList.remove('hidden'); }
+  player.style.left = `${gamePlayerX}%`; player.style.top = `${gamePlayerY}px`;
+  $('#gameHeight').textContent = String(gameHeight).padStart(4, '0');
+  if (gameRunning) gameFrame = requestAnimationFrame(runSkyGame);
+}
+
+function jumpMiniGame() { if (gameRunning && gameVelocityY > 0) gameVelocityY = -10; }
 
 $$('.switch').forEach(button => button.addEventListener('click', () => setAuthMode(button.dataset.auth)));
 $('#rememberSession').checked = rememberSessionEnabled();
@@ -333,16 +372,17 @@ $('#profileChangePassword').addEventListener('click', () => { closeModal('profil
 $('#sendResetCode').addEventListener('click', async () => {
   const email = $('#resetEmail').value.trim();
   if (!email) { $('#resetMessage').textContent = 'Escribe tu correo primero.'; return; }
-  $('#sendResetCode').disabled = true;
-  try { await callFunction('send-otp', { email, purpose: 'reset' }); $('#resetMessage').textContent = 'Código enviado. Revisa también la carpeta de spam.'; } catch (error) { $('#resetMessage').textContent = error.message; } finally { $('#sendResetCode').disabled = false; }
+  setButtonLoading($('#sendResetCode'), true, 'Enviando código');
+  try { await callFunction('send-otp', { email, purpose: 'reset' }); $('#resetMessage').textContent = 'Código enviado. Revisa también la carpeta de spam.'; } catch (error) { $('#resetMessage').textContent = error.message; } finally { setButtonLoading($('#sendResetCode'), false); }
 });
 $('#resetForm').addEventListener('submit', async event => {
   event.preventDefault();
   if ($('#resetPassword').value !== $('#resetPasswordConfirm').value) { $('#resetMessage').textContent = 'Las contraseñas no coinciden.'; return; }
   const button = event.currentTarget.querySelector('button[type="submit"]');
-  button.disabled = true;
-  try { await callFunction('reset-password', { email: $('#resetEmail').value.trim(), code: $('#resetCode').value.trim(), password: $('#resetPassword').value }); closeModal('resetModal'); showToast('Contraseña actualizada. Ya puedes iniciar sesión.'); } catch (error) { $('#resetMessage').textContent = error.message; } finally { button.disabled = false; }
+  setButtonLoading(button, true, 'Actualizando contraseña');
+  try { await callFunction('reset-password', { email: $('#resetEmail').value.trim(), code: $('#resetCode').value.trim(), password: $('#resetPassword').value }); closeModal('resetModal'); showToast('Contraseña actualizada. Ya puedes iniciar sesión.'); } catch (error) { $('#resetMessage').textContent = error.message; } finally { setButtonLoading(button, false); }
 });
+buildSkyGame();
 $$('[data-close]').forEach(button => button.addEventListener('click', () => closeModal(button.dataset.close)));
 $$('[data-open]').forEach(button => button.addEventListener('click', event => { event.preventDefault(); openModal(button.dataset.open); }));
 $$('.currency').forEach(button => button.addEventListener('click', () => setCurrency(button.dataset.currency)));
@@ -352,15 +392,46 @@ $('#carouselPrev')?.addEventListener('click', () => moveCarousel(-1));
 $('#carouselNext')?.addEventListener('click', () => moveCarousel(1));
 $('#startGame')?.addEventListener('click', startMiniGame);
 $('#miniGame')?.addEventListener('keydown', event => { if ([' ', 'ArrowUp'].includes(event.key)) { event.preventDefault(); jumpMiniGame(); } });
+$('#miniGame')?.addEventListener('keydown', event => { if (event.key === 'ArrowLeft') gameKeys.left = true; if (event.key === 'ArrowRight') gameKeys.right = true; });
+$('#miniGame')?.addEventListener('keyup', event => { if (event.key === 'ArrowLeft') gameKeys.left = false; if (event.key === 'ArrowRight') gameKeys.right = false; });
+$('#miniGame')?.addEventListener('pointerdown', jumpMiniGame);
 document.addEventListener('keydown', event => { if (event.key === ' ' && document.activeElement?.id !== 'otpCode') jumpMiniGame(); });
 $$('.nav-link,[data-view]').forEach(button => button.addEventListener('click', () => { const view = button.dataset.view; if (!view) return; $$('.view').forEach(item => item.classList.toggle('active-view', item.id === view)); $$('.nav-link').forEach(item => item.classList.toggle('active', item.dataset.view === view)); }));
 ['openTopUp', 'openTopUpHero', 'openTopUpSmall', 'openTopUpCard'].forEach(id => $(`#${id}`)?.addEventListener('click', () => openModal('topUpModal')));
 $('#amountSlider').addEventListener('input', updateAmount);
 $('#amountInput').addEventListener('input', () => { $('#amountSlider').value = $('#amountInput').value; updateAmount(); });
 $('#continuePayment').addEventListener('click', () => { if (!state.paymentMethod) { showToast('Selecciona un método de pago para continuar.', true); return; } $('#proofAmount').textContent = `${state.amount.toFixed(2)} NCoins`; openModal('proofModal'); });
-$('#proofFile').addEventListener('change', event => { const file = event.target.files[0]; $('#fileName').textContent = file ? file.name : ''; $('#submitProof').disabled = !file; });
+$('#proofFile').addEventListener('change', event => {
+  const file = event.target.files[0];
+  const dropzone = $('#dropzone');
+  const fileName = $('#fileName');
+  const submitButton = $('#submitProof');
+  if (!file) {
+    fileName.textContent = '';
+    dropzone.querySelector('.proof-preview')?.remove();
+    dropzone.classList.remove('has-file');
+    dropzone.querySelector('strong').textContent = 'Arrastra tu captura aquí';
+    dropzone.querySelector('small').textContent = 'o toca para buscar · JPG, PNG o WEBP';
+    submitButton.disabled = true;
+    return;
+  }
+  dropzone.classList.add('has-file');
+  dropzone.querySelector('strong').textContent = 'Comprobante listo';
+  dropzone.querySelector('small').textContent = `${file.type || 'Archivo'} · ${(file.size / 1024).toFixed(1)} KB`;
+  fileName.textContent = file.name;
+  dropzone.querySelector('.proof-preview')?.remove();
+  if (file.type.startsWith('image/')) {
+    const preview = document.createElement('img');
+    preview.className = 'proof-preview';
+    preview.alt = 'Vista previa del comprobante';
+    preview.src = URL.createObjectURL(file);
+    dropzone.append(preview);
+  }
+  submitButton.disabled = false;
+});
 $('#dropzone').addEventListener('dragover', event => { event.preventDefault(); $('#dropzone').style.borderColor = 'var(--cyan)'; });
 $('#dropzone').addEventListener('dragleave', () => { $('#dropzone').style.borderColor = ''; });
+$('#dropzone').addEventListener('click', event => { if (event.target !== $('#proofFile')) $('#proofFile').click(); });
 $('#dropzone').addEventListener('drop', event => { event.preventDefault(); $('#proofFile').files = event.dataTransfer.files; $('#proofFile').dispatchEvent(new Event('change')); });
 $('#submitProof').addEventListener('click', submitProof);
 $('#profileButton').addEventListener('click', () => openModal('profileModal'));
@@ -374,8 +445,8 @@ async function startGoogleAuth(source) {
 
 $('#googleLogin').addEventListener('click', () => startGoogleAuth('login'));
 $('#googleRegister').addEventListener('click', () => startGoogleAuth('register'));
-$('#loginForm').addEventListener('submit', async event => { event.preventDefault(); setRememberSession($('#rememberSession').checked); const form = new FormData(event.currentTarget); setAuthMessage('Comprobando tus datos...'); state.awaitingOtp = true; const { error } = await supabase.auth.signInWithPassword({ email: form.get('email'), password: form.get('password') }); if (error) { state.awaitingOtp = false; setAuthMessage(error.message, true); return; } try { await callFunction('send-otp', { email: form.get('email'), purpose: 'login' }); state.pendingRegistration = { email: form.get('email'), password: form.get('password'), purpose: 'login' }; await supabase.auth.signOut(); openOtpModal(form.get('email'), 'login'); } catch (otpError) { state.awaitingOtp = false; setAuthMessage(otpError.message, true); await supabase.auth.signOut(); } });
-$('#registerForm').addEventListener('submit', async event => { event.preventDefault(); const form = new FormData(event.currentTarget); if (form.get('password') !== form.get('passwordConfirm')) { setAuthMessage('Las contraseñas no coinciden.', true); return; } try { await callFunction('register-account', { email: form.get('email'), password: form.get('password'), firstName: form.get('firstName'), lastName: form.get('lastName') }); state.pendingRegistration = { email: form.get('email'), password: form.get('password'), purpose: 'register' }; openOtpModal(form.get('email'), 'register'); } catch (error) { setAuthMessage(error.message, true); } });
+$('#loginForm').addEventListener('submit', async event => { event.preventDefault(); const button = event.currentTarget.querySelector('button[type="submit"]'); setButtonLoading(button, true, 'Comprobando'); setRememberSession($('#rememberSession').checked); const form = new FormData(event.currentTarget); setAuthMessage('Comprobando tus datos...'); state.awaitingOtp = true; const { error } = await supabase.auth.signInWithPassword({ email: form.get('email'), password: form.get('password') }); if (error) { state.awaitingOtp = false; setAuthMessage(error.message, true); setButtonLoading(button, false); return; } try { await callFunction('send-otp', { email: form.get('email'), purpose: 'login' }); state.pendingRegistration = { email: form.get('email'), password: form.get('password'), purpose: 'login' }; await supabase.auth.signOut(); openOtpModal(form.get('email'), 'login'); } catch (otpError) { state.awaitingOtp = false; setAuthMessage(otpError.message, true); await supabase.auth.signOut(); } finally { setButtonLoading(button, false); } });
+$('#registerForm').addEventListener('submit', async event => { event.preventDefault(); const button = event.currentTarget.querySelector('button[type="submit"]'); const form = new FormData(event.currentTarget); if (form.get('password') !== form.get('passwordConfirm')) { setAuthMessage('Las contraseñas no coinciden.', true); return; } setButtonLoading(button, true, 'Creando cuenta'); try { await callFunction('register-account', { email: form.get('email'), password: form.get('password'), firstName: form.get('firstName'), lastName: form.get('lastName') }); state.pendingRegistration = { email: form.get('email'), password: form.get('password'), purpose: 'register' }; openOtpModal(form.get('email'), 'register'); } catch (error) { setAuthMessage(error.message, true); } finally { setButtonLoading(button, false); } });
 
 supabase.auth.onAuthStateChange((event, session) => {
   authLog('Cambio de estado Auth.', { event, hasSession: Boolean(session), user: userLog(session?.user) });
