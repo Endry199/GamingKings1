@@ -312,11 +312,13 @@ let gameBall = { x: 0, y: 0, vx: 3.2, vy: -3.2, radius: 7 };
 let gameBlocks = [];
 const gamePaddleWidth = 96;
 const gameKeys = { left: false, right: false };
+let gameCountdown = false;
+let gameCountdownTimer;
 
 function buildSkyGame() {
   const game = $('#miniGame');
   game.classList.add('sky-climb');
-  game.innerHTML = '<div class="game-hud"><span>NIVEL <strong id="gameLevel">1</strong></span><span>PUNTOS <strong id="gameScore">0000</strong></span><span>VIDAS <strong id="gameLives">♥♥♥</strong></span></div><div class="breakout-board"><div class="breakout-blocks"></div><div class="breakout-ball"></div><div class="breakout-paddle"></div></div><button id="startGame" class="game-start">Jugar breakout <span>→</span></button><p class="game-tip">Mueve la barra con el dedo, mouse o flechas</p>';
+  game.innerHTML = '<div class="game-hud"><span>NIVEL <strong id="gameLevel">1</strong></span><span>PUNTOS <strong id="gameScore">0000</strong></span><span>VIDAS <strong id="gameLives">♥♥♥</strong></span></div><div class="breakout-board"><div class="breakout-blocks"></div><div id="gameCountdown" class="game-countdown"></div><div class="breakout-ball"></div><div class="breakout-paddle"></div></div><button id="startGame" class="game-start">Jugar breakout <span>→</span></button><p class="game-tip">Mueve la barra con el dedo o las flechas</p>';
   gameLevel = 1; gameLives = 3; gameScore = 0;
   resetBreakoutLevel();
 }
@@ -330,8 +332,30 @@ function resetBreakoutLevel() {
   for (let row = 0; row < rows; row += 1) for (let column = 0; column < columns; column += 1) gameBlocks.push({ row, column, alive: true });
   gamePaddleX = Math.max(0, (board.clientWidth - gamePaddleWidth) / 2);
   const speed = gameLevel === 1 ? 2.35 : 3.2 + ((gameLevel - 1) * .25);
-  gameBall = { x: board.clientWidth / 2, y: board.clientHeight - 48, vx: gameLevel % 2 ? speed : -speed, vy: -(gameLevel === 1 ? 2.5 : speed), radius: 7 };
+  gameBall = { x: board.clientWidth / 2, y: 22, vx: gameLevel % 2 ? speed : -speed, vy: gameLevel === 1 ? 2 : speed, radius: 7 };
   renderBreakout();
+}
+
+function beginRoundCountdown() {
+  clearInterval(gameCountdownTimer);
+  const countdown = $('#gameCountdown');
+  if (!countdown) return;
+  gameCountdown = true;
+  let count = 3;
+  countdown.textContent = count;
+  countdown.classList.add('visible');
+  gameCountdownTimer = setInterval(() => {
+    count -= 1;
+    if (count > 0) {
+      countdown.textContent = count;
+      return;
+    }
+    clearInterval(gameCountdownTimer);
+    countdown.textContent = '¡YA!';
+    gameCountdown = false;
+    gameBall.vy = gameLevel === 1 ? 2 : 2.4 + ((gameLevel - 1) * .2);
+    setTimeout(() => countdown.classList.remove('visible'), 350);
+  }, 700);
 }
 
 function renderBreakout() {
@@ -352,13 +376,13 @@ function startMiniGame() {
   gameLevel = 1;
   gameLives = 3;
   gameScore = 0;
-  resetBreakoutLevel(); gameRunning = true; $('#startGame').classList.add('hidden'); $('#miniGame').focus(); gameFrame = requestAnimationFrame(runBreakout);
+  resetBreakoutLevel(); gameRunning = true; $('#startGame').classList.add('hidden'); $('#miniGame').focus(); beginRoundCountdown(); gameFrame = requestAnimationFrame(runBreakout);
 }
 
 function loseBreakoutLife() {
   gameLives -= 1;
   if (gameLives <= 0) { gameRunning = false; $('#startGame').textContent = 'Reintentar partida →'; $('#startGame').classList.remove('hidden'); }
-  else { resetBreakoutLevel(); }
+  else { resetBreakoutLevel(); beginRoundCountdown(); }
 }
 
 function runBreakout() {
@@ -368,6 +392,7 @@ function runBreakout() {
   if (gameKeys.left) gamePaddleX -= 5.5;
   if (gameKeys.right) gamePaddleX += 5.5;
   gamePaddleX = Math.max(0, Math.min(board.clientWidth - paddleWidth, gamePaddleX));
+  if (gameCountdown) { renderBreakout(); if (gameRunning) gameFrame = requestAnimationFrame(runBreakout); return; }
   const previousX = gameBall.x; const previousY = gameBall.y;
   gameBall.x += gameBall.vx; gameBall.y += gameBall.vy;
   if (gameBall.x - gameBall.radius <= 0 || gameBall.x + gameBall.radius >= board.clientWidth) gameBall.vx *= -1;
