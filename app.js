@@ -7,6 +7,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { storage
 
 const state = { user: null, balance: 0, currency: 'usd', rate: 0, amount: 10, paymentMethod: '', products: [], transactions: [], banners: [], carouselIndex: 0, pendingRegistration: null, awaitingOtp: false };
 let enteredUserId = null;
+let enteringUserId = null;
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const authLog = (message, details = {}) => console.info(`[Niunx Auth] ${message}`, details);
@@ -186,6 +187,7 @@ function openProductDetail(productId) {
     if (!freeFire) { showToast('Paquete seleccionado. La recarga estará disponible próximamente.'); return; }
     $('#freeFireCheck').classList.remove('hidden');
     $('#freeFireCheck').dataset.packageName = selectedPackage?.nombre_paquete || '';
+    $('#freeFireCheck').dataset.packageId = selectedPackage?.id || '';
     $('#freeFireCheck').dataset.productId = '';
     $('#freeFireCheck').dataset.validatedId = '';
     $('#freeFireCheck').dataset.validatedPackageName = '';
@@ -222,6 +224,7 @@ function openProductDetail(productId) {
     $('#confirmFreeFire').addEventListener('click', async () => {
       const currentId = $('#playerIdInput')?.value.trim();
       const packageName = $('#freeFireCheck').dataset.packageName;
+      const packageId = $('#freeFireCheck').dataset.packageId;
       if (currentId !== $('#freeFireCheck').dataset.validatedId || packageName !== $('#freeFireCheck').dataset.validatedPackageName) {
         $('#confirmFreeFire').classList.add('hidden');
         $('#freeFireStatus').className = 'form-message';
@@ -229,19 +232,20 @@ function openProductDetail(productId) {
         return;
       }
       const productId = $('#freeFireCheck').dataset.productId;
-      if (!productId || !packageName) {
+      if (!productId || !packageName || !packageId) {
         $('#confirmFreeFire').classList.add('hidden');
         $('#freeFireStatus').textContent = 'Selecciona y valida un paquete antes de comprar.';
         return;
       }
       setButtonLoading($('#confirmFreeFire'), true, 'Comprando');
       try {
-        const result = await callFunction('buy-free-fire', { serviceUserId: currentId, packageName, productId });
+        const result = await callFunction('buy-free-fire', { serviceUserId: currentId, packageName, productId, packageId });
         const transactionId = result.transaction?.transaction_id;
         $('#freeFireStatus').className = 'form-message valid-account';
         $('#freeFireStatus').textContent = transactionId ? `Recarga enviada. Orden #${transactionId}.` : 'Recarga enviada correctamente.';
         $('#confirmFreeFire').classList.add('hidden');
         showToast('Recarga enviada correctamente.');
+        await Promise.all([loadWallet(), loadTransactions()]);
       } catch (error) {
         $('#freeFireStatus').className = 'form-message invalid-account';
         $('#freeFireStatus').textContent = error.message;
@@ -275,7 +279,7 @@ async function loadTransactions() {
   const { data, error } = await supabase.from('transactions').select('*').eq('google_id', state.user.id).order('created_at', { ascending: false }).limit(30);
   if (error) { authLog('Error cargando transacciones.', { message: error.message, code: error.code, details: error.details }); throw error; }
   state.transactions = data || [];
-  $('#transactionsList').innerHTML = state.transactions.length ? state.transactions.map(transaction => `<div class="transaction-row"><div><strong>#${escapeHtml(transaction.id_transaccion)}</strong><small>${formatDate(transaction.created_at)}</small></div><div>${escapeHtml(transaction.game || 'Recarga de wallet')}<small>${escapeHtml(transaction.paymentMethod || transaction.payment_method || 'Pago')}</small></div><div><strong>${Number(transaction.base_amount ?? transaction.finalPrice ?? 0).toFixed(2)} NCoins</strong><small>${escapeHtml(transaction.currency || '')}</small></div><div><span class="status ${statusClass(transaction.status)}">${statusLabel(transaction.status)}</span></div></div>`).join('') : '<div class="empty-state">Todavía no tienes transacciones.</div>';
+  $('#transactionsList').innerHTML = state.transactions.length ? state.transactions.map(transaction => `<div class="transaction-row"><div><strong>#${escapeHtml(transaction.id_transaccion)}</strong><small>${formatDate(transaction.created_at)}</small></div><div>${escapeHtml(transaction.product_name || transaction.game || 'Recarga de wallet')}<small>${escapeHtml(transaction.service_user_id ? `ID: ${transaction.service_user_id}` : transaction.paymentMethod || transaction.payment_method || 'Pago')}</small></div><div><strong>${Number(transaction.base_amount ?? transaction.finalPrice ?? 0).toFixed(2)} NCoins</strong><small>${escapeHtml(transaction.currency || '')}</small></div><div><span class="status ${statusClass(transaction.status)}">${statusLabel(transaction.status)}</span></div></div>`).join('') : '<div class="empty-state">Todavía no tienes transacciones.</div>';
   const latest = state.transactions[0];
   $('#recentSummary').textContent = latest ? `${statusLabel(latest.status)} · ${Number(latest.base_amount ?? latest.finalPrice ?? 0).toFixed(2)} NCoins` : 'Tus movimientos aparecerán aquí.';
 }
@@ -293,7 +297,8 @@ function renderUser() {
 
 async function enterApp(user) {
   if (!user?.id) { authLog('No se puede entrar al panel: no hay usuario.'); return; }
-  if (enteredUserId === user.id) { authLog('Entrada duplicada ignorada.', userLog(user)); return; }
+  if (enteredUserId === user.id || enteringUserId === user.id) { authLog('Entrada duplicada ignorada.', userLog(user)); return; }
+  enteringUserId = user.id;
   authLog('Sesión válida recibida; entrando al panel.', userLog(user));
   state.user = user;
   $('#authView').classList.add('hidden');
@@ -306,6 +311,8 @@ async function enterApp(user) {
   } catch (error) {
     authLog('La sesión existe, pero falló la carga inicial.', { ...userLog(user), message: error.message, code: error.code });
     showToast(error.message, true);
+  } finally {
+    enteringUserId = null;
   }
 }
 
@@ -374,7 +381,7 @@ function escapeAttr(value) { return escapeHtml(value).replace(/javascript:/gi, '
 function initials(value) { return escapeHtml(String(value || 'NP').split(' ').map(word => word[0]).join('').slice(0, 3).toUpperCase()); }
 function formatDate(value) { return new Intl.DateTimeFormat('es-VE', { dateStyle: 'medium' }).format(new Date(value)); }
 function statusClass(value) { return String(value || 'pendiente').toLowerCase().replace(/\s/g, ''); }
-function statusLabel(value) { return ({ pendiente: 'En revisión', aprobado: 'Aprobado', rechazado: 'Rechazado', completado: 'Aprobado' }[String(value || '').toLowerCase()] || 'En revisión'); }
+function statusLabel(value) { return ({ pendiente: 'En revisión', procesando: 'Procesando', aprobado: 'Aprobado', rechazado: 'Rechazado', completado: 'Completado' }[String(value || '').toLowerCase()] || 'En revisión'); }
 
 let gameFrame;
 let gameRunning = false;

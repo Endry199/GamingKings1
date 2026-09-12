@@ -25,9 +25,10 @@ SMTP_PASS=tu-app-password-de-gmail
 SMTP_FROM=Niunx Play <tu-correo>
 TELEGRAM_BOT_TOKEN=tu-token-del-bot
 TELEGRAM_CHAT_ID=tu-chat-id
+RECARGAS_AMERICA_API_TOKEN=tu-clave-privada-de-recargas-america
 ```
 
-Usa una **App Password de Gmail**, no la contraseña normal. La `service_role` solo vive en Netlify Functions.
+Usa una **App Password de Gmail**, no la contraseña normal. La `service_role` y la clave de Recargas América solo viven en Netlify Functions.
 
 ## Telegram
 
