@@ -179,12 +179,21 @@ function openProductDetail(productId) {
   if (!product) return;
   const packages = [...(product.paquetes || [])].sort((a, b) => (a.orden || 0) - (b.orden || 0));
   const freeFire = isFreeFireProduct(product);
-  $('#productDetail').innerHTML = `<div class="detail-banner" style="${product.banner_url ? `background-image:url('${escapeAttr(product.banner_url)}')` : ''}"><div class="detail-logo">${product.logo_url ? `<img src="${escapeAttr(product.logo_url)}" alt="">` : initials(product.nombre)}</div></div><h2>${escapeHtml(product.nombre)}</h2><p class="helper product-description">${escapeHtml(product.descripcion || 'Elige tu paquete y disfruta tu recarga.')}</p>${product.require_id ? '<label class="player-id-label">ID de cuenta<input id="playerIdInput" placeholder="Escribe el ID de tu cuenta" autocomplete="off"></label>' : ''}<div class="package-list">${packages.length ? packages.map(pack => `<button class="package-option" data-package-id="${pack.id}"><span><strong>${escapeHtml(pack.nombre_paquete)}</strong><small>${Number(pack.ncoins || 0).toFixed(2)} NCoins</small></span><span>→</span></button>`).join('') : '<div class="empty-state">Este producto aún no tiene paquetes.</div>'}</div>${freeFire ? '<div id="freeFireCheck" class="free-fire-check hidden"><p id="freeFireStatus" class="form-message"></p><button id="validateFreeFire" class="button primary full" type="button">Validar cuenta</button><button id="confirmFreeFire" class="button primary full hidden" type="button">Confirmar compra</button></div>' : ''}`;
+  const destinationField = product.require_id || freeFire ? '<label class="player-id-label">ID de cuenta<input id="playerIdInput" placeholder="Escribe la ID de la cuenta" autocomplete="off"></label>' : '<label class="player-id-label">WhatsApp de contacto<input id="playerIdInput" type="tel" placeholder="Ej. 0412 123 4545" autocomplete="tel"></label>';
+  const manualOrder = !freeFire ? '<div id="manualOrder" class="free-fire-check hidden"><p id="manualOrderStatus" class="form-message"></p><button id="submitManualOrder" class="button primary full" type="button">Enviar pedido</button></div>' : '';
+  $('#productDetail').innerHTML = `<div class="detail-banner" style="${product.banner_url ? `background-image:url('${escapeAttr(product.banner_url)}')` : ''}"><div class="detail-logo">${product.logo_url ? `<img src="${escapeAttr(product.logo_url)}" alt="">` : initials(product.nombre)}</div></div><h2>${escapeHtml(product.nombre)}</h2><p class="helper product-description">${escapeHtml(product.descripcion || 'Elige tu paquete y disfruta tu recarga.')}</p>${destinationField}<div class="package-list">${packages.length ? packages.map(pack => `<button class="package-option" data-package-id="${pack.id}"><span><strong>${escapeHtml(pack.nombre_paquete)}</strong><small>${Number(pack.ncoins || 0).toFixed(2)} NCoins</small></span><span>→</span></button>`).join('') : '<div class="empty-state">Este producto aún no tiene paquetes.</div>'}</div>${freeFire ? '<div id="freeFireCheck" class="free-fire-check hidden"><p id="freeFireStatus" class="form-message"></p><button id="validateFreeFire" class="button primary full" type="button">Validar cuenta</button><button id="confirmFreeFire" class="button primary full hidden" type="button">Confirmar compra</button></div>' : manualOrder}`;
   $$('#productDetail .package-option').forEach(option => option.addEventListener('click', () => {
     const selectedPackage = packages.find(pack => pack.id === option.dataset.packageId);
     $$('#productDetail .package-option').forEach(item => item.classList.remove('selected'));
     option.classList.add('selected');
-    if (!freeFire) { showToast('Paquete seleccionado. La recarga estará disponible próximamente.'); return; }
+    if (!freeFire) {
+      $('#manualOrder').classList.remove('hidden');
+      $('#manualOrder').dataset.packageId = selectedPackage?.id || '';
+      $('#manualOrder').dataset.packageName = selectedPackage?.nombre_paquete || '';
+      $('#manualOrderStatus').className = 'form-message';
+      $('#manualOrderStatus').textContent = product.require_id ? 'Verifica la ID antes de enviar tu pedido.' : 'Verifica el WhatsApp antes de enviar tu pedido.';
+      return;
+    }
     $('#freeFireCheck').classList.remove('hidden');
     $('#freeFireCheck').dataset.packageName = selectedPackage?.nombre_paquete || '';
     $('#freeFireCheck').dataset.packageId = selectedPackage?.id || '';
@@ -244,12 +253,37 @@ function openProductDetail(productId) {
         $('#freeFireStatus').className = 'form-message valid-account';
         $('#freeFireStatus').textContent = transactionId ? `Recarga enviada. Orden #${transactionId}.` : 'Recarga enviada correctamente.';
         $('#confirmFreeFire').classList.add('hidden');
-        showPurchaseSuccess(result.transaction);
+        showPurchaseSuccess(result.transaction, true);
         await Promise.all([loadWallet(), loadTransactions()]);
       } catch (error) {
         $('#freeFireStatus').className = 'form-message invalid-account';
         $('#freeFireStatus').textContent = error.message;
       } finally { setButtonLoading($('#confirmFreeFire'), false); }
+    });
+  } else {
+    $('#playerIdInput')?.addEventListener('input', () => {
+      $('#submitManualOrder').classList.remove('hidden');
+      $('#manualOrderStatus').className = 'form-message';
+      $('#manualOrderStatus').textContent = product.require_id ? 'La ID cambió. Revisa los datos antes de enviar.' : 'El WhatsApp cambió. Revisa los datos antes de enviar.';
+    });
+    $('#submitManualOrder').addEventListener('click', async () => {
+      const destination = $('#playerIdInput')?.value.trim();
+      const packageId = $('#manualOrder').dataset.packageId;
+      const packageName = $('#manualOrder').dataset.packageName;
+      if (!destination) { $('#playerIdInput').focus(); $('#manualOrderStatus').textContent = product.require_id ? 'Escribe la ID de cuenta primero.' : 'Escribe el WhatsApp primero.'; return; }
+      if (!packageId || !packageName) { $('#manualOrderStatus').textContent = 'Selecciona un paquete primero.'; return; }
+      setButtonLoading($('#submitManualOrder'), true, 'Enviando pedido');
+      try {
+        const result = await callFunction('create-manual-order', { productId: product.id, packageId, packageName, destination });
+        $('#manualOrderStatus').className = 'form-message valid-account';
+        $('#manualOrderStatus').textContent = 'Pedido enviado y saldo descontado. Revisa tu correo.';
+        $('#submitManualOrder').classList.add('hidden');
+        showPurchaseSuccess(result.transaction);
+        await Promise.all([loadWallet(), loadTransactions()]);
+      } catch (error) {
+        $('#manualOrderStatus').className = 'form-message invalid-account';
+        $('#manualOrderStatus').textContent = error.message;
+      } finally { setButtonLoading($('#submitManualOrder'), false); }
     });
   }
   openModal('productModal');
@@ -323,13 +357,15 @@ function renderTransactions() {
   $$('#transactionPagination [data-page]').forEach(button => button.addEventListener('click', () => { state.transactionsPage = Number(button.dataset.page); renderTransactions(); }));
 }
 
-function showPurchaseSuccess(transaction) {
+function showPurchaseSuccess(transaction, manualOrder = false) {
   if (!$('#purchaseSuccessModal')) {
-    document.body.insertAdjacentHTML('beforeend', '<div id="purchaseSuccessModal" class="modal-backdrop"><section class="modal-card purchase-success-modal"><button class="modal-close" data-close="purchaseSuccessModal" aria-label="Cerrar">×</button><p class="eyebrow">RECARGA COMPLETADA</p><h2>¡Compra exitosa!</h2><p id="purchaseSuccessMessage" class="helper"></p><div class="purchase-success-id"><span>Transacción</span><strong id="purchaseSuccessId"></strong></div><button class="button primary full" data-close="purchaseSuccessModal" type="button">Continuar</button></section></div>');
+    document.body.insertAdjacentHTML('beforeend', '<div id="purchaseSuccessModal" class="modal-backdrop"><section class="modal-card purchase-success-modal"><button class="modal-close" data-close="purchaseSuccessModal" aria-label="Cerrar">×</button><p id="purchaseSuccessEyebrow" class="eyebrow"></p><h2 id="purchaseSuccessTitle"></h2><p id="purchaseSuccessMessage" class="helper"></p><div class="purchase-success-id"><span>Transacción</span><strong id="purchaseSuccessId"></strong></div><button class="button primary full" data-close="purchaseSuccessModal" type="button">Continuar</button></section></div>');
     $$('#purchaseSuccessModal [data-close]').forEach(button => button.addEventListener('click', () => closeModal(button.dataset.close)));
   }
+  $('#purchaseSuccessEyebrow').textContent = manualOrder ? 'PEDIDO RECIBIDO' : 'RECARGA COMPLETADA';
+  $('#purchaseSuccessTitle').textContent = manualOrder ? '¡Pedido enviado!' : '¡Compra exitosa!';
   $('#purchaseSuccessId').textContent = transaction?.local_transaction_id || 'Confirmada';
-  $('#purchaseSuccessMessage').textContent = transaction?.item ? `Se procesó ${transaction.item} correctamente.` : 'La recarga se procesó correctamente.';
+  $('#purchaseSuccessMessage').textContent = manualOrder ? 'Tu pedido está pendiente. Te avisaremos por correo cuando sea completado.' : transaction?.item ? `Se procesó ${transaction.item} correctamente.` : 'La recarga se procesó correctamente.';
   openModal('purchaseSuccessModal');
 }
 
