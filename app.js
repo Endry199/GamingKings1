@@ -199,7 +199,6 @@ function renderUser() {
   const name = metadata.first_name || metadata.full_name?.split(' ')[0] || state.user.email?.split('@')[0] || 'amigo';
   $('#userName').textContent = name;
   $('#profileEmail').textContent = state.user.email || '';
-  $('#profileName').value = `${metadata.first_name || ''} ${metadata.last_name || ''}`.trim();
   const initial = name.slice(0, 1).toUpperCase();
   $('#avatarInitial').textContent = initial;
   $('#profileAvatar').textContent = initial;
@@ -309,6 +308,7 @@ $('#rememberSession').addEventListener('change', event => setRememberSession(eve
 $('#registerPassword').addEventListener('input', updatePasswordStrength);
 $('#resetPassword').addEventListener('input', updateResetPasswordStrength);
 $('#forgotPassword').addEventListener('click', () => { $('#resetMessage').textContent = ''; openModal('resetModal'); $('#resetEmail').focus(); });
+$('#profileChangePassword').addEventListener('click', () => { closeModal('profileModal'); $('#resetMessage').textContent = ''; $('#resetEmail').value = state.user?.email || ''; openModal('resetModal'); $('#sendResetCode').focus(); });
 $('#sendResetCode').addEventListener('click', async () => {
   const email = $('#resetEmail').value.trim();
   if (!email) { $('#resetMessage').textContent = 'Escribe tu correo primero.'; return; }
@@ -343,7 +343,6 @@ $('#dropzone').addEventListener('drop', event => { event.preventDefault(); $('#p
 $('#submitProof').addEventListener('click', submitProof);
 $('#profileButton').addEventListener('click', () => openModal('profileModal'));
 $('#logoutButton').addEventListener('click', async () => { await supabase.auth.signOut(); enteredUserId = null; closeModal('profileModal'); $('#appView').classList.add('hidden'); $('#authView').classList.remove('hidden'); });
-$('#profileForm').addEventListener('submit', async event => { event.preventDefault(); const name = $('#profileName').value.trim(); const password = $('#profilePassword').value; const [first_name, ...rest] = name.split(' '); const payload = { data: { first_name, last_name: rest.join(' ') } }; if (password) payload.password = password; const { error } = await supabase.auth.updateUser(payload); if (error) showToast(error.message, true); else { showToast('Perfil actualizado.'); closeModal('profileModal'); } });
 
 async function startGoogleAuth(source) {
   authLog('Iniciando OAuth con Google.', { source, origin: window.location.origin });
