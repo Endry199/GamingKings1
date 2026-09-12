@@ -89,18 +89,29 @@ function openOtpModal(email, purpose) {
 async function verifyOtp() {
   const code = $('#otpCode').value.trim();
   if (!/^\d{6}$/.test(code)) { $('#otpMessage').textContent = 'Escribe un código válido de 6 dígitos.'; return; }
+  const pending = state.pendingRegistration;
+  if (!pending) { $('#otpMessage').textContent = 'La verificación expiró. Solicita un código nuevo.'; return; }
+  $('#verifyOtp').disabled = true;
+  $('#otpMessage').textContent = 'Verificando...';
   try {
-    await callFunction('verify-otp', { email: state.pendingRegistration.email, code, purpose: state.pendingRegistration.purpose });
-    closeModal('otpModal');
-    if (['register', 'login'].includes(state.pendingRegistration.purpose)) {
-      const { email, password } = state.pendingRegistration;
-      state.awaitingOtp = false;
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+    authLog('Validando código OTP.', { purpose: pending.purpose, emailDomain: pending.email.split('@')[1] || null });
+    await callFunction('verify-otp', { email: pending.email, code, purpose: pending.purpose });
+    authLog('Código OTP válido. Iniciando sesión.');
+    const { data, error } = await supabase.auth.signInWithPassword({ email: pending.email, password: pending.password });
+    if (error) {
+      authLog('OTP válido, pero falló el inicio de sesión.', { message: error.message, code: error.code, status: error.status });
+      throw error;
     }
+    state.awaitingOtp = false;
+    closeModal('otpModal');
+    authLog('Inicio de sesión completado después del OTP.', userLog(data.user));
+    await enterApp(data.user);
     showToast('Correo verificado correctamente.');
     state.pendingRegistration = null;
-  } catch (error) { $('#otpMessage').textContent = error.message; }
+  } catch (error) {
+    authLog('Falló la verificación OTP.', { message: error.message, code: error.code, status: error.status });
+    $('#otpMessage').textContent = error.message;
+  } finally { $('#verifyOtp').disabled = false; }
 }
 
 async function loadProducts() {
