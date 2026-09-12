@@ -5,7 +5,7 @@ const SUPABASE_URL = 'https://oznmqczxpywvdmefermv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96bm1xY3p4cHl3dmRtZWZlcm12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyMDg3NzcsImV4cCI6MjA2ODc4NDc3N30.SxB0TpVWDihU6MZwQIG4fT42D9gvWjFQNga93zxRfbc';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { storage: authStorage(), autoRefreshToken: true, persistSession: true, detectSessionInUrl: true } });
 
-const state = { user: null, balance: 0, currency: 'usd', rate: 0, amount: 10, products: [], transactions: [], banners: [], carouselIndex: 0, pendingRegistration: null, awaitingOtp: false };
+const state = { user: null, balance: 0, currency: 'usd', rate: 0, amount: 10, paymentMethod: '', products: [], transactions: [], banners: [], carouselIndex: 0, pendingRegistration: null, awaitingOtp: false };
 let enteredUserId = null;
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -236,8 +236,29 @@ function updateAmount() {
 
 function setCurrency(currency) {
   state.currency = currency;
+  state.paymentMethod = '';
   $$('.currency').forEach(button => button.classList.toggle('active', button.dataset.currency === currency));
+  renderPaymentMethods();
   updateAmount();
+}
+
+function paymentOptions() {
+  if (state.currency === 'usd') return [
+    { id: 'binance-pay', name: 'Binance Pay', details: ['ID: 909792776', 'Correo: endryreyes199@gmail.com'] },
+    { id: 'usdt-bep20', name: 'USDT BEP20', details: ['Dirección: 0x9ebe5fe682123c531408944236a99754886a46dd'] },
+    { id: 'zinli', name: 'Zinli', details: ['Correo: endryreyes199@gmail.com'] }
+  ];
+  return [
+    { id: 'pago-movil', name: 'Pago móvil', details: ['Banco de Venezuela (0102)', 'Teléfono: 04127123391', 'Cédula: 31605458'] },
+    { id: 'pago-ubi', name: 'Pago UBI', details: ['Correo: endryjosuereyessequera@gmail.com'] }
+  ];
+}
+
+function renderPaymentMethods() {
+  const container = $('#paymentMethods');
+  if (!container) return;
+  container.innerHTML = paymentOptions().map(option => `<button class="payment-method ${state.paymentMethod === option.id ? 'selected' : ''}" data-payment-method="${option.id}"><span class="payment-method-title"><strong>${escapeHtml(option.name)}</strong><span>${state.paymentMethod === option.id ? 'Seleccionado' : 'Ver datos →'}</span></span><span class="payment-details">${option.details.map(detail => `<span>${escapeHtml(detail)}</span>`).join('')}</span></button>`).join('');
+  $$('#paymentMethods [data-payment-method]').forEach(button => button.addEventListener('click', () => { state.paymentMethod = button.dataset.paymentMethod; renderPaymentMethods(); }));
 }
 
 async function submitProof() {
@@ -252,7 +273,7 @@ async function submitProof() {
     const { data: publicData } = supabase.storage.from('payment-proofs').getPublicUrl(path);
     const currency = state.currency === 'usd' ? 'USD' : 'VES';
     const finalPrice = state.currency === 'usd' ? state.amount : state.amount * state.rate;
-    const transaction = { id_transaccion: transactionId, finalPrice, base_amount: state.amount, currency, paymentMethod: 'Por definir', receipt_url: publicData.publicUrl, status: 'pendiente', google_id: state.user.id, email: state.user.email };
+    const transaction = { id_transaccion: transactionId, finalPrice, base_amount: state.amount, currency, paymentMethod: state.paymentMethod, receipt_url: publicData.publicUrl, status: 'pendiente', google_id: state.user.id, email: state.user.email };
     const { data, error } = await supabase.from('transactions').insert(transaction).select('id').single();
     if (error) throw error;
       await callFunction('notify-transaction', { transactionId: data.id });
@@ -325,6 +346,7 @@ $('#resetForm').addEventListener('submit', async event => {
 $$('[data-close]').forEach(button => button.addEventListener('click', () => closeModal(button.dataset.close)));
 $$('[data-open]').forEach(button => button.addEventListener('click', event => { event.preventDefault(); openModal(button.dataset.open); }));
 $$('.currency').forEach(button => button.addEventListener('click', () => setCurrency(button.dataset.currency)));
+renderPaymentMethods();
 $('[data-close="productModal"]')?.addEventListener('click', () => closeModal('productModal'));
 $('#carouselPrev')?.addEventListener('click', () => moveCarousel(-1));
 $('#carouselNext')?.addEventListener('click', () => moveCarousel(1));
@@ -335,7 +357,7 @@ $$('.nav-link,[data-view]').forEach(button => button.addEventListener('click', (
 ['openTopUp', 'openTopUpHero', 'openTopUpSmall', 'openTopUpCard'].forEach(id => $(`#${id}`)?.addEventListener('click', () => openModal('topUpModal')));
 $('#amountSlider').addEventListener('input', updateAmount);
 $('#amountInput').addEventListener('input', () => { $('#amountSlider').value = $('#amountInput').value; updateAmount(); });
-$('#continuePayment').addEventListener('click', () => { $('#proofAmount').textContent = `${state.amount.toFixed(2)} NCoins`; openModal('proofModal'); });
+$('#continuePayment').addEventListener('click', () => { if (!state.paymentMethod) { showToast('Selecciona un método de pago para continuar.', true); return; } $('#proofAmount').textContent = `${state.amount.toFixed(2)} NCoins`; openModal('proofModal'); });
 $('#proofFile').addEventListener('change', event => { const file = event.target.files[0]; $('#fileName').textContent = file ? file.name : ''; $('#submitProof').disabled = !file; });
 $('#dropzone').addEventListener('dragover', event => { event.preventDefault(); $('#dropzone').style.borderColor = 'var(--cyan)'; });
 $('#dropzone').addEventListener('dragleave', () => { $('#dropzone').style.borderColor = ''; });
