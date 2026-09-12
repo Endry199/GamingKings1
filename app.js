@@ -67,6 +67,18 @@ function updatePasswordStrength() {
   label.textContent = levels[score];
 }
 
+function updateResetPasswordStrength() {
+  const input = $('#resetPassword');
+  const bar = $('#resetPasswordStrengthBar');
+  const label = $('#resetPasswordStrengthLabel');
+  if (!input || !bar || !label) return;
+  const score = passwordStrength(input.value);
+  const levels = ['Escribe una contraseña', 'Nivel bajo', 'Nivel bajo', 'Nivel medio', 'Nivel alto', 'Nivel muy alto'];
+  bar.style.width = `${score * 20}%`;
+  bar.dataset.level = score < 3 ? 'low' : score < 5 ? 'medium' : 'high';
+  label.textContent = levels[score];
+}
+
 function openOtpModal(email, purpose) {
   state.pendingRegistration = { ...state.pendingRegistration, email, purpose };
   let modal = $('#otpModal');
@@ -295,6 +307,7 @@ $$('.switch').forEach(button => button.addEventListener('click', () => setAuthMo
 $('#rememberSession').checked = rememberSessionEnabled();
 $('#rememberSession').addEventListener('change', event => setRememberSession(event.target.checked));
 $('#registerPassword').addEventListener('input', updatePasswordStrength);
+$('#resetPassword').addEventListener('input', updateResetPasswordStrength);
 $('#forgotPassword').addEventListener('click', () => { $('#resetMessage').textContent = ''; openModal('resetModal'); $('#resetEmail').focus(); });
 $('#sendResetCode').addEventListener('click', async () => {
   const email = $('#resetEmail').value.trim();
