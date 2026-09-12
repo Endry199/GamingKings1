@@ -37,12 +37,33 @@ create table if not exists public.transactions (
 
 alter table public.transactions add column if not exists game text;
 alter table public.transactions add column if not exists product_name text;
+alter table public.transactions add column if not exists package_name text;
 alter table public.transactions add column if not exists service_user_id text;
 alter table public.transactions add column if not exists provider_transaction_id text;
 alter table public.transactions add column if not exists provider_order_id text;
 alter table public.transactions add column if not exists provider_status text;
 alter table public.transactions add column if not exists amount_charged numeric;
 alter table public.transactions add column if not exists details jsonb;
+
+create or replace function public.delete_old_transactions()
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  delete from public.transactions
+  where created_at < now() - interval '1 month';
+$$;
+
+-- Requiere habilitar pg_cron en Supabase si todavía no está activo.
+create extension if not exists pg_cron with schema extensions;
+do $schedule$
+begin
+  if not exists (select 1 from cron.job where jobname = 'delete-old-transactions') then
+    perform cron.schedule('delete-old-transactions', '15 3 * * *', $job$select public.delete_old_transactions();$job$);
+  end if;
+end
+$schedule$;
 
 create table if not exists public.email_verification_codes (
   id uuid primary key default gen_random_uuid(),

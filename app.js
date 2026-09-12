@@ -5,7 +5,7 @@ const SUPABASE_URL = 'https://oznmqczxpywvdmefermv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96bm1xY3p4cHl3dmRtZWZlcm12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyMDg3NzcsImV4cCI6MjA2ODc4NDc3N30.SxB0TpVWDihU6MZwQIG4fT42D9gvWjFQNga93zxRfbc';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { storage: authStorage(), autoRefreshToken: true, persistSession: true, detectSessionInUrl: true } });
 
-const state = { user: null, balance: 0, currency: 'usd', rate: 0, amount: 10, paymentMethod: '', products: [], transactions: [], banners: [], carouselIndex: 0, pendingRegistration: null, awaitingOtp: false };
+const state = { user: null, balance: 0, currency: 'usd', rate: 0, amount: 10, paymentMethod: '', products: [], transactions: [], transactionsPage: 1, transactionsDate: '', banners: [], carouselIndex: 0, pendingRegistration: null, awaitingOtp: false };
 let enteredUserId = null;
 let enteringUserId = null;
 const $ = (selector) => document.querySelector(selector);
@@ -244,7 +244,7 @@ function openProductDetail(productId) {
         $('#freeFireStatus').className = 'form-message valid-account';
         $('#freeFireStatus').textContent = transactionId ? `Recarga enviada. Orden #${transactionId}.` : 'Recarga enviada correctamente.';
         $('#confirmFreeFire').classList.add('hidden');
-        showToast('Recarga enviada correctamente.');
+        showPurchaseSuccess(result.transaction);
         await Promise.all([loadWallet(), loadTransactions()]);
       } catch (error) {
         $('#freeFireStatus').className = 'form-message invalid-account';
@@ -276,12 +276,59 @@ async function loadRate() {
 
 async function loadTransactions() {
   authLog('Cargando transacciones.', { userId: state.user?.id });
-  const { data, error } = await supabase.from('transactions').select('*').eq('google_id', state.user.id).order('created_at', { ascending: false }).limit(30);
+  const { data, error } = await supabase.from('transactions').select('*').eq('google_id', state.user.id).order('created_at', { ascending: false });
   if (error) { authLog('Error cargando transacciones.', { message: error.message, code: error.code, details: error.details }); throw error; }
   state.transactions = data || [];
-  $('#transactionsList').innerHTML = state.transactions.length ? state.transactions.map(transaction => `<div class="transaction-row"><div><strong>#${escapeHtml(transaction.id_transaccion)}</strong><small>${formatDate(transaction.created_at)}</small></div><div>${escapeHtml(transaction.product_name || transaction.game || 'Recarga de wallet')}<small>${escapeHtml(transaction.service_user_id ? `ID: ${transaction.service_user_id}` : transaction.paymentMethod || transaction.payment_method || 'Pago')}</small></div><div><strong>${Number(transaction.base_amount ?? transaction.finalPrice ?? 0).toFixed(2)} NCoins</strong><small>${escapeHtml(transaction.currency || '')}</small></div><div><span class="status ${statusClass(transaction.status)}">${statusLabel(transaction.status)}</span></div></div>`).join('') : '<div class="empty-state">Todavía no tienes transacciones.</div>';
+  ensureTransactionControls();
+  state.transactionsPage = 1;
+  renderTransactions();
   const latest = state.transactions[0];
   $('#recentSummary').textContent = latest ? `${statusLabel(latest.status)} · ${Number(latest.base_amount ?? latest.finalPrice ?? 0).toFixed(2)} NCoins` : 'Tus movimientos aparecerán aquí.';
+}
+
+function ensureTransactionControls() {
+  const list = $('#transactionsList');
+  if (!list) return;
+  const tableCard = list.closest('.table-card');
+  if (!$('#transactionDateFilter')) {
+    const filters = document.createElement('div');
+    filters.className = 'transaction-filters';
+    filters.innerHTML = '<label>Buscar por fecha<input id="transactionDateFilter" type="date"></label><button id="clearTransactionDate" class="button ghost" type="button">Mostrar todas</button>';
+    tableCard.parentElement.insertBefore(filters, tableCard);
+    $('#transactionDateFilter').addEventListener('change', event => { state.transactionsDate = event.target.value; state.transactionsPage = 1; renderTransactions(); });
+    $('#clearTransactionDate').addEventListener('click', () => { state.transactionsDate = ''; $('#transactionDateFilter').value = ''; state.transactionsPage = 1; renderTransactions(); });
+  }
+  if (!$('#transactionPagination')) {
+    const pagination = document.createElement('div');
+    pagination.id = 'transactionPagination';
+    pagination.className = 'transaction-pagination';
+    list.after(pagination);
+  }
+  const header = tableCard.querySelector('.table-head');
+  if (header && header.children.length === 4) header.innerHTML = '<span>Transacción</span><span>Producto</span><span>Detalle</span><span>Monto</span><span>Estado</span>';
+}
+
+function renderTransactions() {
+  const selectedDate = state.transactionsDate;
+  const filtered = state.transactions.filter(transaction => !selectedDate || new Date(transaction.created_at).toISOString().slice(0, 10) === selectedDate);
+  const pageSize = 10;
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  state.transactionsPage = Math.min(state.transactionsPage, pageCount);
+  const start = (state.transactionsPage - 1) * pageSize;
+  const page = filtered.slice(start, start + pageSize);
+  $('#transactionsList').innerHTML = page.length ? page.map(transaction => `<div class="transaction-row"><div><strong>#${escapeHtml(transaction.id_transaccion)}</strong><small>${formatDate(transaction.created_at)}</small></div><div>${escapeHtml(transaction.game || transaction.product_name || 'Recarga de wallet')}</div><div>${escapeHtml(transaction.package_name || (transaction.game ? transaction.product_name : '') || transaction.details?.item || transaction.paymentMethod || transaction.payment_method || 'Pago')}<small>${escapeHtml(transaction.service_user_id ? `ID: ${transaction.service_user_id}` : transaction.paymentMethod || transaction.payment_method || 'Pago')}</small></div><div><strong>${Number(transaction.base_amount ?? transaction.finalPrice ?? 0).toFixed(2)} NCoins</strong><small>${escapeHtml(transaction.currency || '')}</small></div><div><span class="status ${statusClass(transaction.status)}">${statusLabel(transaction.status)}</span></div></div>`).join('') : '<div class="empty-state">No hay transacciones para esta fecha.</div>';
+  $('#transactionPagination').innerHTML = pageCount > 1 ? Array.from({ length: pageCount }, (_, index) => `<button class="pagination-button ${state.transactionsPage === index + 1 ? 'active' : ''}" data-page="${index + 1}">${index + 1}</button>`).join('') : '';
+  $$('#transactionPagination [data-page]').forEach(button => button.addEventListener('click', () => { state.transactionsPage = Number(button.dataset.page); renderTransactions(); }));
+}
+
+function showPurchaseSuccess(transaction) {
+  if (!$('#purchaseSuccessModal')) {
+    document.body.insertAdjacentHTML('beforeend', '<div id="purchaseSuccessModal" class="modal-backdrop"><section class="modal-card purchase-success-modal"><button class="modal-close" data-close="purchaseSuccessModal" aria-label="Cerrar">×</button><p class="eyebrow">RECARGA COMPLETADA</p><h2>¡Compra exitosa!</h2><p id="purchaseSuccessMessage" class="helper"></p><div class="purchase-success-id"><span>Transacción</span><strong id="purchaseSuccessId"></strong></div><button class="button primary full" data-close="purchaseSuccessModal" type="button">Continuar</button></section></div>');
+    $$('#purchaseSuccessModal [data-close]').forEach(button => button.addEventListener('click', () => closeModal(button.dataset.close)));
+  }
+  $('#purchaseSuccessId').textContent = transaction?.local_transaction_id || 'Confirmada';
+  $('#purchaseSuccessMessage').textContent = transaction?.item ? `Se procesó ${transaction.item} correctamente.` : 'La recarga se procesó correctamente.';
+  openModal('purchaseSuccessModal');
 }
 
 function renderUser() {
