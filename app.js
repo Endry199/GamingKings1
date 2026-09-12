@@ -352,6 +352,7 @@ async function enterApp(user) {
   state.user = user;
   $('#authView').classList.add('hidden');
   $('#appView').classList.remove('hidden');
+  buildSkyGame();
   renderUser();
   try {
     await Promise.all([loadProducts(), loadSiteConfiguration(), loadWallet(), loadRate(), loadTransactions()]);
@@ -459,14 +460,24 @@ function buildSkyGame() {
 function resetBreakoutLevel() {
   const board = $('.breakout-board');
   if (!board) return;
-  const columns = 6;
-  const rows = Math.min(2 + gameLevel, 6);
+  const columns = 12;
+  const rows = Math.min(4 + gameLevel, 8);
+  const formations = [
+    (column, row) => Math.abs(column - 5.5) <= row * .9 + 1,
+    (column, row) => row === 0 || row === 1 || column === 0 || column === 11 || (row > 1 && column > 1 && column < 11),
+    (column, row) => Math.abs(column - 5.5) < 4 - Math.abs(row - 2.5) * .7,
+    (column, row) => ((column + row) % 3 !== 1) && (row < 6 - Math.abs(column - 5.5) * .35),
+    (column, row) => Math.abs(column - 5.5) < 1.8 + row * .35 || Math.abs(column - 5.5) > 4.6 - row * .35
+  ];
+  const formation = formations[Math.floor(Math.random() * formations.length)];
   gameBlocks = [];
   gamePowerUps = [];
   for (let row = 0; row < rows; row += 1) for (let column = 0; column < columns; column += 1) {
+    if (!formation(column, row) || Math.random() < .1) continue;
     const roll = Math.random();
-    const type = row === 0 && column % 3 === 0 ? 'solid' : roll < .16 ? 'hard' : 'normal';
-    gameBlocks.push({ row, column, type, hits: type === 'hard' ? 2 : type === 'solid' ? Infinity : 1, alive: true });
+    const type = row === 0 && column % 5 === 0 ? 'solid' : roll < .18 ? 'hard' : 'normal';
+    const shape = ['round', 'diamond', 'cut', 'hex'][Math.floor(Math.random() * 4)];
+    gameBlocks.push({ row, column, type, shape, hits: type === 'hard' ? 2 : type === 'solid' ? Infinity : 1, alive: true });
   }
   gamePaddleWidth = basePaddleWidth;
   gamePaddleX = Math.max(0, (board.clientWidth - gamePaddleWidth) / 2);
@@ -502,8 +513,8 @@ function renderBreakout() {
   const blocks = $('.breakout-blocks');
   const board = $('.breakout-board');
   if (!blocks || !board) return;
-  const gap = 6; const blockWidth = (board.clientWidth - gap * 7) / 6; const blockHeight = 16;
-  blocks.innerHTML = gameBlocks.map((block, index) => `<span class="breakout-block ${block.alive ? '' : 'broken'} block-${block.type} level-${(block.row + gameLevel) % 4}" data-block="${index}" style="left:${gap + block.column * (blockWidth + gap)}px;top:${24 + block.row * (blockHeight + gap)}px;width:${blockWidth}px;height:${blockHeight}px"><b>${block.type === 'hard' ? block.hits : block.type === 'solid' ? '◆' : ''}</b></span>`).join('');
+  const gap = 4; const blockWidth = (board.clientWidth - gap * 13) / 12; const blockHeight = 12;
+  blocks.innerHTML = gameBlocks.map((block, index) => `<span class="breakout-block ${block.alive ? '' : 'broken'} block-${block.type} shape-${block.shape} level-${(block.row + gameLevel) % 4}" data-block="${index}" style="left:${gap + block.column * (blockWidth + gap)}px;top:${18 + block.row * (blockHeight + gap)}px;width:${blockWidth}px;height:${blockHeight}px"><b>${block.type === 'hard' ? block.hits : block.type === 'solid' ? '◆' : ''}</b></span>`).join('');
   const ball = $('.breakout-ball'); const paddle = $('.breakout-paddle');
   const primaryBall = gameBalls[0] || gameBall;
   ball.style.left = `${primaryBall.x - primaryBall.radius}px`; ball.style.top = `${primaryBall.y - primaryBall.radius}px`;
@@ -513,7 +524,7 @@ function renderBreakout() {
   paddle.style.width = `${gamePaddleWidth}px`;
   const powerLayer = $('.breakout-powerups');
   if (powerLayer) powerLayer.innerHTML = gamePowerUps.map((power, index) => `<span class="breakout-powerup power-${power.type}" data-power="${index}" style="left:${power.x}px;top:${power.y}px">${power.type === 'expand' ? '↔' : power.type === 'multi' ? '●●' : '♥'}</span>`).join('');
-  $('#gameLevel').textContent = gameLevel; $('#gameScore').textContent = String(gameScore).padStart(4, '0'); $('#gameLives').textContent = `${'♥'.repeat(gameLives)}${'♡'.repeat(3 - gameLives)}`;
+  $('#gameLevel').textContent = gameLevel; $('#gameScore').textContent = String(gameScore).padStart(4, '0'); $('#gameLives').textContent = `${'♥'.repeat(Math.min(gameLives, 3))}${'♡'.repeat(Math.max(0, 3 - gameLives))}`;
 }
 
 function startMiniGame() {
@@ -540,7 +551,7 @@ function runBreakout() {
   gamePaddleX = Math.max(0, Math.min(board.clientWidth - paddleWidth, gamePaddleX));
   if (gameCountdown) { renderBreakout(); if (gameRunning) gameFrame = requestAnimationFrame(runBreakout); return; }
   const paddleY = board.clientHeight - 22;
-  const gap = 6; const blockWidth = (board.clientWidth - gap * 7) / 6; const blockHeight = 16;
+  const gap = 4; const blockWidth = (board.clientWidth - gap * 13) / 12; const blockHeight = 12;
   gameBalls.forEach(ball => {
     ball.x += ball.vx; ball.y += ball.vy;
     if (ball.x - ball.radius <= 0 || ball.x + ball.radius >= board.clientWidth) { ball.vx *= -1; ball.x = Math.max(ball.radius, Math.min(board.clientWidth - ball.radius, ball.x)); }
@@ -550,7 +561,7 @@ function runBreakout() {
     }
     gameBlocks.forEach(block => {
       if (!block.alive) return;
-      const x = gap + block.column * (blockWidth + gap); const y = 24 + block.row * (blockHeight + gap);
+      const x = gap + block.column * (blockWidth + gap); const y = 18 + block.row * (blockHeight + gap);
       if (ball.x + ball.radius > x && ball.x - ball.radius < x + blockWidth && ball.y + ball.radius > y && ball.y - ball.radius < y + blockHeight) {
         ball.vy *= -1;
         if (block.type === 'solid') return;
@@ -562,7 +573,7 @@ function runBreakout() {
   gamePowerUps.forEach(power => { power.y += 1.8; });
   gamePowerUps = gamePowerUps.filter(power => {
     const caught = power.y + 18 >= paddleY && power.y <= paddleY + 12 && power.x + 18 >= gamePaddleX && power.x <= gamePaddleX + paddleWidth;
-    if (caught) { if (power.type === 'expand') gamePaddleWidth = Math.min(150, gamePaddleWidth + 28); if (power.type === 'life') gameLives = Math.min(5, gameLives + 1); if (power.type === 'multi' && gameBalls.length < 3) gameBalls.push({ ...gameBalls[0], vx: -gameBalls[0].vx, vy: gameBalls[0].vy }); return false; }
+    if (caught) { if (power.type === 'expand') gamePaddleWidth = Math.min(150, gamePaddleWidth + 28); if (power.type === 'life' && gameLives < 3) gameLives += 1; if (power.type === 'multi' && gameBalls.length < 3) gameBalls.push({ ...gameBalls[0], vx: -gameBalls[0].vx, vy: gameBalls[0].vy }); return false; }
     return power.y < board.clientHeight;
   });
   gameBalls = gameBalls.filter(ball => ball.y - ball.radius <= board.clientHeight);
