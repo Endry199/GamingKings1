@@ -78,6 +78,12 @@ export async function handler(event) {
     if (!validationResponse.ok || !validation.success) return json(502, { error: validation.error || 'No se pudo validar la cuenta antes de comprar.' });
     if (validation.data?.status !== true) return json(422, { error: 'La cuenta ya no pudo ser validada. Revisa el ID e inténtalo otra vez.' });
 
+    const { data: balanceRow, error: balanceError } = await supabaseAdmin.from('saldos').select('saldo_ncoins').eq('user_id', authData.user.id).maybeSingle();
+    if (balanceError) throw balanceError;
+    const customerBalance = Number(balanceRow?.saldo_ncoins || 0);
+    console.info('[buy-free-fire] customer wallet checked', { balanceAvailable: Number.isFinite(customerBalance), hasEnoughBalance: Number.isFinite(customerBalance) && customerBalance >= ncoinsCost, required: ncoinsCost });
+    if (!Number.isFinite(customerBalance) || customerBalance < ncoinsCost) return json(402, { error: 'Saldo insuficiente. Recarga tu wallet primero, por favor.' });
+
     const walletResponse = await fetch(`${API_BASE}/wallet`, { headers: apiHeaders });
     const wallet = await readApiResponse(walletResponse);
     const providerBalance = Number(wallet.data?.balance);
@@ -92,10 +98,6 @@ export async function handler(event) {
       try { await sendTelegram(`⚠️ ALERTA DE SALDO\nSaldo Recargas América insuficiente o bajo: $${providerBalance.toFixed(2)}\nProducto: ${product.name}\nCliente: ${authData.user.email || authData.user.id}`); } catch (error) { console.error('[buy-free-fire] low balance Telegram failed', { message: error.message }); }
       return json(503, { error: 'Sin stock disponible en este momento. Inténtalo en unos minutos.' });
     }
-
-    const { data: balanceRow, error: balanceError } = await supabaseAdmin.from('saldos').select('saldo_ncoins').eq('user_id', authData.user.id).maybeSingle();
-    if (balanceError) throw balanceError;
-    if (Number(balanceRow?.saldo_ncoins || 0) < ncoinsCost) return json(402, { error: 'Saldo insuficiente. Recarga tu wallet primero, por favor.' });
 
     const { data: reservedBalance, error: reserveError } = await supabaseAdmin.from('saldos').update({ saldo_ncoins: Number(balanceRow.saldo_ncoins) - ncoinsCost }).eq('user_id', authData.user.id).gte('saldo_ncoins', ncoinsCost).select('saldo_ncoins').maybeSingle();
     if (reserveError) throw reserveError;
