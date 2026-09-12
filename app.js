@@ -311,6 +311,7 @@ let gamePaddleX = 0;
 let gameBall = { x: 0, y: 0, vx: 3.2, vy: -3.2, radius: 7 };
 let gameBlocks = [];
 const gamePaddleWidth = 96;
+const gameKeys = { left: false, right: false };
 
 function buildSkyGame() {
   const game = $('#miniGame');
@@ -364,6 +365,9 @@ function runBreakout() {
   if (!gameRunning) return;
   const board = $('.breakout-board');
   const paddleWidth = gamePaddleWidth; const paddleHeight = 10;
+  if (gameKeys.left) gamePaddleX -= 5.5;
+  if (gameKeys.right) gamePaddleX += 5.5;
+  gamePaddleX = Math.max(0, Math.min(board.clientWidth - paddleWidth, gamePaddleX));
   const previousX = gameBall.x; const previousY = gameBall.y;
   gameBall.x += gameBall.vx; gameBall.y += gameBall.vy;
   if (gameBall.x - gameBall.radius <= 0 || gameBall.x + gameBall.radius >= board.clientWidth) gameBall.vx *= -1;
@@ -418,7 +422,10 @@ $('[data-close="productModal"]')?.addEventListener('click', () => closeModal('pr
 $('#carouselPrev')?.addEventListener('click', () => moveCarousel(-1));
 $('#carouselNext')?.addEventListener('click', () => moveCarousel(1));
 $('#startGame')?.addEventListener('click', startMiniGame);
-$('#miniGame')?.addEventListener('keydown', event => { if ([' ', 'ArrowUp'].includes(event.key)) { event.preventDefault(); jumpMiniGame(); } if (event.key === 'ArrowLeft') { gamePaddleX = Math.max(0, gamePaddleX - 24); renderBreakout(); } if (event.key === 'ArrowRight') { const board = $('.breakout-board'); gamePaddleX = Math.min(board.clientWidth - gamePaddleWidth, gamePaddleX + 24); renderBreakout(); } });
+$('#miniGame')?.addEventListener('keydown', event => { if (['ArrowLeft', 'ArrowRight', ' '].includes(event.key)) event.preventDefault(); if (event.key === 'ArrowLeft') gameKeys.left = true; if (event.key === 'ArrowRight') gameKeys.right = true; if (event.key === ' ') jumpMiniGame(); });
+$('#miniGame')?.addEventListener('keyup', event => { if (event.key === 'ArrowLeft') gameKeys.left = false; if (event.key === 'ArrowRight') gameKeys.right = false; });
+document.addEventListener('keydown', event => { if (!$('#miniGame')?.matches(':focus')) return; if (event.key === 'ArrowLeft') gameKeys.left = true; if (event.key === 'ArrowRight') gameKeys.right = true; });
+document.addEventListener('keyup', event => { if (event.key === 'ArrowLeft') gameKeys.left = false; if (event.key === 'ArrowRight') gameKeys.right = false; });
 $('#miniGame')?.addEventListener('pointermove', event => { if (event.pointerType === 'touch' || event.pointerType === 'pen') moveBreakoutPaddle(event.clientX); });
 $('#miniGame')?.addEventListener('pointerdown', event => { if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return; moveBreakoutPaddle(event.clientX); if (!gameRunning) startMiniGame(); });
 document.addEventListener('keydown', event => { if (event.key === ' ' && document.activeElement?.id !== 'otpCode') jumpMiniGame(); });
