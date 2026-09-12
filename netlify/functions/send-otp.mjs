@@ -10,5 +10,10 @@ export async function handler(event) {
     if (error) throw error;
     await mailer().sendMail(otpEmail(email, verificationCode, purpose));
     return json(200, { ok: true });
-  } catch (error) { return json(500, { error: error.message }); }
+  } catch (error) {
+    const message = error?.message?.includes('email_verification_codes_purpose_check')
+      ? 'La base de datos aún no permite códigos de recuperación. Ejecuta la migración reset en Supabase.'
+      : error.message;
+    return json(500, { error: message });
+  }
 }
