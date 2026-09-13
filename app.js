@@ -412,7 +412,7 @@ function updateAmount() {
   $('#vesConversion').classList.remove('hidden');
   const conversionRows = $('#vesConversion').querySelectorAll('span, strong');
   conversionRows[0].textContent = state.currency === 'usd' ? 'Cambio' : 'Tasa actual';
-  conversionRows[1].textContent = state.currency === 'usd' ? '1 USD = 1 NCoin' : `1 NCoin = ${state.rate.toFixed(2)} Bs`;
+  conversionRows[1].textContent = state.currency === 'usd' ? '1 NCoin = 1 USD': `1 NCoin = ${state.rate.toFixed(2)} Bs`;
   conversionRows[2].textContent = state.currency === 'usd' ? 'Equivalencia' : 'Total en VES';
   conversionRows[3].textContent = state.currency === 'usd' ? `${state.amount.toFixed(2)} USD` : `${(state.amount * state.rate).toFixed(2)} Bs`;
 }
