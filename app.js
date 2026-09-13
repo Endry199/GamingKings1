@@ -479,7 +479,7 @@ let gameLevel = 1;
 let gameLives = 3;
 let gameScore = 0;
 let gamePaddleX = 0;
-let gameBall = { x: 0, y: 0, vx: 3.2, vy: -3.2, radius: 7 };
+let gameBall = { x: 0, y: 0, vx: 0, vy: 0, radius: 7 };
 let gameBalls = [];
 let gameBlocks = [];
 const basePaddleWidth = 96;
@@ -488,9 +488,13 @@ let gamePowerUps = [];
 const gameKeys = { left: false, right: false };
 let gameCountdown = false;
 let gameCountdownTimer;
+let gameCountdownHideTimer;
+let gameLastTime = 0;
+let gameBoardSize = { width: 0, height: 0 };
 
 function buildSkyGame() {
   const game = $('#miniGame');
+  stopMiniGame();
   game.classList.add('sky-climb');
   game.innerHTML = '<div class="game-hud"><span>NIVEL <strong id="gameLevel">1</strong></span><span>PUNTOS <strong id="gameScore">0000</strong></span><span>VIDAS <strong id="gameLives">♥♥♥</strong></span></div><div class="breakout-board"><div class="breakout-blocks"></div><div class="breakout-powerups"></div><div id="gameCountdown" class="game-countdown"></div><div class="breakout-ball"></div><div class="breakout-paddle"></div></div><button id="startGame" class="game-start">Jugar breakout <span>→</span></button><p class="game-tip">Mueve la barra con el dedo o las flechas</p>';
   $('#startGame').addEventListener('click', startMiniGame);
@@ -513,34 +517,48 @@ function resetBreakoutLevel() {
     const shape = row % 2 === 0 ? 'brick' : 'brick-soft';
     gameBlocks.push({ row, column, type, shape, hits: type === 'hard' ? 2 : type === 'solid' ? Infinity : 1, alive: true });
   }
+  if (!gameBlocks.some(block => block.type !== 'solid')) gameBlocks[gameBlocks.length - 1].type = 'normal';
   gamePaddleWidth = basePaddleWidth;
+  gameBoardSize = { width: board.clientWidth, height: board.clientHeight };
   gamePaddleX = Math.max(0, (board.clientWidth - gamePaddleWidth) / 2);
-  const speed = gameLevel === 1 ? 2.35 : 3.2 + ((gameLevel - 1) * .25);
-  gameBall = { x: board.clientWidth / 2, y: board.clientHeight - 55, vx: gameLevel % 2 ? speed : -speed, vy: -(gameLevel === 1 ? 2 : speed), radius: 7 };
+  const speed = Math.min(7.2, 3.1 + ((gameLevel - 1) * .3));
+  gameBall = { x: board.clientWidth / 2, y: board.clientHeight - 55, vx: gameLevel % 2 ? speed : -speed, vy: -speed, radius: 7 };
   gameBalls = [gameBall];
   renderBreakout();
 }
 
 function beginRoundCountdown() {
-  clearInterval(gameCountdownTimer);
+  clearTimeout(gameCountdownTimer);
+  clearTimeout(gameCountdownHideTimer);
   const countdown = $('#gameCountdown');
   if (!countdown) return;
   gameCountdown = true;
   let count = 3;
   countdown.textContent = count;
   countdown.classList.add('visible');
-  gameCountdownTimer = setInterval(() => {
+  const tick = () => {
     count -= 1;
     if (count > 0) {
-      countdown.textContent = count;
+      countdown.textContent = String(count);
+      gameCountdownTimer = setTimeout(tick, 700);
       return;
     }
-    clearInterval(gameCountdownTimer);
     countdown.textContent = '¡YA!';
     gameCountdown = false;
-    gameBalls.forEach(ball => { ball.vy = -Math.abs(gameLevel === 1 ? 2 : 2.4 + ((gameLevel - 1) * .2)); });
-    setTimeout(() => countdown.classList.remove('visible'), 350);
-  }, 700);
+    gameCountdownHideTimer = setTimeout(() => countdown.classList.remove('visible'), 350);
+  };
+  gameCountdownTimer = setTimeout(tick, 700);
+}
+
+function stopMiniGame() {
+  gameRunning = false;
+  cancelAnimationFrame(gameFrame);
+  clearTimeout(gameCountdownTimer);
+  clearTimeout(gameCountdownHideTimer);
+  gameCountdown = false;
+  gameLastTime = 0;
+  gameKeys.left = false;
+  gameKeys.right = false;
 }
 
 function renderBreakout() {
@@ -564,61 +582,153 @@ function renderBreakout() {
 function startMiniGame() {
   if (gameRunning) return;
   if (!$('.breakout-board')) buildSkyGame();
+  stopMiniGame();
   gameLevel = 1;
   gameLives = 3;
   gameScore = 0;
-  resetBreakoutLevel(); gameRunning = true; $('#startGame').classList.add('hidden'); $('#miniGame').focus(); beginRoundCountdown(); gameFrame = requestAnimationFrame(runBreakout);
+  resetBreakoutLevel();
+  gameRunning = true;
+  $('#startGame').textContent = 'Jugar breakout →';
+  $('#startGame').classList.add('hidden');
+  $('#miniGame').focus();
+  beginRoundCountdown();
+  gameFrame = requestAnimationFrame(runBreakout);
 }
 
 function loseBreakoutLife() {
   gameLives -= 1;
-  if (gameLives <= 0) { gameRunning = false; $('#startGame').textContent = 'Reintentar partida →'; $('#startGame').classList.remove('hidden'); }
-  else { resetBreakoutLevel(); beginRoundCountdown(); }
+  gameBalls = [];
+  if (gameLives <= 0) {
+    stopMiniGame();
+    $('#startGame').textContent = 'Reintentar partida →';
+    $('#startGame').classList.remove('hidden');
+    renderBreakout();
+    return;
+  }
+  resetBreakoutLevel();
+  beginRoundCountdown();
 }
 
-function runBreakout() {
-  if (!gameRunning) return;
-  const board = $('.breakout-board');
-  const paddleWidth = gamePaddleWidth; const paddleHeight = 10;
-  if (gameKeys.left) gamePaddleX -= 5.5;
-  if (gameKeys.right) gamePaddleX += 5.5;
-  gamePaddleX = Math.max(0, Math.min(board.clientWidth - paddleWidth, gamePaddleX));
-  if (gameCountdown) { renderBreakout(); if (gameRunning) gameFrame = requestAnimationFrame(runBreakout); return; }
-  const paddleY = board.clientHeight - 22;
-  const gap = 4; const blockWidth = (board.clientWidth - gap * 13) / 12; const blockHeight = 12;
-  gameBalls.forEach(ball => {
-    ball.x += ball.vx; ball.y += ball.vy;
-    if (ball.x - ball.radius <= 0 || ball.x + ball.radius >= board.clientWidth) { ball.vx *= -1; ball.x = Math.max(ball.radius, Math.min(board.clientWidth - ball.radius, ball.x)); }
-    if (ball.y - ball.radius <= 0) { ball.y = ball.radius; ball.vy = Math.abs(ball.vy); }
-    if (ball.vy > 0 && ball.y + ball.radius >= paddleY && ball.y - ball.radius <= paddleY + paddleHeight && ball.x >= gamePaddleX && ball.x <= gamePaddleX + paddleWidth) {
-      const hit = (ball.x - (gamePaddleX + paddleWidth / 2)) / (paddleWidth / 2); ball.vx = hit * 4.5; ball.vy = -Math.abs(ball.vy);
+function getBreakoutMetrics(board) {
+  const gap = 4;
+  const columns = 12;
+  const blockWidth = Math.max(8, (board.clientWidth - gap * (columns + 1)) / columns);
+  return { gap, blockWidth, blockHeight: 12, paddleY: board.clientHeight - 22, paddleHeight: 10 };
+}
+
+function intersectsBallRect(ball, x, y, width, height) {
+  return ball.x + ball.radius > x && ball.x - ball.radius < x + width && ball.y + ball.radius > y && ball.y - ball.radius < y + height;
+}
+
+function bounceFromBlock(ball, x, y, width, height) {
+  const previousX = ball.x - ball.vx;
+  const previousY = ball.y - ball.vy;
+  const cameFromSide = previousX + ball.radius <= x || previousX - ball.radius >= x + width;
+  if (cameFromSide) ball.vx *= -1;
+  else ball.vy *= -1;
+  if (ball.vx > 0) ball.x = x - ball.radius;
+  if (ball.vx < 0 && cameFromSide) ball.x = x + width + ball.radius;
+  if (!cameFromSide && ball.vy > 0) ball.y = y - ball.radius;
+  if (!cameFromSide && ball.vy < 0) ball.y = y + height + ball.radius;
+}
+
+function hitBreakoutBlock(ball, block, metrics) {
+  const x = metrics.gap + block.column * (metrics.blockWidth + metrics.gap);
+  const y = 18 + block.row * (metrics.blockHeight + metrics.gap);
+  if (!intersectsBallRect(ball, x, y, metrics.blockWidth, metrics.blockHeight)) return false;
+  bounceFromBlock(ball, x, y, metrics.blockWidth, metrics.blockHeight);
+  if (block.type === 'solid') return true;
+  block.hits -= 1;
+  if (block.hits <= 0) {
+    block.alive = false;
+    gameScore += 10 * gameLevel;
+    if (Math.random() < .28) gamePowerUps.push({ x: x + metrics.blockWidth / 2 - 9, y, type: ['expand', 'multi', 'life'][Math.floor(Math.random() * 3)] });
+  }
+  return true;
+}
+
+function updateBreakoutBall(ball, metrics, board, delta) {
+  const steps = Math.max(1, Math.ceil(Math.max(Math.abs(ball.vx), Math.abs(ball.vy)) * delta / ball.radius));
+  const stepDelta = delta / steps;
+  for (let step = 0; step < steps; step += 1) {
+    ball.x += ball.vx * stepDelta * 60;
+    ball.y += ball.vy * stepDelta * 60;
+    if (ball.x - ball.radius <= 0 || ball.x + ball.radius >= board.clientWidth) {
+      ball.vx *= -1;
+      ball.x = Math.max(ball.radius, Math.min(board.clientWidth - ball.radius, ball.x));
     }
-    gameBlocks.forEach(block => {
-      if (!block.alive) return;
-      const x = gap + block.column * (blockWidth + gap); const y = 18 + block.row * (blockHeight + gap);
-      if (ball.x + ball.radius > x && ball.x - ball.radius < x + blockWidth && ball.y + ball.radius > y && ball.y - ball.radius < y + blockHeight) {
-        ball.vy *= -1;
-        if (block.type === 'solid') return;
-        block.hits -= 1;
-        if (block.hits <= 0) { block.alive = false; gameScore += 10 * gameLevel; if (Math.random() < .28) gamePowerUps.push({ x: x + blockWidth / 2 - 9, y, type: ['expand', 'multi', 'life'][Math.floor(Math.random() * 3)] }); }
-      }
-    });
-  });
-  gamePowerUps.forEach(power => { power.y += 1.8; });
+    if (ball.y - ball.radius <= 0) {
+      ball.vy = Math.abs(ball.vy);
+      ball.y = ball.radius;
+    }
+    if (ball.vy > 0 && intersectsBallRect(ball, gamePaddleX, metrics.paddleY, gamePaddleWidth, metrics.paddleHeight)) {
+      const hit = Math.max(-1, Math.min(1, (ball.x - (gamePaddleX + gamePaddleWidth / 2)) / (gamePaddleWidth / 2)));
+      const speed = Math.max(3.1, Math.hypot(ball.vx, ball.vy));
+      ball.vx = speed * hit;
+      ball.vy = -Math.sqrt(Math.max(1, speed * speed - ball.vx * ball.vx));
+      ball.y = metrics.paddleY - ball.radius;
+    }
+    const block = gameBlocks.find(item => item.alive && hitBreakoutBlock(ball, item, metrics));
+    if (block) break;
+  }
+}
+
+function updateBreakout(delta) {
+  const board = $('.breakout-board');
+  if (!board) return;
+  const metrics = getBreakoutMetrics(board);
+  gameBalls.forEach(ball => updateBreakoutBall(ball, metrics, board, delta));
+  gamePowerUps.forEach(power => { power.y += 1.8 * delta * 60; });
   gamePowerUps = gamePowerUps.filter(power => {
-    const caught = power.y + 18 >= paddleY && power.y <= paddleY + 12 && power.x + 18 >= gamePaddleX && power.x <= gamePaddleX + paddleWidth;
-    if (caught) { if (power.type === 'expand') gamePaddleWidth = Math.min(150, gamePaddleWidth + 28); if (power.type === 'life' && gameLives < 3) gameLives += 1; if (power.type === 'multi' && gameBalls.length < 3) gameBalls.push({ ...gameBalls[0], vx: -gameBalls[0].vx, vy: gameBalls[0].vy }); return false; }
-    return power.y < board.clientHeight;
+    const caught = intersectsBallRect({ x: power.x + 9, y: power.y + 9, radius: 9 }, gamePaddleX, metrics.paddleY, gamePaddleWidth, metrics.paddleHeight);
+    if (!caught) return power.y < board.clientHeight;
+    if (power.type === 'expand') gamePaddleWidth = Math.min(150, gamePaddleWidth + 28);
+    if (power.type === 'life') gameLives = Math.min(3, gameLives + 1);
+    if (power.type === 'multi' && gameBalls.length < 3 && gameBalls[0]) gameBalls.push({ ...gameBalls[0], vx: -gameBalls[0].vx, vy: gameBalls[0].vy });
+    return false;
   });
   gameBalls = gameBalls.filter(ball => ball.y - ball.radius <= board.clientHeight);
-  if (!gameBalls.length) loseBreakoutLife();
-  if (!gameBlocks.some(block => block.alive && block.type !== 'solid')) { gameLevel += 1; gameScore += 100; resetBreakoutLevel(); }
+  if (!gameBalls.length) {
+    loseBreakoutLife();
+    return;
+  }
+  if (!gameBlocks.some(block => block.alive && block.type !== 'solid')) {
+    gameLevel += 1;
+    gameScore += 100;
+    resetBreakoutLevel();
+    beginRoundCountdown();
+  }
+}
+
+function runBreakout(timestamp) {
+  if (!gameRunning) return;
+  const board = $('.breakout-board');
+  if (!board) return;
+  const delta = Math.min(.032, gameLastTime ? (timestamp - gameLastTime) / 1000 : .016);
+  gameLastTime = timestamp;
+  if (gameKeys.left) gamePaddleX -= 330 * delta;
+  if (gameKeys.right) gamePaddleX += 330 * delta;
+  gamePaddleX = Math.max(0, Math.min(board.clientWidth - gamePaddleWidth, gamePaddleX));
+  if (!gameCountdown) updateBreakout(delta);
   renderBreakout();
   if (gameRunning) gameFrame = requestAnimationFrame(runBreakout);
 }
 
 function moveBreakoutPaddle(clientX) { const board = $('.breakout-board'); if (!board) return; const rect = board.getBoundingClientRect(); gamePaddleX = Math.max(0, Math.min(board.clientWidth - gamePaddleWidth, clientX - rect.left - gamePaddleWidth / 2)); }
-function jumpMiniGame() { if (gameRunning) gameBalls.forEach(ball => { ball.vy = -Math.abs(ball.vy); }); }
+
+function handleGameResize() {
+  const board = $('.breakout-board');
+  if (!board || !board.clientWidth || !board.clientHeight) return;
+  const changed = gameBoardSize.width && (gameBoardSize.width !== board.clientWidth || gameBoardSize.height !== board.clientHeight);
+  gameBoardSize = { width: board.clientWidth, height: board.clientHeight };
+  gamePaddleX = Math.max(0, Math.min(board.clientWidth - gamePaddleWidth, gamePaddleX));
+  if (changed && gameRunning) {
+    resetBreakoutLevel();
+    beginRoundCountdown();
+  } else {
+    renderBreakout();
+  }
+}
 
 $$('.switch').forEach(button => button.addEventListener('click', () => setAuthMode(button.dataset.auth)));
 $('#rememberSession').checked = rememberSessionEnabled();
@@ -648,13 +758,36 @@ renderPaymentMethods();
 $('[data-close="productModal"]')?.addEventListener('click', () => closeModal('productModal'));
 $('#carouselPrev')?.addEventListener('click', () => moveCarousel(-1));
 $('#carouselNext')?.addEventListener('click', () => moveCarousel(1));
-$('#miniGame')?.addEventListener('keydown', event => { if (['ArrowLeft', 'ArrowRight', ' '].includes(event.key)) event.preventDefault(); if (event.key === 'ArrowLeft') gameKeys.left = true; if (event.key === 'ArrowRight') gameKeys.right = true; if (event.key === ' ') jumpMiniGame(); });
-$('#miniGame')?.addEventListener('keyup', event => { if (event.key === 'ArrowLeft') gameKeys.left = false; if (event.key === 'ArrowRight') gameKeys.right = false; });
-document.addEventListener('keydown', event => { if (!$('#miniGame')?.matches(':focus')) return; if (event.key === 'ArrowLeft') gameKeys.left = true; if (event.key === 'ArrowRight') gameKeys.right = true; });
-document.addEventListener('keyup', event => { if (event.key === 'ArrowLeft') gameKeys.left = false; if (event.key === 'ArrowRight') gameKeys.right = false; });
-$('#miniGame')?.addEventListener('pointermove', event => { if (event.pointerType === 'touch' || event.pointerType === 'pen') moveBreakoutPaddle(event.clientX); });
-$('#miniGame')?.addEventListener('pointerdown', event => { if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return; moveBreakoutPaddle(event.clientX); if (!gameRunning) startMiniGame(); });
-document.addEventListener('keydown', event => { if (event.key === ' ' && document.activeElement?.id !== 'otpCode') jumpMiniGame(); });
+$('#miniGame')?.addEventListener('keydown', event => {
+  if (!['ArrowLeft', 'ArrowRight', ' '].includes(event.key)) return;
+  event.preventDefault();
+  if (event.key === 'ArrowLeft') gameKeys.left = true;
+  if (event.key === 'ArrowRight') gameKeys.right = true;
+});
+$('#miniGame')?.addEventListener('keyup', event => {
+  if (event.key === 'ArrowLeft') gameKeys.left = false;
+  if (event.key === 'ArrowRight') gameKeys.right = false;
+});
+$('#miniGame')?.addEventListener('pointermove', event => {
+  if (event.pointerType === 'touch' || event.pointerType === 'pen') moveBreakoutPaddle(event.clientX);
+});
+$('#miniGame')?.addEventListener('pointerdown', event => {
+  if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
+  event.currentTarget.setPointerCapture?.(event.pointerId);
+  moveBreakoutPaddle(event.clientX);
+  if (!gameRunning) startMiniGame();
+});
+window.addEventListener('keydown', event => {
+  if (!$('#miniGame')?.matches(':focus')) return;
+  if (event.key === 'ArrowLeft') gameKeys.left = true;
+  if (event.key === 'ArrowRight') gameKeys.right = true;
+});
+window.addEventListener('keyup', event => {
+  if (event.key === 'ArrowLeft') gameKeys.left = false;
+  if (event.key === 'ArrowRight') gameKeys.right = false;
+});
+window.addEventListener('blur', () => { gameKeys.left = false; gameKeys.right = false; });
+window.addEventListener('resize', handleGameResize);
 $$('.nav-link,[data-view]').forEach(button => button.addEventListener('click', () => { const view = button.dataset.view; if (!view) return; $$('.view').forEach(item => item.classList.toggle('active-view', item.id === view)); $$('.nav-link').forEach(item => item.classList.toggle('active', item.dataset.view === view)); }));
 ['openTopUp', 'openTopUpHero', 'openTopUpSmall', 'openTopUpCard'].forEach(id => $(`#${id}`)?.addEventListener('click', () => openModal('topUpModal')));
 $('#amountSlider').addEventListener('input', updateAmount);
