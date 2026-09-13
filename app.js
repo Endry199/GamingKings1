@@ -407,10 +407,14 @@ function updateAmount() {
   $('#amountSlider').value = state.amount;
   $('#amountInput').value = state.amount.toFixed(2);
   $('#amountValue').textContent = state.amount.toFixed(2);
-  $('#amountCurrency').textContent = state.currency === 'usd' ? 'USD' : 'NCoins';
+  $('#amountCurrency').textContent = 'NCoins';
   $('#inputCurrency').textContent = state.currency === 'usd' ? 'USD' : 'NCoins';
-  $('#vesConversion').classList.toggle('hidden', state.currency !== 'ves');
-  $('#vesTotal').textContent = `${(state.amount * state.rate).toFixed(2)} Bs`;
+  $('#vesConversion').classList.remove('hidden');
+  const conversionRows = $('#vesConversion').querySelectorAll('span, strong');
+  conversionRows[0].textContent = state.currency === 'usd' ? 'Cambio' : 'Tasa actual';
+  conversionRows[1].textContent = state.currency === 'usd' ? '1 USD = 1 NCoin' : `1 NCoin = ${state.rate.toFixed(2)} Bs`;
+  conversionRows[2].textContent = state.currency === 'usd' ? 'Equivalencia' : 'Total en VES';
+  conversionRows[3].textContent = state.currency === 'usd' ? `${state.amount.toFixed(2)} USD` : `${(state.amount * state.rate).toFixed(2)} Bs`;
 }
 
 function setCurrency(currency) {
