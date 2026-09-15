@@ -406,6 +406,7 @@ async function enterApp(user) {
   try {
     await Promise.all([loadProducts(), loadSiteConfiguration(), loadWallet(), loadRate(), loadTransactions()]);
     enteredUserId = user.id;
+    try { createReferralUi(); } catch (e) { console.error('createReferralUi failed', e); }
     authLog('Panel cargado correctamente.', userLog(user));
   } catch (error) {
     authLog('La sesión existe, pero falló la carga inicial.', { ...userLog(user), message: error.message, code: error.code });
@@ -707,7 +708,14 @@ $('#dropzone').addEventListener('click', event => { if (event.target !== $('#pro
 $('#dropzone').addEventListener('drop', event => { event.preventDefault(); $('#proofFile').files = event.dataTransfer.files; $('#proofFile').dispatchEvent(new Event('change')); });
 $('#submitProof').addEventListener('click', submitProof);
 $('#profileButton').addEventListener('click', () => openModal('profileModal'));
-$('#logoutButton').addEventListener('click', async () => { await supabase.auth.signOut(); enteredUserId = null; closeModal('profileModal'); $('#appView').classList.add('hidden'); $('#authView').classList.remove('hidden'); });
+$('#logoutButton').addEventListener('click', async () => {
+  try { await supabase.auth.signOut(); } catch (e) { console.error('logout failed', e); }
+  enteredUserId = null;
+  closeModal('profileModal');
+  $('#appView').classList.add('hidden');
+  $('#authView').classList.remove('hidden');
+  removeReferralUi();
+});
 
 async function startGoogleAuth(source) {
   authLog('Iniciando OAuth con Google.', { source, origin: window.location.origin });
@@ -733,8 +741,8 @@ if (session?.user) await enterApp(session.user);
 
 //aaaaa
 
-// Insertar enlace discreto "Conviértete en colaborador" y crear modal dinámico
-(function insertReferralUi() {
+// Crear interfaz de colaborador (no la inserta hasta que el usuario esté autenticado)
+function createReferralUi() {
   try {
     const anchor = document.createElement('a');
     anchor.id = 'becomeCollaborator';
@@ -747,7 +755,9 @@ if (session?.user) await enterApp(session.user);
     anchor.style.color = 'var(--muted)';
     anchor.style.zIndex = '9999';
     anchor.textContent = 'Conviértete en colaborador';
-    document.body.appendChild(anchor);
+    // Añadir en el footer si existe, sino al body
+    const footer = document.querySelector('footer') || document.getElementById('footer');
+    if (footer) footer.appendChild(anchor); else document.body.appendChild(anchor);
 
     anchor.addEventListener('click', async (e) => {
       e.preventDefault();
@@ -808,4 +818,13 @@ if (session?.user) await enterApp(session.user);
       }
     });
   } catch (e) { console.error('referral UI init failed', e); }
-})();
+}
+
+function removeReferralUi() {
+  try {
+    const anchor = document.getElementById('becomeCollaborator');
+    if (anchor) anchor.remove();
+    const modal = document.getElementById('referralModal');
+    if (modal) modal.remove();
+  } catch (e) { console.error('removeReferralUi failed', e); }
+}

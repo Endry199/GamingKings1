@@ -16,6 +16,7 @@ export async function handler(event) {
 
     // Obtener, crear o rotar código de colaborador
     if (action === 'get' || action === 'create' || action === 'rotate') {
+      console.info('[referral-code] action', { action, userId: authData.user.id });
       // Buscar código existente
       const { data: existing } = await supabaseAdmin.from('colaboradores').select('id,code').eq('user_id', authData.user.id).maybeSingle();
       const site = process.env.SITE_URL || '';
@@ -27,8 +28,10 @@ export async function handler(event) {
       // Generar código nuevo
       const code = `REF-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
       if (existing && action === 'rotate') {
+        console.info('[referral-code] rotating code', { userId: authData.user.id, old: existing.code });
         const { error: updateError } = await supabaseAdmin.from('colaboradores').update({ code }).eq('id', existing.id);
         if (updateError) throw updateError;
+        console.info('[referral-code] rotated code', { userId: authData.user.id, new: code });
         return json(200, { ok: true, code, link: site ? `${site}?ref=${encodeURIComponent(code)}` : null });
       }
 
@@ -39,6 +42,7 @@ export async function handler(event) {
     }
 
     if (action === 'earnings' || action === 'list') {
+      console.info('[referral-code] listing earnings', { userId: authData.user.id });
       // Listar ganancias del colaborador
       const { data: earnings } = await supabaseAdmin.from('referral_earnings').select('id, referred_user_id, transaction_id, profit, credited_amount, created_at').eq('referrer_user_id', authData.user.id).order('created_at', { ascending: false }).limit(200);
       // Recuperar datos de usuarios referidos
