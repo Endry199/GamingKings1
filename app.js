@@ -6,6 +6,18 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { storage: authStorage(), autoRefreshToken: true, persistSession: true, detectSessionInUrl: true } });
 
 const state = { user: null, balance: 0, currency: 'usd', rate: 0, amount: 10, paymentMethod: '', products: [], transactions: [], transactionsPage: 1, transactionsDate: '', banners: [], carouselIndex: 0, pendingRegistration: null, awaitingOtp: false };
+// Capturar código de referido desde la URL (?ref=...) y almacenarlo en localStorage
+(function captureReferralFromUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      localStorage.setItem('referral_code', ref);
+      // Mensaje discreto para confirmar almacenamiento
+      setTimeout(() => showToast('Código de referido guardado.'), 300);
+    }
+  } catch (e) { /* no bloquear si falla */ }
+})();
 let enteredUserId = null;
 let enteringUserId = null;
 const $ = (selector) => document.querySelector(selector);
@@ -248,7 +260,8 @@ function openProductDetail(productId) {
       }
       setButtonLoading($('#confirmFreeFire'), true, 'Comprando');
       try {
-        const result = await callFunction('buy-free-fire', { serviceUserId: currentId, packageName, productId, packageId });
+        const referralCode = localStorage.getItem('referral_code') || null;
+        const result = await callFunction('buy-free-fire', { serviceUserId: currentId, packageName, productId, packageId, referralCode });
         const transactionId = result.transaction?.transaction_id;
         $('#freeFireStatus').className = 'form-message valid-account';
         $('#freeFireStatus').textContent = transactionId ? `Recarga enviada. Orden #${transactionId}.` : 'Recarga enviada correctamente.';
@@ -719,3 +732,80 @@ authLog('Sesión recuperada al cargar la página.', { hasSession: Boolean(sessio
 if (session?.user) await enterApp(session.user);
 
 //aaaaa
+
+// Insertar enlace discreto "Conviértete en colaborador" y crear modal dinámico
+(function insertReferralUi() {
+  try {
+    const anchor = document.createElement('a');
+    anchor.id = 'becomeCollaborator';
+    anchor.href = '#';
+    anchor.title = 'Conviértete en colaborador';
+    anchor.style.position = 'fixed';
+    anchor.style.right = '12px';
+    anchor.style.bottom = '12px';
+    anchor.style.fontSize = '12px';
+    anchor.style.color = 'var(--muted)';
+    anchor.style.zIndex = '9999';
+    anchor.textContent = 'Conviértete en colaborador';
+    document.body.appendChild(anchor);
+
+    anchor.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        const result = await callFunction('referral-code', { action: 'get' });
+        const code = result.code;
+        const link = result.link || `${window.location.origin}?ref=${encodeURIComponent(code)}`;
+        let modal = document.querySelector('#referralModal');
+        if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'referralModal';
+          modal.className = 'modal-backdrop hidden';
+          modal.innerHTML = `<section class="modal-card"><p class="eyebrow">COLABORADOR</p><h2>Tu enlace de referido</h2><p class="helper">Comparte este enlace con tus clientes para obtener 40% de tus ganancias en Free Fire.</p><label class="form-label">Enlace<input id="referralLink" readonly></label><label class="form-label">Código<input id="referralCodeInput" readonly></label><p id="referralMessage" class="form-message"></p><div style="display:flex;gap:8px;margin-bottom:10px"><button id="copyReferral" class="button primary">Copiar enlace</button><button id="rotateReferral" class="button ghost">Rotar código</button><button id="closeReferral" class="button ghost">Cerrar</button></div><div id="referralEarningsContainer" style="max-height:360px;overflow:auto;margin-top:8px"></div></section>`;
+          document.body.appendChild(modal);
+          document.getElementById('closeReferral').addEventListener('click', () => modal.classList.add('hidden'));
+          document.getElementById('copyReferral').addEventListener('click', async () => {
+            const linkInput = document.getElementById('referralLink');
+            try { await navigator.clipboard.writeText(linkInput.value); document.getElementById('referralMessage').textContent = 'Enlace copiado.'; } catch (err) { document.getElementById('referralMessage').textContent = 'No se pudo copiar. Copia manualmente.'; }
+          });
+          document.getElementById('rotateReferral').addEventListener('click', async () => {
+            try {
+              const res = await callFunction('referral-code', { action: 'rotate' });
+              const newCode = res.code;
+              const newLink = res.link || `${window.location.origin}?ref=${encodeURIComponent(newCode)}`;
+              document.getElementById('referralLink').value = newLink;
+              document.getElementById('referralCodeInput').value = newCode;
+              document.getElementById('referralMessage').textContent = 'Código rotado correctamente.';
+            } catch (err) {
+              document.getElementById('referralMessage').textContent = err.message || 'No se pudo rotar el código.';
+            }
+          });
+          // Controles para cargar historial de referidos
+          async function loadReferralEarnings() {
+            const container = document.getElementById('referralEarningsContainer');
+            container.innerHTML = '<p class="helper">Cargando historial...</p>';
+            try {
+              const res = await callFunction('referral-code', { action: 'earnings' });
+              const total = res.total || 0;
+              const earnings = res.earnings || [];
+              const rows = earnings.map(e => {
+                const name = e.referred?.nombre || e.referred?.email || e.referred_user_id || 'Anónimo';
+                const date = new Date(e.created_at).toLocaleString();
+                return `<tr><td>${escapeHtml(name)}</td><td>${escapeHtml(e.transaction_id || '')}</td><td>${Number(e.profit).toFixed(2)}</td><td>${Number(e.credited_amount).toFixed(2)}</td><td>${date}</td></tr>`;
+              }).join('');
+              container.innerHTML = `<div style="margin-bottom:8px"><strong>Total acreditado:</strong> ${Number(total).toFixed(2)} NCoins</div><table class="table"><thead><tr><th>Cliente</th><th>Transacción</th><th>Profit</th><th>Acreditado</th><th>Fecha</th></tr></thead><tbody>${rows}</tbody></table>`;
+            } catch (err) {
+              container.innerHTML = `<p class="form-message invalid-account">${err.message || 'No se pudo cargar el historial.'}</p>`;
+            }
+          }
+        }
+        document.getElementById('referralLink').value = link;
+        document.getElementById('referralCodeInput').value = code;
+        // Cargar historial inmediatamente
+        try { loadReferralEarnings(); } catch (e) { /* ignore */ }
+        modal.classList.remove('hidden');
+      } catch (err) {
+        showToast(err.message || 'No se pudo recuperar el código de referido.', true);
+      }
+    });
+  } catch (e) { console.error('referral UI init failed', e); }
+})();

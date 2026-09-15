@@ -46,7 +46,7 @@ export async function handler(event) {
     const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !authData.user) return json(401, { error: 'La sesión no es válida. Inicia sesión nuevamente.' });
 
-    const { serviceUserId, packageName, productId, packageId } = readBody(event);
+    const { serviceUserId, packageName, productId, packageId, referralCode } = readBody(event);
     const redemptionId = String(serviceUserId || '').trim();
     console.info('[buy-free-fire] request received', { userId: authData.user.id, hasEmail: Boolean(authData.user.email), hasRedemptionId: Boolean(redemptionId), productId, packageId });
     if (!redemptionId || !packageName || !productId || !packageId) return json(400, { error: 'Falta el ID de cuenta, el paquete o el producto.' });
@@ -104,7 +104,23 @@ export async function handler(event) {
     if (!reservedBalance) return json(402, { error: 'Saldo insuficiente. Recarga tu wallet primero, por favor.' });
 
     const localTransactionId = `RA-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
-    const transactionRecord = { id_transaccion: localTransactionId, finalPrice: ncoinsCost, base_amount: ncoinsCost, currency: 'NCoins', paymentMethod: 'Recarga directa', receipt_url: '', status: 'procesando', google_id: authData.user.id, email: authData.user.email, game: 'Free Fire', product_name: packageName, service_user_id: redemptionId, provider_status: 'VALIDATED', amount_charged: providerPrice };
+    // Resolver posible referidor por código
+    let referrerUserId = null;
+    if (referralCode) {
+      try {
+        const { data: refRow } = await supabaseAdmin.from('colaboradores').select('user_id').eq('code', referralCode).maybeSingle();
+        if (refRow?.user_id) {
+          // Evitar auto-referidos: no aceptar si el código pertenece al mismo usuario
+          if (String(refRow.user_id) !== String(authData.user.id)) {
+            referrerUserId = refRow.user_id;
+          } else {
+            console.info('[buy-free-fire] referral ignored: self-referral detected', { userId: authData.user.id });
+          }
+        }
+      } catch (err) { console.error('[buy-free-fire] lookup collaborator failed', { err: err?.message || err }); }
+    }
+
+    const transactionRecord = { id_transaccion: localTransactionId, finalPrice: ncoinsCost, base_amount: ncoinsCost, currency: 'NCoins', paymentMethod: 'Recarga directa', receipt_url: '', status: 'procesando', google_id: authData.user.id, email: authData.user.email, game: 'Free Fire', product_name: packageName, service_user_id: redemptionId, provider_status: 'VALIDATED', amount_charged: providerPrice, referrer_user_id: referrerUserId };
     const { data: transaction, error: transactionError } = await supabaseAdmin.from('transactions').insert(transactionRecord).select('*').single();
     if (transactionError) {
       await supabaseAdmin.from('saldos').update({ saldo_ncoins: Number(balanceRow.saldo_ncoins) }).eq('user_id', authData.user.id);
@@ -131,10 +147,47 @@ export async function handler(event) {
     const providerTransactionId = purchase.data?.transaction_id || null;
     const providerOrderId = purchase.data?.order_id || purchase.data?.reference || null;
     const providerStatus = purchase.data?.status || 'COMPLETED';
-    const { error: updateError } = await supabaseAdmin.from('transactions').update({ status: 'completado', completed_at: new Date().toISOString(), completed_by: 'recargas-america', provider_transaction_id: providerTransactionId, provider_order_id: providerOrderId, provider_status: providerStatus, amount_charged: Number(purchase.data?.amount_charged || providerPrice), details: purchase.data || {} }).eq('id', transaction.id);
+    const amountChargedFinal = Number(purchase.data?.amount_charged || providerPrice);
+    const { error: updateError } = await supabaseAdmin.from('transactions').update({ status: 'completado', completed_at: new Date().toISOString(), completed_by: 'recargas-america', provider_transaction_id: providerTransactionId, provider_order_id: providerOrderId, provider_status: providerStatus, amount_charged: amountChargedFinal, details: purchase.data || {} }).eq('id', transaction.id);
     if (updateError) throw updateError;
     const completedTransaction = { ...transaction, status: 'completado', provider_transaction_id: providerTransactionId, provider_order_id: providerOrderId, provider_status: providerStatus, amount_charged: Number(purchase.data?.amount_charged || providerPrice) };
     console.info('[buy-free-fire] purchase completed', { localTransactionId, providerTransactionId, providerOrderId, userId: authData.user.id });
+    // Si hay referidor, calcular ganancia y acreditar 40% al saldo del referidor
+    try {
+      if (referrerUserId) {
+        // Obtener tasa de conversión (Bs por USD) para convertir el precio del proveedor a NCoins
+        const { data: cfg } = await supabaseAdmin.from('configuracion_sitio').select('tasa_dolar').order('id').limit(1).maybeSingle();
+        const tasa = Number(cfg?.tasa_dolar) || 1;
+        const providerCostInNcoins = Number(providerPrice || 0) * tasa;
+        const profit = Number((ncoinsCost - providerCostInNcoins).toFixed(2));
+        const MIN_PROFIT_TO_CREDIT = 0.1; // mínimo profit para acreditar
+        console.info('[buy-free-fire] referral profit calculation', { ncoinsCost, providerPrice, tasa, providerCostInNcoins, profit });
+        if (profit >= MIN_PROFIT_TO_CREDIT) {
+          const credit = Number((profit * 0.4).toFixed(2));
+          // Actualizar saldo del referidor
+          try {
+            const { data: refSaldo } = await supabaseAdmin.from('saldos').select('saldo_ncoins').eq('user_id', referrerUserId).maybeSingle();
+            if (refSaldo) {
+              await supabaseAdmin.from('saldos').update({ saldo_ncoins: Number(refSaldo.saldo_ncoins || 0) + credit }).eq('user_id', referrerUserId);
+            } else {
+              await supabaseAdmin.from('saldos').insert({ user_id: referrerUserId, saldo_ncoins: credit, ultima_recarga: new Date().toISOString() });
+            }
+          } catch (err) { console.error('[buy-free-fire] updating referrer balance failed', { err: err?.message || err }); }
+
+          // Registrar ganancia (evitar duplicados por transaction_id)
+          try {
+            const { data: existing } = await supabaseAdmin.from('referral_earnings').select('id').eq('transaction_id', transaction.id).maybeSingle();
+            if (!existing) {
+              await supabaseAdmin.from('referral_earnings').insert({ referrer_user_id: referrerUserId, referred_user_id: authData.user.id, transaction_id: transaction.id, profit: profit, credited_amount: credit });
+            } else {
+              console.info('[buy-free-fire] referral_earnings already exists for transaction', { transactionId: transaction.id });
+            }
+          } catch (err) { console.error('[buy-free-fire] inserting referral_earnings failed', { err: err?.message || err }); }
+        } else {
+          console.info('[buy-free-fire] profit below threshold, no credit', { profit, MIN_PROFIT_TO_CREDIT });
+        }
+      }
+    } catch (err) { console.error('[buy-free-fire] referral processing failed', { err: err?.message || err }); }
     try { await sendInvoice(completedTransaction); } catch (error) { console.error('[buy-free-fire] invoice failed', { message: error.message }); }
     try { await sendTelegram(`✅ RECARGA COMPLETADA\nProducto: ${product.name}\nID: ${redemptionId}\nCliente: ${authData.user.email || authData.user.id}\nTransacción: ${localTransactionId}`); } catch (error) { console.error('[buy-free-fire] Telegram failed', { message: error.message }); }
     return json(200, { ok: true, transaction: { ...purchase.data, local_transaction_id: localTransactionId }, accountName: validation.data?.account_name || null, productName: product.name, userId: authData.user.id });
