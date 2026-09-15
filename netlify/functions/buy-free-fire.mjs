@@ -158,10 +158,12 @@ export async function handler(event) {
     // Si hay referidor, calcular ganancia y acreditar 40% al saldo del referidor
     try {
       if (referrerUserId) {
-        // Obtener tasa de conversión (Bs por USD) para convertir el precio del proveedor a NCoins
-        const { data: cfg } = await supabaseAdmin.from('configuracion_sitio').select('tasa_dolar').order('id').limit(1).maybeSingle();
-        const tasa = Number(cfg?.tasa_dolar) || 1;
-        const providerCostInNcoins = Number(providerPrice || 0) * tasa;
+        // Determinar factor de conversión USD -> NCoins.
+        // Por defecto 1 (1 NCoin = 1 USD). Si en configuracion_sitio existe 'ncoins_per_usd' se utilizará.
+        const { data: cfg } = await supabaseAdmin.from('configuracion_sitio').select('tasa_dolar,ncoins_per_usd').order('id').limit(1).maybeSingle();
+        const ncoinsPerUsd = Number(cfg?.ncoins_per_usd) || 1;
+        const providerCostInNcoins = Number(providerPrice || 0) * ncoinsPerUsd;
+        const tasa = Number(cfg?.tasa_dolar) || null; // mantener para logs si está disponible
         const profit = Number((ncoinsCost - providerCostInNcoins).toFixed(2));
         const MIN_PROFIT_TO_CREDIT = 0.1; // mínimo profit para acreditar
         console.info('[buy-free-fire] referral profit calculation', { ncoinsCost, providerPrice, tasa, providerCostInNcoins, profit });

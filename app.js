@@ -755,9 +755,19 @@ function createReferralUi() {
     anchor.style.color = 'var(--muted)';
     anchor.style.zIndex = '9999';
     anchor.textContent = 'Conviértete en colaborador';
-    // Añadir en el footer si existe, sino al body
-    const footer = document.querySelector('footer') || document.getElementById('footer');
-    if (footer) footer.appendChild(anchor); else document.body.appendChild(anchor);
+    // Insertar junto a los enlaces legales en el footer (privacidad/terminos/soporte)
+    const footer = document.querySelector('footer.site-footer');
+    if (footer) {
+      const rightSpan = footer.querySelector('span:nth-child(2)');
+      if (rightSpan) {
+        anchor.style.marginLeft = '12px';
+        rightSpan.appendChild(anchor);
+      } else {
+        footer.appendChild(anchor);
+      }
+    } else {
+      document.body.appendChild(anchor);
+    }
 
     anchor.addEventListener('click', async (e) => {
       e.preventDefault();
