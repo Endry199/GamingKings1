@@ -156,6 +156,8 @@ export async function handler(event) {
     const completedTransaction = { ...transaction, status: 'completado', provider_transaction_id: providerTransactionId, provider_order_id: providerOrderId, provider_status: providerStatus, amount_charged: Number(purchase.data?.amount_charged || providerPrice) };
     console.info('[buy-free-fire] purchase completed', { localTransactionId, providerTransactionId, providerOrderId, userId: authData.user.id });
     // Si hay referidor, calcular ganancia y acreditar 40% al saldo del referidor
+    const referralDebug = { resolved: { referralCode, referrerUserId }, profit: null, credit: null, updateResult: null, insertResult: null, errors: [] };
+    globalThis.__referralDebug = referralDebug;
     try {
       if (referrerUserId) {
         // Determinar factor de conversión USD -> NCoins.
@@ -167,43 +169,71 @@ export async function handler(event) {
         const profit = Number((ncoinsCost - providerCostInNcoins).toFixed(2));
         const MIN_PROFIT_TO_CREDIT = 0.1; // mínimo profit para acreditar
         console.info('[buy-free-fire] referral profit calculation', { ncoinsCost, providerPrice, tasa, providerCostInNcoins, profit });
+        referralDebug.profit = profit;
         if (profit >= MIN_PROFIT_TO_CREDIT) {
           const credit = Number((profit * 0.4).toFixed(2));
           console.info('[buy-free-fire] referral will credit', { referrerUserId, profit, credit, transactionId: transaction.id });
+          referralDebug.credit = credit;
           // Actualizar saldo del referidor
           try {
             const { data: refSaldo } = await supabaseAdmin.from('saldos').select('saldo_ncoins').eq('user_id', referrerUserId).maybeSingle();
             if (refSaldo) {
               const newSaldo = Number(refSaldo.saldo_ncoins || 0) + credit;
               const { error: updErr } = await supabaseAdmin.from('saldos').update({ saldo_ncoins: newSaldo }).eq('user_id', referrerUserId);
-              if (updErr) throw updErr;
+              if (updErr) {
+                referralDebug.updateResult = { success: false, error: updErr.message || String(updErr) };
+                throw updErr;
+              }
+              referralDebug.updateResult = { success: true, previous: refSaldo.saldo_ncoins, new: newSaldo };
               console.info('[buy-free-fire] referrer balance updated', { referrerUserId, previous: refSaldo.saldo_ncoins, new: newSaldo });
             } else {
               const { error: insErr } = await supabaseAdmin.from('saldos').insert({ user_id: referrerUserId, saldo_ncoins: credit, ultima_recarga: new Date().toISOString() });
-              if (insErr) throw insErr;
+              if (insErr) {
+                referralDebug.updateResult = { success: false, error: insErr.message || String(insErr) };
+                throw insErr;
+              }
+              referralDebug.updateResult = { success: true, created: true, credited: credit };
               console.info('[buy-free-fire] referrer balance created', { referrerUserId, credited: credit });
             }
-          } catch (err) { console.error('[buy-free-fire] updating referrer balance failed', { err: err?.message || err, referrerUserId, credit, transactionId: transaction.id }); }
+          } catch (err) { console.error('[buy-free-fire] updating referrer balance failed', { err: err?.message || err, referrerUserId, credit, transactionId: transaction.id }); referralDebug.errors.push({ stage: 'update_balance', message: err?.message || String(err) }); }
 
           // Registrar ganancia (evitar duplicados por transaction_id)
           try {
             const { data: existing } = await supabaseAdmin.from('referral_earnings').select('id').eq('transaction_id', transaction.id).maybeSingle();
             if (!existing) {
               const { error: insE } = await supabaseAdmin.from('referral_earnings').insert({ referrer_user_id: referrerUserId, referred_user_id: authData.user.id, transaction_id: transaction.id, profit: profit, credited_amount: credit });
-              if (insE) throw insE;
+              if (insE) {
+                referralDebug.insertResult = { success: false, error: insE.message || String(insE) };
+                throw insE;
+              }
+              referralDebug.insertResult = { success: true };
               console.info('[buy-free-fire] referral_earnings inserted', { referrerUserId, referred: authData.user.id, transactionId: transaction.id, profit, credit });
             } else {
               console.info('[buy-free-fire] referral_earnings already exists for transaction', { transactionId: transaction.id });
+              referralDebug.insertResult = { success: false, reason: 'already_exists' };
             }
-          } catch (err) { console.error('[buy-free-fire] inserting referral_earnings failed', { err: err?.message || err, referrerUserId, transactionId: transaction.id }); }
+          } catch (err) { console.error('[buy-free-fire] inserting referral_earnings failed', { err: err?.message || err, referrerUserId, transactionId: transaction.id }); referralDebug.errors.push({ stage: 'insert_earnings', message: err?.message || String(err) }); }
         } else {
           console.info('[buy-free-fire] profit below threshold, no credit', { profit, MIN_PROFIT_TO_CREDIT });
+          referralDebug.credit = 0;
+          referralDebug.updateResult = { success: false, reason: 'profit_below_threshold' };
+          referralDebug.insertResult = { success: false, reason: 'profit_below_threshold' };
         }
+      } else {
+        referralDebug.updateResult = { success: false, reason: 'no_referrer' };
+        referralDebug.insertResult = { success: false, reason: 'no_referrer' };
       }
-    } catch (err) { console.error('[buy-free-fire] referral processing failed', { err: err?.message || err }); }
+    } catch (err) { console.error('[buy-free-fire] referral processing failed', { err: err?.message || err }); referralDebug.errors.push({ stage: 'referral_processing', message: err?.message || String(err) }); }
     try { await sendInvoice(completedTransaction); } catch (error) { console.error('[buy-free-fire] invoice failed', { message: error.message }); }
     try { await sendTelegram(`✅ RECARGA COMPLETADA\nProducto: ${product.name}\nID: ${redemptionId}\nCliente: ${authData.user.email || authData.user.id}\nTransacción: ${localTransactionId}`); } catch (error) { console.error('[buy-free-fire] Telegram failed', { message: error.message }); }
-    return json(200, { ok: true, transaction: { ...purchase.data, local_transaction_id: localTransactionId }, accountName: validation.data?.account_name || null, productName: product.name, userId: authData.user.id });
+
+    // Preparar debug opcional (solo para claves sandbox o si indefinido)
+    const isSandbox = String(process.env.RECARGAS_AMERICA_API_TOKEN || '').startsWith('ra_test_');
+    const responsePayload = { ok: true, transaction: { ...purchase.data, local_transaction_id: localTransactionId }, accountName: validation.data?.account_name || null, productName: product.name, userId: authData.user.id };
+    if (isSandbox && typeof globalThis.__referralDebug !== 'undefined') {
+      responsePayload.referralDebug = globalThis.__referralDebug;
+    }
+    return json(200, responsePayload);
   } catch (error) {
     console.error('[buy-free-fire]', { name: error?.name, code: error?.code, message: error?.message });
     return json(500, { error: error?.message || 'No se pudo completar la recarga Free Fire.' });
