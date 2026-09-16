@@ -22,6 +22,44 @@
     <link rel="stylesheet" href="/free-fire-enhancements.css">
     <link rel="stylesheet" href="/history-enhancements.css">
     <link rel="stylesheet" href="/controls-enhancements.css">
+    <style>
+        /* Carrusel: tamaño fijo 1920x1080 (16:9) y estirado de imágenes */
+        .carousel-stage {
+            width: 100%;
+            max-width: 1920px;
+            margin-left: auto;
+            margin-right: auto;
+            aspect-ratio: 1920 / 1080;
+            position: relative;
+            overflow: hidden;
+            border-radius: 18px;
+            background: #070b1a;
+        }
+
+            .carousel-stage #carouselSlides {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+            }
+
+        .carousel-slide {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: fill; /* estira la imagen, no la recorta */
+            display: block;
+            opacity: 0;
+            transition: opacity .5s ease;
+            pointer-events: none;
+        }
+
+            .carousel-slide.active {
+                opacity: 1;
+                pointer-events: auto;
+            }
+    </style>
 </head>
 <body>
     <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>

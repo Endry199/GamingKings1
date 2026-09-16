@@ -172,17 +172,53 @@ async function loadSiteConfiguration() {
     renderCarousel();
 }
 
+let carouselTimer = null;
+
 function renderCarousel() {
     const slides = $('#carouselSlides');
     const dots = $('#carouselDots');
-    if (!state.banners.length) { slides.innerHTML = '<div class="carousel-empty">Novedades de Niunx Play aparecerán aquí.</div>'; dots.innerHTML = ''; return; }
+    if (!state.banners.length) {
+        slides.innerHTML = '<div class="carousel-empty">Novedades de Niunx Play aparecerán aquí.</div>';
+        dots.innerHTML = '';
+        stopCarouselAutoplay();
+        return;
+    }
     state.carouselIndex = state.carouselIndex % state.banners.length;
     slides.innerHTML = state.banners.map((url, index) => `<img class="carousel-slide ${index === state.carouselIndex ? 'active' : ''}" src="${escapeAttr(url)}" alt="Destacado ${index + 1}">`).join('');
     dots.innerHTML = state.banners.map((_, index) => `<button class="carousel-dot ${index === state.carouselIndex ? 'active' : ''}" data-slide="${index}" aria-label="Ver destacado ${index + 1}"></button>`).join('');
-    $$('#carouselDots [data-slide]').forEach(dot => dot.addEventListener('click', () => { state.carouselIndex = Number(dot.dataset.slide); renderCarousel(); }));
+    $$('#carouselDots [data-slide]').forEach(dot => dot.addEventListener('click', () => {
+        state.carouselIndex = Number(dot.dataset.slide);
+        renderCarousel();
+        restartCarouselAutoplay();
+    }));
+    startCarouselAutoplay();
 }
 
-function moveCarousel(direction) { if (!state.banners.length) return; state.carouselIndex = (state.carouselIndex + direction + state.banners.length) % state.banners.length; renderCarousel(); }
+function startCarouselAutoplay() {
+    stopCarouselAutoplay();
+    if (state.banners.length < 2) return;
+    carouselTimer = setInterval(() => {
+        moveCarousel(1);
+    }, 5000);
+}
+
+function stopCarouselAutoplay() {
+    if (carouselTimer) {
+        clearInterval(carouselTimer);
+        carouselTimer = null;
+    }
+}
+
+function restartCarouselAutoplay() {
+    stopCarouselAutoplay();
+    startCarouselAutoplay();
+}
+
+function moveCarousel(direction) {
+    if (!state.banners.length) return;
+    state.carouselIndex = (state.carouselIndex + direction + state.banners.length) % state.banners.length;
+    renderCarousel();
+}
 
 function isFreeFireProduct(product) { return /free\s*fire/i.test(`${product.nombre || ''} ${product.slug || ''}`); }
 
@@ -660,8 +696,12 @@ $$('[data-open]').forEach(button => button.addEventListener('click', event => { 
 $$('.currency').forEach(button => button.addEventListener('click', () => setCurrency(button.dataset.currency)));
 renderPaymentMethods();
 $('[data-close="productModal"]')?.addEventListener('click', () => closeModal('productModal'));
-$('#carouselPrev')?.addEventListener('click', () => moveCarousel(-1));
-$('#carouselNext')?.addEventListener('click', () => moveCarousel(1));
+$('#carouselPrev')?.addEventListener('click', () => { moveCarousel(-1); restartCarouselAutoplay(); });
+$('#carouselNext')?.addEventListener('click', () => { moveCarousel(1); restartCarouselAutoplay(); });
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopCarouselAutoplay();
+    else startCarouselAutoplay();
+});
 $('#miniGame')?.addEventListener('keydown', event => { if (['ArrowLeft', 'ArrowRight', ' '].includes(event.key)) event.preventDefault(); if (event.key === 'ArrowLeft') gameKeys.left = true; if (event.key === 'ArrowRight') gameKeys.right = true; if (event.key === ' ') jumpMiniGame(); });
 $('#miniGame')?.addEventListener('keyup', event => { if (event.key === 'ArrowLeft') gameKeys.left = false; if (event.key === 'ArrowRight') gameKeys.right = false; });
 document.addEventListener('keydown', event => { if (!$('#miniGame')?.matches(':focus')) return; if (event.key === 'ArrowLeft') gameKeys.left = true; if (event.key === 'ArrowRight') gameKeys.right = true; });
