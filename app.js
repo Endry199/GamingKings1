@@ -452,13 +452,12 @@ async function enterApp(user) {
     }
 }
 
+// 🆕 MODIFICADO: Rango 1-50, sin input manual
 function updateAmount() {
-    state.amount = Math.min(500, Math.max(1, Math.round(Number($('#amountSlider').value || $('#amountInput').value || 1) * 10) / 10));
+    state.amount = Math.min(50, Math.max(1, Math.round(Number($('#amountSlider').value || 1) * 10) / 10));
     $('#amountSlider').value = state.amount;
-    $('#amountInput').value = state.amount.toFixed(2);
     $('#amountValue').textContent = state.amount.toFixed(2);
     $('#amountCurrency').textContent = 'NCoins';
-    $('#inputCurrency').textContent = state.currency === 'usd' ? 'USD' : 'NCoins';
     $('#vesConversion').classList.remove('hidden');
     const conversionRows = $('#vesConversion').querySelectorAll('span, strong');
     conversionRows[0].textContent = state.currency === 'usd' ? 'Cambio' : 'Tasa actual';
@@ -712,7 +711,19 @@ document.addEventListener('keydown', event => { if (event.key === ' ' && documen
 $$('.nav-link,[data-view]').forEach(button => button.addEventListener('click', () => { const view = button.dataset.view; if (!view) return; $$('.view').forEach(item => item.classList.toggle('active-view', item.id === view)); $$('.nav-link').forEach(item => item.classList.toggle('active', item.dataset.view === view)); }));
 ['openTopUp', 'openTopUpHero', 'openTopUpSmall', 'openTopUpCard'].forEach(id => $(`#${id}`)?.addEventListener('click', () => openModal('topUpModal')));
 $('#amountSlider').addEventListener('input', updateAmount);
-$('#amountInput').addEventListener('input', () => { $('#amountSlider').value = $('#amountInput').value; updateAmount(); });
+
+// 🆕 NUEVO: Listener de las flechas ↑↓
+document.querySelectorAll('.amount-step').forEach(button => {
+    button.addEventListener('click', () => {
+        const direction = Number(button.dataset.step);
+        const slider = $('#amountSlider');
+        const next = Math.round((Number(slider.value) + direction * 0.10) * 10) / 10;
+        const clamped = Math.min(50, Math.max(1, next));
+        slider.value = clamped;
+        updateAmount();
+    });
+});
+
 $('#continuePayment').addEventListener('click', () => { if (!state.paymentMethod) { showToast('Selecciona un método de pago para continuar.', true); return; } $('#proofAmount').textContent = `${state.amount.toFixed(2)} NCoins`; openModal('proofModal'); });
 $('#proofFile').addEventListener('change', event => {
     const file = event.target.files[0];
@@ -788,13 +799,11 @@ function createReferralUi() {
         anchor.id = 'becomeCollaborator';
         anchor.href = '#';
         anchor.title = 'Conviértete en colaborador';
-        // Estilos integrados al footer: sin position fixed, hereda color y tipografía
         anchor.style.fontSize = 'inherit';
         anchor.style.color = 'inherit';
         anchor.style.textDecoration = 'none';
         anchor.style.cursor = 'pointer';
         anchor.textContent = 'Conviértete en colaborador';
-        // Insertar junto a los enlaces legales en el footer (privacidad/terminos/soporte)
         const footer = document.querySelector('footer.site-footer');
         if (footer) {
             const rightSpan = footer.querySelector('span:nth-child(2)');
@@ -838,7 +847,6 @@ function createReferralUi() {
                             document.getElementById('referralMessage').textContent = err.message || 'No se pudo rotar el código.';
                         }
                     });
-                    // Controles para cargar historial de referidos
                     async function loadReferralEarnings() {
                         const container = document.getElementById('referralEarningsContainer');
                         container.innerHTML = '<p class="helper">Cargando historial...</p>';
@@ -859,7 +867,6 @@ function createReferralUi() {
                 }
                 document.getElementById('referralLink').value = link;
                 document.getElementById('referralCodeInput').value = code;
-                // Cargar historial inmediatamente
                 try { loadReferralEarnings(); } catch (e) { /* ignore */ }
                 modal.classList.remove('hidden');
             } catch (err) {

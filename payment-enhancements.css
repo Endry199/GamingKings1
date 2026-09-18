@@ -1,1 +1,113 @@
-.payment-section{margin:20px 0}.payment-heading{display:flex;gap:12px;align-items:center;margin-bottom:12px}.payment-heading p{color:var(--muted);font-size:12px;margin-top:4px}.payment-methods{display:grid;gap:8px}.payment-method{display:grid;gap:10px;width:100%;border:1px solid var(--line);background:#0a142d;color:var(--text);border-radius:10px;padding:13px 15px;text-align:left;transition:border-color .2s,background .2s}.payment-method:hover,.payment-method.selected{border-color:var(--cyan);background:#102044}.payment-method-title{display:flex;justify-content:space-between;gap:12px;align-items:center}.payment-method-title>span{color:var(--cyan);font-size:11px}.payment-details{display:grid;gap:4px;color:var(--muted);font-size:12px;line-height:1.4}.payment-details span{overflow-wrap:anywhere}
+.payment-section {
+    margin: 20px 0
+}
+
+.payment-heading {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 12px
+}
+
+    .payment-heading p {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 4px
+    }
+
+.payment-methods {
+    display: grid;
+    gap: 8px
+}
+
+.payment-method {
+    display: grid;
+    gap: 10px;
+    width: 100%;
+    border: 1px solid var(--line);
+    background: #0a142d;
+    color: var(--text);
+    border-radius: 10px;
+    padding: 13px 15px;
+    text-align: left;
+    transition: border-color .2s,background .2s
+}
+
+    .payment-method:hover, .payment-method.selected {
+        border-color: var(--cyan);
+        background: #102044
+    }
+
+.payment-method-title {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center
+}
+
+    .payment-method-title > span {
+        color: var(--cyan);
+        font-size: 11px
+    }
+
+.payment-details {
+    display: grid;
+    gap: 4px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.4
+}
+
+    .payment-details span {
+        overflow-wrap: anywhere
+    }
+
+/* 🆕 NUEVO: Contenedor de la barra + flechas */
+.amount-input-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 28px 0 8px;
+}
+
+    .amount-input-row .range {
+        flex: 1;
+        margin: 0;
+    }
+
+.amount-stepper {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.amount-step {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 26px;
+    border: 1px solid #355489;
+    border-radius: 7px;
+    background: linear-gradient(145deg, #142a52, #0a142d);
+    color: var(--cyan);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+
+    .amount-step:hover {
+        border-color: var(--cyan);
+        background: linear-gradient(145deg, #1a3a6e, #102044);
+        box-shadow: 0 0 12px rgba(43, 227, 255, 0.3);
+        transform: scale(1.05);
+    }
+
+    .amount-step:active {
+        transform: scale(0.95);
+        box-shadow: 0 0 6px rgba(43, 227, 255, 0.5);
+    }
+
+    .amount-step svg {
+        display: block;
+    }
