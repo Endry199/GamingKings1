@@ -522,14 +522,13 @@ function statusClass(value) { return String(value || 'pendiente').toLowerCase().
 function statusLabel(value) { return ({ pendiente: 'En revisión', procesando: 'Procesando', aprobado: 'Aprobado', rechazado: 'Rechazado', completado: 'Completado' }[String(value || '').toLowerCase()] || 'En revisión'); }
 
 /* =================================================================
-   🎮 MINIJUEGO ARKANOID NEO — Sistema completo
+   🎮 MINIJUEGO ARKANOID NEO — Sistema completo (CORREGIDO)
    ================================================================= */
 
 const GAME = {
     canvas: null,
     ctx: null,
     running: false,
-    paused: false,
     rafId: null,
     lastTime: 0,
     accumulator: 0,
@@ -542,16 +541,15 @@ const GAME = {
     score: 0,
     combo: 0,
     comboTimer: 0,
-    paddle: { x: 0, y: 0, w: 100, h: 12, targetX: 0, vx: 0 },
+    paddle: { x: 0, y: 0, w: 100, h: 14, targetX: 0 },
     balls: [],
     blocks: [],
     powerups: [],
     particles: [],
     shake: { x: 0, y: 0, intensity: 0, duration: 0 },
     input: { left: false, right: false, pointerActive: false },
-    layout: { gap: 6, cols: 10, topOffset: 70, sideMargin: 20 },
+    layout: { gap: 6, cols: 10, topOffset: 60, sideMargin: 14 },
     countdown: 0,
-    gameOver: false,
     winTransition: false,
     timers: new Set(),
     colors: {
@@ -560,9 +558,7 @@ const GAME = {
         pink: '#f45bd8',
         green: '#42e4b3',
         orange: '#ffad62',
-        danger: '#ff6d8c',
-        text: '#f6f8ff',
-        muted: '#98a9c9'
+        danger: '#ff6d8c'
     }
 };
 
@@ -578,8 +574,6 @@ function gameClearAllTimers() {
 }
 
 function initGameCanvas() {
-    const container = document.getElementById('miniGame');
-    if (!container) return;
     const canvas = document.getElementById('gameCanvas');
     if (!canvas) return;
     GAME.canvas = canvas;
@@ -599,35 +593,41 @@ function resizeGameCanvas() {
     GAME.canvas.height = Math.round(rect.height * dpr);
     GAME.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    if (GAME.paddle.w) {
-        GAME.paddle.y = GAME.height - 30;
-        GAME.paddle.x = Math.min(GAME.paddle.x, GAME.width - GAME.paddle.w);
-        GAME.balls.forEach(b => {
-            b.x = Math.min(b.x, GAME.width - b.r);
-            b.y = Math.min(b.y, GAME.height - b.r);
-        });
-        if (GAME.blocks.length > 0 && !GAME.running) rebuildBlocks();
-    }
+    GAME.paddle.y = GAME.height - 34;
+    GAME.paddle.x = Math.max(0, Math.min(GAME.paddle.x, GAME.width - GAME.paddle.w));
+    if (GAME.blocks.length > 0 && !GAME.running) rebuildBlocks();
 }
 
+/* =================================================================
+   🧱 BLOQUES — Patrón LIMPIO sin huecos aleatorios ni sólidos raros
+   ================================================================= */
 function rebuildBlocks() {
     const { cols, topOffset, gap, sideMargin } = GAME.layout;
     const playWidth = GAME.width - sideMargin * 2;
     const blockW = (playWidth - gap * (cols - 1)) / cols;
-    const blockH = Math.max(14, Math.min(22, GAME.height * 0.028));
-    const rows = Math.min(5 + Math.floor(GAME.level / 3), 8);
+    const blockH = Math.max(16, Math.min(22, GAME.height * 0.03));
+    // Filas de bloques: nivel 1 = 4 filas, sube hasta 7
+    const rows = Math.min(4 + Math.floor((GAME.level - 1) / 2), 7);
     GAME.blocks = [];
+
+    // Paleta de colores por fila (arriba → abajo)
+    const rowColors = ['#f45bd8', '#a56bff', '#2be3ff', '#42e4b3', '#ffad62', '#5b7cff', '#ff6d8c'];
+
     for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
-            const isSolid = row === 0 && col % 4 === 1;
-            const gapChance = row < 2 ? 0 : 0.08;
-            if (!isSolid && Math.random() < gapChance) continue;
-
             let hp = 1;
             let type = 'normal';
-            if (isSolid) { hp = 999; type = 'solid'; }
-            else if (row === 0) { hp = 2; type = 'hard'; }
-            else if (row === 1 && Math.random() < 0.3) { hp = 2; type = 'hard'; }
+
+            // Solo la fila 0 tiene algunos bloques duros (2 golpes)
+            if (row === 0 && col % 3 === 0) {
+                hp = 2;
+                type = 'hard';
+            }
+            // A partir del nivel 3, la fila 1 también tiene duros
+            else if (row === 1 && GAME.level >= 3 && col % 4 === 0) {
+                hp = 2;
+                type = 'hard';
+            }
 
             GAME.blocks.push({
                 x: sideMargin + col * (blockW + gap),
@@ -639,6 +639,7 @@ function rebuildBlocks() {
                 type,
                 row,
                 col,
+                color: rowColors[row % rowColors.length],
                 alive: true,
                 hitFlash: 0
             });
@@ -648,21 +649,16 @@ function rebuildBlocks() {
 
 function spawnBall(fromPaddle = true) {
     const speed = 5.5 + GAME.level * 0.4;
-    const angle = (Math.random() * 0.6 - 0.3) + (-Math.PI / 2);
     const ball = {
         x: GAME.paddle.x + GAME.paddle.w / 2,
         y: GAME.paddle.y - 12,
         r: 8,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
+        vx: 0,
+        vy: 0,
         stuck: fromPaddle,
         stuckOffset: 0,
         trail: []
     };
-    if (fromPaddle) {
-        ball.vx = 0;
-        ball.vy = 0;
-    }
     GAME.balls.push(ball);
     return ball;
 }
@@ -689,21 +685,18 @@ function startGame() {
     GAME.particles = [];
     GAME.powerups = [];
     GAME.balls = [];
-    GAME.gameOver = false;
     GAME.winTransition = false;
     GAME.paddle.w = Math.min(110, GAME.width * 0.22);
-    GAME.paddle.h = 12;
-    GAME.paddle.y = GAME.height - 30;
+    GAME.paddle.h = 14;
+    GAME.paddle.y = GAME.height - 34;
     GAME.paddle.x = (GAME.width - GAME.paddle.w) / 2;
     GAME.paddle.targetX = GAME.paddle.x;
-    GAME.paddle.vx = 0;
     rebuildBlocks();
     spawnBall(true);
     updateGameHud();
     document.getElementById('startGame').classList.add('hidden');
     document.getElementById('gameOverScreen').classList.add('hidden');
     GAME.running = true;
-    GAME.paused = false;
     GAME.lastTime = performance.now();
     GAME.accumulator = 0;
     GAME.countdown = 3;
@@ -719,7 +712,6 @@ function stopGame() {
 
 function endGame() {
     stopGame();
-    GAME.gameOver = true;
     const screen = document.getElementById('gameOverScreen');
     document.getElementById('gameFinalScore').textContent = `${GAME.score} puntos`;
     const record = Number(localStorage.getItem('niunx-arkanoid-record') || 0);
@@ -738,7 +730,11 @@ function updateGameHud() {
     const lv = document.getElementById('gameLives');
     if (lvl) lvl.textContent = GAME.level;
     if (sc) sc.textContent = GAME.score;
-    if (lv) lv.textContent = '♥'.repeat(Math.max(0, GAME.lives)) + '♡'.repeat(Math.max(0, 3 - GAME.lives));
+    if (lv) {
+        const hearts = [];
+        for (let i = 0; i < 3; i++) hearts.push(i < GAME.lives ? '♥' : '♡');
+        lv.textContent = hearts.join('');
+    }
 }
 
 function gameLoop(now) {
@@ -801,6 +797,7 @@ function updateGame(step) {
         const sx = (ball.vx * step) / subSteps;
         const sy = (ball.vy * step) / subSteps;
 
+        let removeBall = false;
         for (let s = 0; s < subSteps; s++) {
             ball.x += sx;
             ball.y += sy;
@@ -865,9 +862,13 @@ function updateGame(step) {
             }
 
             if (ball.y - ball.r > GAME.height) {
-                GAME.balls.splice(i, 1);
+                removeBall = true;
                 break;
             }
+        }
+
+        if (removeBall) {
+            GAME.balls.splice(i, 1);
         }
     }
 
@@ -917,15 +918,16 @@ function updateGame(step) {
         GAME.shake.duration -= step;
         GAME.shake.x = (Math.random() - 0.5) * GAME.shake.intensity;
         GAME.shake.y = (Math.random() - 0.5) * GAME.shake.intensity;
-        GAME.shake.intensity *= 0.92;
+        GAME.shake.intensity *= 0.9;
     } else {
         GAME.shake.x = 0;
         GAME.shake.y = 0;
+        GAME.shake.intensity = 0;
     }
 
     if (!GAME.winTransition) {
         const destructible = GAME.blocks.filter(b => b.type !== 'solid');
-        if (destructible.every(b => !b.alive)) {
+        if (destructible.length > 0 && destructible.every(b => !b.alive)) {
             GAME.winTransition = true;
             gameSetTimeout(() => {
                 GAME.level += 1;
@@ -945,10 +947,6 @@ function updateGame(step) {
 
 function hitBlock(block) {
     block.hitFlash = 1;
-    if (block.type === 'solid') {
-        spawnParticles(block.x + block.w / 2, block.y + block.h / 2, '#8ba3c8', 3);
-        return;
-    }
     block.hp -= 1;
     if (block.hp <= 0) {
         block.alive = false;
@@ -958,27 +956,20 @@ function hitBlock(block) {
         const points = (10 + comboBonus * 2) * GAME.level;
         GAME.score += points;
         updateGameHud();
-        spawnParticles(block.x + block.w / 2, block.y + block.h / 2, getBlockColor(block), 10);
-        triggerShake(2, 10);
+        spawnParticles(block.x + block.w / 2, block.y + block.h / 2, block.color, 8);
+        triggerShake(1.5, 8);
 
         const roll = Math.random();
         if (roll < 0.10) spawnPowerUp(block.x + block.w / 2, block.y + block.h / 2, 'expand');
         else if (roll < 0.18) spawnPowerUp(block.x + block.w / 2, block.y + block.h / 2, 'multi');
         else if (roll < 0.22) spawnPowerUp(block.x + block.w / 2, block.y + block.h / 2, 'life');
     } else {
-        spawnParticles(block.x + block.w / 2, block.y + block.h / 2, getBlockColor(block), 4);
+        spawnParticles(block.x + block.w / 2, block.y + block.h / 2, block.color, 3);
     }
 }
 
-function getBlockColor(block) {
-    if (block.type === 'solid') return '#445878';
-    if (block.type === 'hard') return GAME.colors.orange;
-    const palette = [GAME.colors.cyan, GAME.colors.violet, GAME.colors.pink, GAME.colors.green];
-    return palette[(block.row + GAME.level) % palette.length];
-}
-
 function spawnPowerUp(x, y, type) {
-    GAME.powerups.push({ x, y, type, rot: 0, vy: 3 });
+    GAME.powerups.push({ x, y, type, rot: 0 });
 }
 
 function applyPowerUp(type) {
@@ -987,7 +978,7 @@ function applyPowerUp(type) {
         GAME.paddle.x = Math.min(GAME.paddle.x, GAME.width - GAME.paddle.w - 6);
     } else if (type === 'multi') {
         const source = GAME.balls[0];
-        if (source && GAME.balls.length < 4) {
+        if (source && !source.stuck && GAME.balls.length < 3) {
             const b1 = { ...source, vx: source.vx * 0.9, vy: source.vy * 0.9, trail: [] };
             const b2 = { ...source, vx: -source.vx * 0.9, vy: source.vy * 0.9, trail: [] };
             GAME.balls.push(b1, b2);
@@ -1018,16 +1009,26 @@ function triggerShake(intensity, duration) {
     GAME.shake.duration = duration;
 }
 
+/* =================================================================
+   🎨 RENDERIZADO — Ahora limpia ANTES del shake
+   ================================================================= */
 function renderGame() {
     const ctx = GAME.ctx;
     const W = GAME.width;
     const H = GAME.height;
 
-    ctx.save();
+    // 1) Limpiar SIEMPRE el rectángulo completo ANTES de cualquier transformación
+    ctx.setTransform(GAME.dpr, 0, 0, GAME.dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
 
+    // 2) Dibujar fondo (sin shake)
     drawBackground(ctx, W, H);
-    ctx.translate(GAME.shake.x, GAME.shake.y);
+
+    // 3) Aplicar shake solo a los elementos del juego
+    ctx.save();
+    if (GAME.shake.duration > 0) {
+        ctx.translate(GAME.shake.x, GAME.shake.y);
+    }
 
     GAME.blocks.forEach(block => {
         if (!block.alive) return;
@@ -1047,6 +1048,9 @@ function renderGame() {
     });
     ctx.globalAlpha = 1;
 
+    ctx.restore();
+
+    // 4) Countdown (sin shake, centrado)
     if (GAME.countdown > 0) {
         ctx.fillStyle = 'rgba(2,6,17,0.55)';
         ctx.fillRect(0, 0, W, H);
@@ -1058,6 +1062,7 @@ function renderGame() {
         ctx.fillText(secs > 0 ? String(secs) : '¡YA!', W / 2, H / 2);
     }
 
+    // 5) Combo (sin shake)
     if (GAME.combo > 1 && GAME.comboTimer > 0) {
         ctx.fillStyle = GAME.colors.orange;
         ctx.font = `700 ${Math.min(22, W * 0.045)}px 'Space Grotesk', sans-serif`;
@@ -1067,75 +1072,54 @@ function renderGame() {
         ctx.fillText(`COMBO x${GAME.combo}`, W - 20, 54);
         ctx.globalAlpha = 1;
     }
-
-    ctx.restore();
 }
 
 function drawBackground(ctx, W, H) {
     const grad = ctx.createRadialGradient(W / 2, 0, 0, W / 2, 0, H);
-    grad.addColorStop(0, 'rgba(35, 60, 110, 0.4)');
+    grad.addColorStop(0, 'rgba(35, 60, 110, 0.35)');
     grad.addColorStop(1, 'rgba(7, 11, 26, 0)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
-
-    ctx.strokeStyle = 'rgba(43, 227, 255, 0.04)';
-    ctx.lineWidth = 1;
-    for (let y = 60; y < H; y += 40) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(W, y);
-        ctx.stroke();
-    }
 }
 
 function drawBlock(ctx, block) {
-    const color = getBlockColor(block);
-
     ctx.save();
-    ctx.shadowColor = color;
-    ctx.shadowBlur = block.hitFlash > 0 ? 24 : 8;
+    ctx.shadowColor = block.color;
+    ctx.shadowBlur = block.hitFlash > 0 ? 20 : 6;
 
     const grad = ctx.createLinearGradient(block.x, block.y, block.x, block.y + block.h);
-    if (block.type === 'solid') {
-        grad.addColorStop(0, '#5a7aa8');
-        grad.addColorStop(1, '#2d4468');
-    } else {
-        grad.addColorStop(0, color);
-        grad.addColorStop(1, shadeColor(color, -35));
-    }
+    grad.addColorStop(0, block.color);
+    grad.addColorStop(1, shadeColor(block.color, -40));
     ctx.fillStyle = grad;
     roundRect(ctx, block.x, block.y, block.w, block.h, 4);
     ctx.fill();
 
     ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    // Brillo superior
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
     roundRect(ctx, block.x + 2, block.y + 1.5, block.w - 4, 2, 1);
     ctx.fill();
 
+    // Si el bloque es "hard" y está golpeado, oscurecerlo
     if (block.type === 'hard' && block.hp === 1) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
-        roundRect(ctx, block.x + 3, block.y + 3, block.w - 6, block.h - 6, 2);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        roundRect(ctx, block.x + 2, block.y + 2, block.w - 4, block.h - 4, 3);
         ctx.fill();
     }
 
+    // Flash al golpear
     if (block.hitFlash > 0) {
-        ctx.fillStyle = `rgba(255, 255, 255, ${block.hitFlash * 0.6})`;
+        ctx.fillStyle = `rgba(255, 255, 255, ${block.hitFlash * 0.7})`;
         roundRect(ctx, block.x, block.y, block.w, block.h, 4);
         ctx.fill();
-        block.hitFlash = Math.max(0, block.hitFlash - 0.15);
-    }
-
-    if (block.type === 'solid') {
-        ctx.strokeStyle = 'rgba(200, 220, 255, 0.5)';
-        ctx.lineWidth = 1.5;
-        roundRect(ctx, block.x, block.y, block.w, block.h, 4);
-        ctx.stroke();
+        block.hitFlash = Math.max(0, block.hitFlash - 0.18);
     }
 
     ctx.restore();
 }
 
 function drawBall(ctx, ball) {
+    // Estela
     ball.trail.forEach((pt, i) => {
         const alpha = (1 - i / ball.trail.length) * 0.4;
         ctx.fillStyle = `rgba(43, 227, 255, ${alpha})`;
@@ -1144,6 +1128,7 @@ function drawBall(ctx, ball) {
         ctx.fill();
     });
 
+    // Cuerpo
     ctx.save();
     ctx.shadowColor = GAME.colors.cyan;
     ctx.shadowBlur = 20;
@@ -1167,12 +1152,12 @@ function drawPaddle(ctx, paddle) {
     grad.addColorStop(0.5, GAME.colors.violet);
     grad.addColorStop(1, GAME.colors.pink);
     ctx.fillStyle = grad;
-    roundRect(ctx, paddle.x, paddle.y, paddle.w, paddle.h, 6);
+    roundRect(ctx, paddle.x, paddle.y, paddle.w, paddle.h, 7);
     ctx.fill();
 
     ctx.shadowBlur = 0;
     ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
-    roundRect(ctx, paddle.x + 4, paddle.y + 1.5, paddle.w - 8, 2.5, 1.5);
+    roundRect(ctx, paddle.x + 4, paddle.y + 2, paddle.w - 8, 3, 1.5);
     ctx.fill();
     ctx.restore();
 }
@@ -1184,11 +1169,7 @@ function drawPowerUp(ctx, p) {
     ctx.shadowColor = GAME.colors.green;
     ctx.shadowBlur = 16;
 
-    const colors = {
-        expand: GAME.colors.cyan,
-        multi: GAME.colors.violet,
-        life: GAME.colors.pink
-    };
+    const colors = { expand: GAME.colors.cyan, multi: GAME.colors.violet, life: GAME.colors.pink };
     const icons = { expand: '↔', multi: '●●', life: '♥' };
     const color = colors[p.type] || GAME.colors.green;
 
