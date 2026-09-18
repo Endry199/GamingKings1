@@ -550,7 +550,8 @@ const GAME = {
     particles: [],
     shake: { x: 0, y: 0, intensity: 0, duration: 0 },
     input: { left: false, right: false, pointerActive: false },
-    layout: { gap: 6, cols: 10, topOffset: 90, sideMargin: 14 },
+    // 🆕 Layout reajustado: topOffset reducido de 90 a 45 para el nuevo alto
+    layout: { gap: 5, cols: 10, topOffset: 45, sideMargin: 12 },
     countdown: 0,
     winTransition: false,
     timers: new Set(),
@@ -600,7 +601,8 @@ function resizeGameCanvas() {
     if (GAME.expandTimer <= 0) {
         GAME.paddle.w = newBaseW;
     }
-    GAME.paddle.y = GAME.height - 45;
+    // 🆕 Paleta más cerca del borde inferior en un canvas más bajo
+    GAME.paddle.y = GAME.height - 30;
     GAME.paddle.x = Math.max(0, Math.min(GAME.paddle.x, GAME.width - GAME.paddle.w));
     if (GAME.blocks.length > 0 && !GAME.running) rebuildBlocks();
 }
@@ -609,7 +611,8 @@ function rebuildBlocks() {
     const { cols, topOffset, gap, sideMargin } = GAME.layout;
     const playWidth = GAME.width - sideMargin * 2;
     const blockW = (playWidth - gap * (cols - 1)) / cols;
-    const blockH = Math.max(16, Math.min(22, GAME.height * 0.025));
+    // 🆕 Altura del bloque proporcional al nuevo alto (antes 0.025, ahora 0.045)
+    const blockH = Math.max(12, Math.min(18, GAME.height * 0.045));
     const rows = Math.min(4 + Math.floor((GAME.level - 1) / 2), 7);
     GAME.blocks = [];
 
@@ -649,8 +652,8 @@ function rebuildBlocks() {
 function spawnBall(fromPaddle = true) {
     const ball = {
         x: GAME.paddle.x + GAME.paddle.w / 2,
-        y: GAME.paddle.y - 12,
-        r: 8,
+        y: GAME.paddle.y - 10, // 🆕 Ajustado a -10 (antes -12)
+        r: 7, // 🆕 Bola ligeramente más pequeña para el nuevo espacio
         vx: 0,
         vy: 0,
         stuck: fromPaddle,
@@ -685,10 +688,10 @@ function startGame() {
     GAME.balls = [];
     GAME.winTransition = false;
     GAME.paddle.w = Math.min(110, GAME.width * 0.22);
-    GAME.paddle.h = 14;
+    GAME.paddle.h = 12; // 🆕 Paleta ligeramente más delgada
     GAME.basePaddleW = GAME.paddle.w;
     GAME.expandTimer = 0;
-    GAME.paddle.y = GAME.height - 45;
+    GAME.paddle.y = GAME.height - 30; // 🆕 Ajustado
     GAME.paddle.x = (GAME.width - GAME.paddle.w) / 2;
     GAME.paddle.targetX = GAME.paddle.x;
     rebuildBlocks();
@@ -1066,7 +1069,8 @@ function renderGame() {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
         ctx.globalAlpha = 0.85;
-        ctx.fillText(`↔ EXPAND ${Math.ceil(GAME.expandTimer)}s`, W / 2, 54);
+        // 🆕 Ajustado a 36 (antes 54) para el nuevo alto
+        ctx.fillText(`↔ EXPAND ${Math.ceil(GAME.expandTimer)}s`, W / 2, 36);
         ctx.globalAlpha = 1;
     }
 
@@ -1087,7 +1091,8 @@ function renderGame() {
         ctx.textAlign = 'right';
         ctx.textBaseline = 'top';
         ctx.globalAlpha = Math.min(1, GAME.comboTimer);
-        ctx.fillText(`COMBO x${GAME.combo}`, W - 20, 78);
+        // 🆕 Ajustado a 52 (antes 78) para el nuevo alto
+        ctx.fillText(`COMBO x${GAME.combo}`, W - 20, 52);
         ctx.globalAlpha = 1;
     }
 }
