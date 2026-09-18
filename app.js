@@ -522,7 +522,7 @@ function statusClass(value) { return String(value || 'pendiente').toLowerCase().
 function statusLabel(value) { return ({ pendiente: 'En revisión', procesando: 'Procesando', aprobado: 'Aprobado', rechazado: 'Rechazado', completado: 'Completado' }[String(value || '').toLowerCase()] || 'En revisión'); }
 
 /* =================================================================
-   🎮 MINIJUEGO ARKANOID NEO — Sistema completo (CORREGIDO)
+   🎮 MINIJUEGO ARKANOID NEO — Sistema completo
    ================================================================= */
 
 const GAME = {
@@ -550,7 +550,7 @@ const GAME = {
     particles: [],
     shake: { x: 0, y: 0, intensity: 0, duration: 0 },
     input: { left: false, right: false, pointerActive: false },
-    layout: { gap: 6, cols: 10, topOffset: 70, sideMargin: 14 },
+    layout: { gap: 6, cols: 10, topOffset: 90, sideMargin: 14 },
     countdown: 0,
     winTransition: false,
     timers: new Set(),
@@ -600,19 +600,16 @@ function resizeGameCanvas() {
     if (GAME.expandTimer <= 0) {
         GAME.paddle.w = newBaseW;
     }
-    GAME.paddle.y = GAME.height - 40;
+    GAME.paddle.y = GAME.height - 45;
     GAME.paddle.x = Math.max(0, Math.min(GAME.paddle.x, GAME.width - GAME.paddle.w));
     if (GAME.blocks.length > 0 && !GAME.running) rebuildBlocks();
 }
 
-/* =================================================================
-   🧱 BLOQUES — Patrón LIMPIO sin huecos aleatorios ni sólidos raros
-   ================================================================= */
 function rebuildBlocks() {
     const { cols, topOffset, gap, sideMargin } = GAME.layout;
     const playWidth = GAME.width - sideMargin * 2;
     const blockW = (playWidth - gap * (cols - 1)) / cols;
-    const blockH = Math.max(14, Math.min(20, GAME.height * 0.024));
+    const blockH = Math.max(16, Math.min(22, GAME.height * 0.025));
     const rows = Math.min(4 + Math.floor((GAME.level - 1) / 2), 7);
     GAME.blocks = [];
 
@@ -691,7 +688,7 @@ function startGame() {
     GAME.paddle.h = 14;
     GAME.basePaddleW = GAME.paddle.w;
     GAME.expandTimer = 0;
-    GAME.paddle.y = GAME.height - 40;
+    GAME.paddle.y = GAME.height - 45;
     GAME.paddle.x = (GAME.width - GAME.paddle.w) / 2;
     GAME.paddle.targetX = GAME.paddle.x;
     rebuildBlocks();
