@@ -542,13 +542,15 @@ const GAME = {
     combo: 0,
     comboTimer: 0,
     paddle: { x: 0, y: 0, w: 100, h: 14, targetX: 0 },
+    basePaddleW: 100,
+    expandTimer: 0,
     balls: [],
     blocks: [],
     powerups: [],
     particles: [],
     shake: { x: 0, y: 0, intensity: 0, duration: 0 },
     input: { left: false, right: false, pointerActive: false },
-    layout: { gap: 6, cols: 10, topOffset: 60, sideMargin: 14 },
+    layout: { gap: 6, cols: 10, topOffset: 70, sideMargin: 14 },
     countdown: 0,
     winTransition: false,
     timers: new Set(),
@@ -593,7 +595,12 @@ function resizeGameCanvas() {
     GAME.canvas.height = Math.round(rect.height * dpr);
     GAME.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    GAME.paddle.y = GAME.height - 34;
+    const newBaseW = Math.min(110, GAME.width * 0.22);
+    GAME.basePaddleW = newBaseW;
+    if (GAME.expandTimer <= 0) {
+        GAME.paddle.w = newBaseW;
+    }
+    GAME.paddle.y = GAME.height - 40;
     GAME.paddle.x = Math.max(0, Math.min(GAME.paddle.x, GAME.width - GAME.paddle.w));
     if (GAME.blocks.length > 0 && !GAME.running) rebuildBlocks();
 }
@@ -605,12 +612,10 @@ function rebuildBlocks() {
     const { cols, topOffset, gap, sideMargin } = GAME.layout;
     const playWidth = GAME.width - sideMargin * 2;
     const blockW = (playWidth - gap * (cols - 1)) / cols;
-    const blockH = Math.max(16, Math.min(22, GAME.height * 0.03));
-    // Filas de bloques: nivel 1 = 4 filas, sube hasta 7
+    const blockH = Math.max(14, Math.min(20, GAME.height * 0.024));
     const rows = Math.min(4 + Math.floor((GAME.level - 1) / 2), 7);
     GAME.blocks = [];
 
-    // Paleta de colores por fila (arriba → abajo)
     const rowColors = ['#f45bd8', '#a56bff', '#2be3ff', '#42e4b3', '#ffad62', '#5b7cff', '#ff6d8c'];
 
     for (let row = 0; row < rows; row++) {
@@ -618,13 +623,10 @@ function rebuildBlocks() {
             let hp = 1;
             let type = 'normal';
 
-            // Solo la fila 0 tiene algunos bloques duros (2 golpes)
             if (row === 0 && col % 3 === 0) {
                 hp = 2;
                 type = 'hard';
-            }
-            // A partir del nivel 3, la fila 1 también tiene duros
-            else if (row === 1 && GAME.level >= 3 && col % 4 === 0) {
+            } else if (row === 1 && GAME.level >= 3 && col % 4 === 0) {
                 hp = 2;
                 type = 'hard';
             }
@@ -648,7 +650,6 @@ function rebuildBlocks() {
 }
 
 function spawnBall(fromPaddle = true) {
-    const speed = 5.5 + GAME.level * 0.4;
     const ball = {
         x: GAME.paddle.x + GAME.paddle.w / 2,
         y: GAME.paddle.y - 12,
@@ -688,7 +689,9 @@ function startGame() {
     GAME.winTransition = false;
     GAME.paddle.w = Math.min(110, GAME.width * 0.22);
     GAME.paddle.h = 14;
-    GAME.paddle.y = GAME.height - 34;
+    GAME.basePaddleW = GAME.paddle.w;
+    GAME.expandTimer = 0;
+    GAME.paddle.y = GAME.height - 40;
     GAME.paddle.x = (GAME.width - GAME.paddle.w) / 2;
     GAME.paddle.targetX = GAME.paddle.x;
     rebuildBlocks();
@@ -779,6 +782,16 @@ function updateGame(step) {
     if (GAME.comboTimer > 0) {
         GAME.comboTimer -= step;
         if (GAME.comboTimer <= 0) GAME.combo = 0;
+    }
+
+    if (GAME.expandTimer > 0) {
+        GAME.expandTimer -= step / 60;
+        if (GAME.expandTimer <= 0) {
+            GAME.expandTimer = 0;
+            const center = GAME.paddle.x + GAME.paddle.w / 2;
+            GAME.paddle.w = GAME.basePaddleW;
+            GAME.paddle.x = Math.max(6, Math.min(GAME.width - GAME.paddle.w - 6, center - GAME.paddle.w / 2));
+        }
     }
 
     for (let i = GAME.balls.length - 1; i >= 0; i--) {
@@ -935,6 +948,8 @@ function updateGame(step) {
                 GAME.powerups = [];
                 GAME.balls = [];
                 GAME.paddle.w = Math.min(110, GAME.width * 0.22);
+                GAME.basePaddleW = GAME.paddle.w;
+                GAME.expandTimer = 0;
                 rebuildBlocks();
                 spawnBall(true);
                 GAME.countdown = 2;
@@ -974,8 +989,12 @@ function spawnPowerUp(x, y, type) {
 
 function applyPowerUp(type) {
     if (type === 'expand') {
-        GAME.paddle.w = Math.min(GAME.width * 0.4, GAME.paddle.w + 30);
+        if (GAME.expandTimer > 0) {
+            return;
+        }
+        GAME.paddle.w = Math.min(GAME.width * 0.4, GAME.basePaddleW + 40);
         GAME.paddle.x = Math.min(GAME.paddle.x, GAME.width - GAME.paddle.w - 6);
+        GAME.expandTimer = 8;
     } else if (type === 'multi') {
         const source = GAME.balls[0];
         if (source && !source.stuck && GAME.balls.length < 3) {
@@ -1009,22 +1028,16 @@ function triggerShake(intensity, duration) {
     GAME.shake.duration = duration;
 }
 
-/* =================================================================
-   🎨 RENDERIZADO — Ahora limpia ANTES del shake
-   ================================================================= */
 function renderGame() {
     const ctx = GAME.ctx;
     const W = GAME.width;
     const H = GAME.height;
 
-    // 1) Limpiar SIEMPRE el rectángulo completo ANTES de cualquier transformación
     ctx.setTransform(GAME.dpr, 0, 0, GAME.dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
 
-    // 2) Dibujar fondo (sin shake)
     drawBackground(ctx, W, H);
 
-    // 3) Aplicar shake solo a los elementos del juego
     ctx.save();
     if (GAME.shake.duration > 0) {
         ctx.translate(GAME.shake.x, GAME.shake.y);
@@ -1050,7 +1063,16 @@ function renderGame() {
 
     ctx.restore();
 
-    // 4) Countdown (sin shake, centrado)
+    if (GAME.expandTimer > 0) {
+        ctx.fillStyle = GAME.colors.cyan;
+        ctx.font = `700 ${Math.min(14, W * 0.028)}px 'Space Grotesk', sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.globalAlpha = 0.85;
+        ctx.fillText(`↔ EXPAND ${Math.ceil(GAME.expandTimer)}s`, W / 2, 54);
+        ctx.globalAlpha = 1;
+    }
+
     if (GAME.countdown > 0) {
         ctx.fillStyle = 'rgba(2,6,17,0.55)';
         ctx.fillRect(0, 0, W, H);
@@ -1062,14 +1084,13 @@ function renderGame() {
         ctx.fillText(secs > 0 ? String(secs) : '¡YA!', W / 2, H / 2);
     }
 
-    // 5) Combo (sin shake)
     if (GAME.combo > 1 && GAME.comboTimer > 0) {
         ctx.fillStyle = GAME.colors.orange;
         ctx.font = `700 ${Math.min(22, W * 0.045)}px 'Space Grotesk', sans-serif`;
         ctx.textAlign = 'right';
         ctx.textBaseline = 'top';
         ctx.globalAlpha = Math.min(1, GAME.comboTimer);
-        ctx.fillText(`COMBO x${GAME.combo}`, W - 20, 54);
+        ctx.fillText(`COMBO x${GAME.combo}`, W - 20, 78);
         ctx.globalAlpha = 1;
     }
 }
@@ -1095,19 +1116,16 @@ function drawBlock(ctx, block) {
     ctx.fill();
 
     ctx.shadowBlur = 0;
-    // Brillo superior
     ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
     roundRect(ctx, block.x + 2, block.y + 1.5, block.w - 4, 2, 1);
     ctx.fill();
 
-    // Si el bloque es "hard" y está golpeado, oscurecerlo
     if (block.type === 'hard' && block.hp === 1) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         roundRect(ctx, block.x + 2, block.y + 2, block.w - 4, block.h - 4, 3);
         ctx.fill();
     }
 
-    // Flash al golpear
     if (block.hitFlash > 0) {
         ctx.fillStyle = `rgba(255, 255, 255, ${block.hitFlash * 0.7})`;
         roundRect(ctx, block.x, block.y, block.w, block.h, 4);
@@ -1119,7 +1137,6 @@ function drawBlock(ctx, block) {
 }
 
 function drawBall(ctx, ball) {
-    // Estela
     ball.trail.forEach((pt, i) => {
         const alpha = (1 - i / ball.trail.length) * 0.4;
         ctx.fillStyle = `rgba(43, 227, 255, ${alpha})`;
@@ -1128,7 +1145,6 @@ function drawBall(ctx, ball) {
         ctx.fill();
     });
 
-    // Cuerpo
     ctx.save();
     ctx.shadowColor = GAME.colors.cyan;
     ctx.shadowBlur = 20;
