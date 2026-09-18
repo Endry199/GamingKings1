@@ -1482,7 +1482,7 @@ function createReferralUi() {
                 }
                 document.getElementById('referralLink').value = link;
                 document.getElementById('referralCodeInput').value = code;
-                try { loadReferralEarnings(); } catch (e) { /* ignore */ }
+                try { loadReferralEarnings(); } catch (e) { /* ignoreaaaaaaa */ }
                 modal.classList.remove('hidden');
             } catch (err) {
                 showToast(err.message || 'No se pudo recuperar el código de referido.', true);
