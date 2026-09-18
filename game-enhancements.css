@@ -1,1 +1,160 @@
-.sky-climb{height:260px;position:relative;overflow:hidden;border:1px solid rgba(43,227,255,.45);background:linear-gradient(180deg,#111e45 0%,#18275a 52%,#34245d 100%);touch-action:none}.sky-climb:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 20% 22%,rgba(43,227,255,.2),transparent 2px),radial-gradient(circle at 72% 14%,rgba(255,255,255,.6),transparent 2px),radial-gradient(circle at 88% 66%,rgba(165,107,255,.45),transparent 2px);background-size:90px 72px,130px 90px,150px 110px;opacity:.7}.game-hud{position:absolute;z-index:5;top:14px;left:18px;right:18px;display:flex;justify-content:space-between;color:#b6c8ed;font:700 10px 'Space Grotesk';letter-spacing:.15em}.game-hud strong{color:var(--cyan);font-size:16px;margin-left:6px}.game-power{color:var(--orange);font-size:19px;opacity:.35}.game-player{position:absolute;z-index:4;width:28px;height:28px;border-radius:50% 50% 42% 42%;display:grid;place-items:center;background:linear-gradient(145deg,#fff,var(--cyan));color:#16265a;font-size:15px;box-shadow:0 0 22px rgba(43,227,255,.8);transition:left .04s,top .04s}.game-world{position:absolute;inset:0;z-index:2}.sky-cloud{position:absolute;height:13px;border-radius:50%;background:linear-gradient(180deg,#fff,#b5d8ff);box-shadow:0 7px 0 -2px rgba(111,187,255,.75),0 0 18px rgba(255,255,255,.38)}.sky-cloud:before,.sky-cloud:after{content:"";position:absolute;bottom:4px;border-radius:50%;background:inherit}.sky-cloud:before{left:18%;width:36%;height:18px}.sky-cloud:after{right:12%;width:30%;height:15px}.power-cloud{background:linear-gradient(180deg,#ffe4a5,var(--orange));box-shadow:0 7px 0 -2px #ec7d67,0 0 20px rgba(255,173,98,.7)}.power-cloud:after{content:"✦";display:grid;place-items:center;color:#fff;background:none;right:42%;bottom:1px;width:auto;height:auto;font-size:12px}.game-start{z-index:8}.game-tip{position:absolute;z-index:6;bottom:9px;left:0;right:0;text-align:center;color:#b6c8ed;font-size:11px}.sky-climb .hidden{display:none!important}@media(max-width:700px){.sky-climb{height:240px}}
+/* =================================================================
+   🎮 MINIJUEGO ARKANOID NEO — Estilos
+   ================================================================= */
+
+.mini-game {
+    position: relative;
+    width: 100%;
+    max-width: 720px;
+    aspect-ratio: 4 / 3;
+    margin: 0 auto;
+    border: 1px solid rgba(43, 227, 255, 0.35);
+    border-radius: 20px;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 0%, #16264d 0%, #070b1a 70%);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), inset 0 0 60px rgba(43, 227, 255, 0.08);
+    outline: none;
+    touch-action: none;
+    cursor: crosshair;
+    user-select: none;
+}
+
+    .mini-game:focus-visible {
+        box-shadow: 0 0 0 3px rgba(43, 227, 255, 0.35), 0 20px 60px rgba(0, 0, 0, 0.4);
+    }
+
+#gameCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+}
+
+.mini-game .game-hud {
+    position: absolute;
+    top: 14px;
+    left: 18px;
+    right: 18px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    color: #a9c0e9;
+    font: 700 11px 'Space Grotesk', sans-serif;
+    letter-spacing: 0.14em;
+    pointer-events: none;
+    z-index: 5;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+    .mini-game .game-hud strong {
+        color: var(--cyan);
+        font-size: 15px;
+        margin-left: 6px;
+        text-shadow: 0 0 10px rgba(43, 227, 255, 0.6);
+    }
+
+.mini-game .game-start {
+    position: absolute;
+    z-index: 8;
+    inset: 0;
+    margin: auto;
+    width: max-content;
+    height: max-content;
+    padding: 14px 26px;
+    border: 1px solid rgba(43, 227, 255, 0.55);
+    border-radius: 12px;
+    background: rgba(9, 19, 42, 0.92);
+    color: #fff;
+    font: 700 14px 'Space Grotesk', sans-serif;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 0 24px rgba(43, 227, 255, 0.25);
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+    .mini-game .game-start:hover {
+        transform: scale(1.04);
+        box-shadow: 0 12px 34px rgba(0, 0, 0, 0.4), 0 0 30px rgba(43, 227, 255, 0.45);
+    }
+
+    .mini-game .game-start span {
+        color: var(--cyan);
+        margin-left: 6px;
+    }
+
+    .mini-game .game-start.hidden {
+        display: none;
+    }
+
+.game-over-screen {
+    position: absolute;
+    inset: 0;
+    z-index: 9;
+    display: grid;
+    place-content: center;
+    gap: 8px;
+    text-align: center;
+    padding: 30px;
+    background: rgba(2, 6, 17, 0.82);
+    backdrop-filter: blur(14px);
+    animation: gameOverFadeIn 0.35s ease;
+}
+
+    .game-over-screen.hidden {
+        display: none;
+    }
+
+    .game-over-screen h3 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 38px;
+        color: var(--cyan);
+        text-shadow: 0 0 24px rgba(43, 227, 255, 0.6);
+        margin: 8px 0 4px;
+    }
+
+    .game-over-screen .helper {
+        color: var(--muted);
+        margin-bottom: 20px;
+        font-size: 13px;
+    }
+
+    .game-over-screen .button {
+        width: max-content;
+        margin: 0 auto;
+    }
+
+@keyframes gameOverFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@media (max-width: 700px) {
+    .mini-game {
+        aspect-ratio: 3 / 4;
+        max-width: 100%;
+        border-radius: 16px;
+    }
+
+        .mini-game .game-hud {
+            font-size: 10px;
+            top: 10px;
+            left: 12px;
+            right: 12px;
+        }
+
+            .mini-game .game-hud strong {
+                font-size: 13px;
+            }
+
+    .game-over-screen h3 {
+        font-size: 28px;
+    }
+}

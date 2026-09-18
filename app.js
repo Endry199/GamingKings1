@@ -6,18 +6,18 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { storage: authStorage(), autoRefreshToken: true, persistSession: true, detectSessionInUrl: true } });
 
 const state = { user: null, balance: 0, currency: 'usd', rate: 0, amount: 10, paymentMethod: '', products: [], transactions: [], transactionsPage: 1, transactionsDate: '', banners: [], carouselIndex: 0, pendingRegistration: null, awaitingOtp: false };
-// Capturar código de referido desde la URL (?ref=...) y almacenarlo en localStorage
+
 (function captureReferralFromUrl() {
     try {
         const params = new URLSearchParams(window.location.search);
         const ref = params.get('ref');
         if (ref) {
             localStorage.setItem('referral_code', ref);
-            // Mensaje discreto para confirmar almacenamiento
             setTimeout(() => showToast('Código de referido guardado.'), 300);
         }
     } catch (e) { /* no bloquear si falla */ }
 })();
+
 let enteredUserId = null;
 let enteringUserId = null;
 const $ = (selector) => document.querySelector(selector);
@@ -452,7 +452,6 @@ async function enterApp(user) {
     }
 }
 
-// 🆕 MODIFICADO: Rango 1-50, sin input manual
 function updateAmount() {
     state.amount = Math.min(50, Math.max(1, Math.round(Number($('#amountSlider').value || 1) * 10) / 10));
     $('#amountSlider').value = state.amount;
@@ -522,152 +521,777 @@ function formatDate(value) { return new Intl.DateTimeFormat('es-VE', { dateStyle
 function statusClass(value) { return String(value || 'pendiente').toLowerCase().replace(/\s/g, ''); }
 function statusLabel(value) { return ({ pendiente: 'En revisión', procesando: 'Procesando', aprobado: 'Aprobado', rechazado: 'Rechazado', completado: 'Completado' }[String(value || '').toLowerCase()] || 'En revisión'); }
 
-let gameFrame;
-let gameRunning = false;
-let gameLevel = 1;
-let gameLives = 3;
-let gameScore = 0;
-let gamePaddleX = 0;
-let gameBall = { x: 0, y: 0, vx: 3.2, vy: -3.2, radius: 7 };
-let gameBalls = [];
-let gameBlocks = [];
-const basePaddleWidth = 96;
-let gamePaddleWidth = basePaddleWidth;
-let gamePowerUps = [];
-const gameKeys = { left: false, right: false };
-let gameCountdown = false;
-let gameCountdownTimer;
+/* =================================================================
+   🎮 MINIJUEGO ARKANOID NEO — Sistema completo
+   ================================================================= */
 
-function buildSkyGame() {
-    const game = $('#miniGame');
-    game.classList.add('sky-climb');
-    game.innerHTML = '<div class="game-hud"><span>NIVEL <strong id="gameLevel">1</strong></span><span>PUNTOS <strong id="gameScore">0000</strong></span><span>VIDAS <strong id="gameLives">♥♥♥</strong></span></div><div class="breakout-board"><div class="breakout-blocks"></div><div class="breakout-powerups"></div><div id="gameCountdown" class="game-countdown"></div><div class="breakout-ball"></div><div class="breakout-paddle"></div></div><button id="startGame" class="game-start">Jugar breakout <span>→</span></button><p class="game-tip">Mueve la barra con el dedo o las flechas</p>';
-    $('#startGame').addEventListener('click', startMiniGame);
-    gameLevel = 1; gameLives = 3; gameScore = 0;
-    resetBreakoutLevel();
-}
-
-function resetBreakoutLevel() {
-    const board = $('.breakout-board');
-    if (!board) return;
-    const columns = 12;
-    const rows = Math.min(6 + Math.floor(gameLevel / 2), 9);
-    gameBlocks = [];
-    gamePowerUps = [];
-    for (let row = 0; row < rows; row += 1) for (let column = 0; column < columns; column += 1) {
-        const edgeGap = row > 1 && (column === 0 || column === columns - 1) && Math.random() < .35;
-        if (edgeGap || Math.random() < .05) continue;
-        const roll = Math.random();
-        const type = row === 0 && column % 4 === 0 ? 'solid' : roll < .16 ? 'hard' : 'normal';
-        const shape = row % 2 === 0 ? 'brick' : 'brick-soft';
-        gameBlocks.push({ row, column, type, shape, hits: type === 'hard' ? 2 : type === 'solid' ? Infinity : 1, alive: true });
+const GAME = {
+    canvas: null,
+    ctx: null,
+    running: false,
+    paused: false,
+    rafId: null,
+    lastTime: 0,
+    accumulator: 0,
+    fixedStep: 1000 / 120,
+    width: 0,
+    height: 0,
+    dpr: 1,
+    level: 1,
+    lives: 3,
+    score: 0,
+    combo: 0,
+    comboTimer: 0,
+    paddle: { x: 0, y: 0, w: 100, h: 12, targetX: 0, vx: 0 },
+    balls: [],
+    blocks: [],
+    powerups: [],
+    particles: [],
+    shake: { x: 0, y: 0, intensity: 0, duration: 0 },
+    input: { left: false, right: false, pointerActive: false },
+    layout: { gap: 6, cols: 10, topOffset: 70, sideMargin: 20 },
+    countdown: 0,
+    gameOver: false,
+    winTransition: false,
+    timers: new Set(),
+    colors: {
+        cyan: '#2be3ff',
+        violet: '#a56bff',
+        pink: '#f45bd8',
+        green: '#42e4b3',
+        orange: '#ffad62',
+        danger: '#ff6d8c',
+        text: '#f6f8ff',
+        muted: '#98a9c9'
     }
-    gamePaddleWidth = basePaddleWidth;
-    gamePaddleX = Math.max(0, (board.clientWidth - gamePaddleWidth) / 2);
-    const speed = gameLevel === 1 ? 2.35 : 3.2 + ((gameLevel - 1) * .25);
-    gameBall = { x: board.clientWidth / 2, y: board.clientHeight - 55, vx: gameLevel % 2 ? speed : -speed, vy: -(gameLevel === 1 ? 2 : speed), radius: 7 };
-    gameBalls = [gameBall];
-    renderBreakout();
+};
+
+function gameSetTimeout(fn, ms) {
+    const id = setTimeout(() => { GAME.timers.delete(id); fn(); }, ms);
+    GAME.timers.add(id);
+    return id;
 }
 
-function beginRoundCountdown() {
-    clearInterval(gameCountdownTimer);
-    const countdown = $('#gameCountdown');
-    if (!countdown) return;
-    gameCountdown = true;
-    let count = 3;
-    countdown.textContent = count;
-    countdown.classList.add('visible');
-    gameCountdownTimer = setInterval(() => {
-        count -= 1;
-        if (count > 0) {
-            countdown.textContent = count;
+function gameClearAllTimers() {
+    GAME.timers.forEach(id => clearTimeout(id));
+    GAME.timers.clear();
+}
+
+function initGameCanvas() {
+    const container = document.getElementById('miniGame');
+    if (!container) return;
+    const canvas = document.getElementById('gameCanvas');
+    if (!canvas) return;
+    GAME.canvas = canvas;
+    GAME.ctx = canvas.getContext('2d');
+    resizeGameCanvas();
+    window.addEventListener('resize', resizeGameCanvas);
+}
+
+function resizeGameCanvas() {
+    if (!GAME.canvas) return;
+    const rect = GAME.canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    GAME.dpr = dpr;
+    GAME.width = rect.width;
+    GAME.height = rect.height;
+    GAME.canvas.width = Math.round(rect.width * dpr);
+    GAME.canvas.height = Math.round(rect.height * dpr);
+    GAME.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    if (GAME.paddle.w) {
+        GAME.paddle.y = GAME.height - 30;
+        GAME.paddle.x = Math.min(GAME.paddle.x, GAME.width - GAME.paddle.w);
+        GAME.balls.forEach(b => {
+            b.x = Math.min(b.x, GAME.width - b.r);
+            b.y = Math.min(b.y, GAME.height - b.r);
+        });
+        if (GAME.blocks.length > 0 && !GAME.running) rebuildBlocks();
+    }
+}
+
+function rebuildBlocks() {
+    const { cols, topOffset, gap, sideMargin } = GAME.layout;
+    const playWidth = GAME.width - sideMargin * 2;
+    const blockW = (playWidth - gap * (cols - 1)) / cols;
+    const blockH = Math.max(14, Math.min(22, GAME.height * 0.028));
+    const rows = Math.min(5 + Math.floor(GAME.level / 3), 8);
+    GAME.blocks = [];
+    for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+            const isSolid = row === 0 && col % 4 === 1;
+            const gapChance = row < 2 ? 0 : 0.08;
+            if (!isSolid && Math.random() < gapChance) continue;
+
+            let hp = 1;
+            let type = 'normal';
+            if (isSolid) { hp = 999; type = 'solid'; }
+            else if (row === 0) { hp = 2; type = 'hard'; }
+            else if (row === 1 && Math.random() < 0.3) { hp = 2; type = 'hard'; }
+
+            GAME.blocks.push({
+                x: sideMargin + col * (blockW + gap),
+                y: topOffset + row * (blockH + gap),
+                w: blockW,
+                h: blockH,
+                hp,
+                maxHp: hp,
+                type,
+                row,
+                col,
+                alive: true,
+                hitFlash: 0
+            });
+        }
+    }
+}
+
+function spawnBall(fromPaddle = true) {
+    const speed = 5.5 + GAME.level * 0.4;
+    const angle = (Math.random() * 0.6 - 0.3) + (-Math.PI / 2);
+    const ball = {
+        x: GAME.paddle.x + GAME.paddle.w / 2,
+        y: GAME.paddle.y - 12,
+        r: 8,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        stuck: fromPaddle,
+        stuckOffset: 0,
+        trail: []
+    };
+    if (fromPaddle) {
+        ball.vx = 0;
+        ball.vy = 0;
+    }
+    GAME.balls.push(ball);
+    return ball;
+}
+
+function launchBalls() {
+    GAME.balls.forEach(ball => {
+        if (ball.stuck) {
+            ball.stuck = false;
+            const speed = 5.5 + GAME.level * 0.4;
+            const angle = -Math.PI / 2 + (Math.random() * 0.5 - 0.25);
+            ball.vx = Math.cos(angle) * speed;
+            ball.vy = Math.sin(angle) * speed;
+        }
+    });
+}
+
+function startGame() {
+    if (GAME.running) return;
+    gameClearAllTimers();
+    GAME.level = 1;
+    GAME.lives = 3;
+    GAME.score = 0;
+    GAME.combo = 0;
+    GAME.particles = [];
+    GAME.powerups = [];
+    GAME.balls = [];
+    GAME.gameOver = false;
+    GAME.winTransition = false;
+    GAME.paddle.w = Math.min(110, GAME.width * 0.22);
+    GAME.paddle.h = 12;
+    GAME.paddle.y = GAME.height - 30;
+    GAME.paddle.x = (GAME.width - GAME.paddle.w) / 2;
+    GAME.paddle.targetX = GAME.paddle.x;
+    GAME.paddle.vx = 0;
+    rebuildBlocks();
+    spawnBall(true);
+    updateGameHud();
+    document.getElementById('startGame').classList.add('hidden');
+    document.getElementById('gameOverScreen').classList.add('hidden');
+    GAME.running = true;
+    GAME.paused = false;
+    GAME.lastTime = performance.now();
+    GAME.accumulator = 0;
+    GAME.countdown = 3;
+    GAME.rafId = requestAnimationFrame(gameLoop);
+}
+
+function stopGame() {
+    GAME.running = false;
+    if (GAME.rafId) cancelAnimationFrame(GAME.rafId);
+    GAME.rafId = null;
+    gameClearAllTimers();
+}
+
+function endGame() {
+    stopGame();
+    GAME.gameOver = true;
+    const screen = document.getElementById('gameOverScreen');
+    document.getElementById('gameFinalScore').textContent = `${GAME.score} puntos`;
+    const record = Number(localStorage.getItem('niunx-arkanoid-record') || 0);
+    if (GAME.score > record) {
+        localStorage.setItem('niunx-arkanoid-record', String(GAME.score));
+        document.getElementById('gameFinalMessage').textContent = `¡Nuevo récord! Superaste los ${record} puntos anteriores.`;
+    } else {
+        document.getElementById('gameFinalMessage').textContent = `Récord: ${record} puntos.`;
+    }
+    screen.classList.remove('hidden');
+}
+
+function updateGameHud() {
+    const lvl = document.getElementById('gameLevel');
+    const sc = document.getElementById('gameScore');
+    const lv = document.getElementById('gameLives');
+    if (lvl) lvl.textContent = GAME.level;
+    if (sc) sc.textContent = GAME.score;
+    if (lv) lv.textContent = '♥'.repeat(Math.max(0, GAME.lives)) + '♡'.repeat(Math.max(0, 3 - GAME.lives));
+}
+
+function gameLoop(now) {
+    if (!GAME.running) return;
+    const dt = Math.min(now - GAME.lastTime, 100);
+    GAME.lastTime = now;
+
+    if (document.hidden) {
+        GAME.accumulator = 0;
+        GAME.rafId = requestAnimationFrame(gameLoop);
+        return;
+    }
+
+    GAME.accumulator += dt;
+    let steps = 0;
+    while (GAME.accumulator >= GAME.fixedStep && steps < 6) {
+        updateGame(GAME.fixedStep / 16.67);
+        GAME.accumulator -= GAME.fixedStep;
+        steps++;
+    }
+    if (steps === 6) GAME.accumulator = 0;
+
+    renderGame();
+    GAME.rafId = requestAnimationFrame(gameLoop);
+}
+
+function updateGame(step) {
+    if (GAME.countdown > 0) {
+        GAME.countdown -= 1 / 60;
+        return;
+    }
+
+    if (GAME.input.pointerActive) {
+        const diff = GAME.paddle.targetX - GAME.paddle.x;
+        GAME.paddle.x += diff * 0.35;
+    } else {
+        if (GAME.input.left) GAME.paddle.x -= 8 * step;
+        if (GAME.input.right) GAME.paddle.x += 8 * step;
+    }
+    GAME.paddle.x = Math.max(6, Math.min(GAME.width - GAME.paddle.w - 6, GAME.paddle.x));
+
+    if (GAME.comboTimer > 0) {
+        GAME.comboTimer -= step;
+        if (GAME.comboTimer <= 0) GAME.combo = 0;
+    }
+
+    for (let i = GAME.balls.length - 1; i >= 0; i--) {
+        const ball = GAME.balls[i];
+
+        if (ball.stuck) {
+            ball.x = GAME.paddle.x + GAME.paddle.w / 2 + ball.stuckOffset;
+            ball.y = GAME.paddle.y - ball.r - 2;
+            continue;
+        }
+
+        ball.trail.unshift({ x: ball.x, y: ball.y });
+        if (ball.trail.length > 8) ball.trail.pop();
+
+        const subSteps = 4;
+        const sx = (ball.vx * step) / subSteps;
+        const sy = (ball.vy * step) / subSteps;
+
+        for (let s = 0; s < subSteps; s++) {
+            ball.x += sx;
+            ball.y += sy;
+
+            if (ball.x - ball.r < 0) {
+                ball.x = ball.r;
+                ball.vx = Math.abs(ball.vx);
+            } else if (ball.x + ball.r > GAME.width) {
+                ball.x = GAME.width - ball.r;
+                ball.vx = -Math.abs(ball.vx);
+            }
+            if (ball.y - ball.r < 0) {
+                ball.y = ball.r;
+                ball.vy = Math.abs(ball.vy);
+            }
+
+            if (
+                ball.vy > 0 &&
+                ball.y + ball.r >= GAME.paddle.y &&
+                ball.y - ball.r <= GAME.paddle.y + GAME.paddle.h &&
+                ball.x >= GAME.paddle.x - ball.r &&
+                ball.x <= GAME.paddle.x + GAME.paddle.w + ball.r
+            ) {
+                const paddleCenter = GAME.paddle.x + GAME.paddle.w / 2;
+                const hit = (ball.x - paddleCenter) / (GAME.paddle.w / 2);
+                const clampedHit = Math.max(-1, Math.min(1, hit));
+                const angle = clampedHit * (Math.PI / 3);
+                const speed = Math.hypot(ball.vx, ball.vy);
+                ball.vx = Math.sin(angle) * speed;
+                ball.vy = -Math.cos(angle) * speed;
+                ball.y = GAME.paddle.y - ball.r - 1;
+                spawnParticles(ball.x, ball.y, GAME.colors.cyan, 4);
+                break;
+            }
+
+            for (const block of GAME.blocks) {
+                if (!block.alive) continue;
+                if (
+                    ball.x + ball.r > block.x &&
+                    ball.x - ball.r < block.x + block.w &&
+                    ball.y + ball.r > block.y &&
+                    ball.y - ball.r < block.y + block.h
+                ) {
+                    const overlapLeft = ball.x + ball.r - block.x;
+                    const overlapRight = block.x + block.w - (ball.x - ball.r);
+                    const overlapTop = ball.y + ball.r - block.y;
+                    const overlapBottom = block.y + block.h - (ball.y - ball.r);
+                    const minX = Math.min(overlapLeft, overlapRight);
+                    const minY = Math.min(overlapTop, overlapBottom);
+
+                    if (minX < minY) {
+                        ball.vx = -ball.vx;
+                        ball.x += overlapLeft < overlapRight ? -minX : minX;
+                    } else {
+                        ball.vy = -ball.vy;
+                        ball.y += overlapTop < overlapBottom ? -minY : minY;
+                    }
+
+                    hitBlock(block);
+                    break;
+                }
+            }
+
+            if (ball.y - ball.r > GAME.height) {
+                GAME.balls.splice(i, 1);
+                break;
+            }
+        }
+    }
+
+    if (GAME.balls.length === 0 && GAME.running && GAME.countdown <= 0) {
+        GAME.lives -= 1;
+        updateGameHud();
+        if (GAME.lives <= 0) {
+            endGame();
             return;
         }
-        clearInterval(gameCountdownTimer);
-        countdown.textContent = '¡YA!';
-        gameCountdown = false;
-        gameBalls.forEach(ball => { ball.vy = -Math.abs(gameLevel === 1 ? 2 : 2.4 + ((gameLevel - 1) * .2)); });
-        setTimeout(() => countdown.classList.remove('visible'), 350);
-    }, 700);
-}
+        GAME.paddle.x = (GAME.width - GAME.paddle.w) / 2;
+        GAME.paddle.targetX = GAME.paddle.x;
+        spawnBall(true);
+        GAME.countdown = 1.5;
+    }
 
-function renderBreakout() {
-    const blocks = $('.breakout-blocks');
-    const board = $('.breakout-board');
-    if (!blocks || !board) return;
-    const gap = 4; const blockWidth = (board.clientWidth - gap * 13) / 12; const blockHeight = 12;
-    blocks.innerHTML = gameBlocks.map((block, index) => `<span class="breakout-block ${block.alive ? '' : 'broken'} block-${block.type} shape-${block.shape} level-${(block.row + gameLevel) % 4}" data-block="${index}" style="left:${gap + block.column * (blockWidth + gap)}px;top:${18 + block.row * (blockHeight + gap)}px;width:${blockWidth}px;height:${blockHeight}px"><b>${block.type === 'hard' ? block.hits : block.type === 'solid' ? '◆' : ''}</b></span>`).join('');
-    const ball = $('.breakout-ball'); const paddle = $('.breakout-paddle');
-    const primaryBall = gameBalls[0] || gameBall;
-    ball.style.left = `${primaryBall.x - primaryBall.radius}px`; ball.style.top = `${primaryBall.y - primaryBall.radius}px`;
-    document.querySelectorAll('.extra-ball').forEach(item => item.remove());
-    gameBalls.slice(1).forEach(extra => { const extraElement = document.createElement('span'); extraElement.className = 'breakout-ball extra-ball'; extraElement.style.left = `${extra.x - extra.radius}px`; extraElement.style.top = `${extra.y - extra.radius}px`; board.append(extraElement); });
-    paddle.style.left = `${gamePaddleX}px`;
-    paddle.style.width = `${gamePaddleWidth}px`;
-    const powerLayer = $('.breakout-powerups');
-    if (powerLayer) powerLayer.innerHTML = gamePowerUps.map((power, index) => `<span class="breakout-powerup power-${power.type}" data-power="${index}" style="left:${power.x}px;top:${power.y}px">${power.type === 'expand' ? '↔' : power.type === 'multi' ? '●●' : '♥'}</span>`).join('');
-    $('#gameLevel').textContent = gameLevel; $('#gameScore').textContent = String(gameScore).padStart(4, '0'); $('#gameLives').textContent = `${'♥'.repeat(Math.min(gameLives, 3))}${'♡'.repeat(Math.max(0, 3 - gameLives))}`;
-}
+    for (let i = GAME.powerups.length - 1; i >= 0; i--) {
+        const p = GAME.powerups[i];
+        p.y += 3 * step;
+        p.rot += 0.08 * step;
 
-function startMiniGame() {
-    if (gameRunning) return;
-    if (!$('.breakout-board')) buildSkyGame();
-    gameLevel = 1;
-    gameLives = 3;
-    gameScore = 0;
-    resetBreakoutLevel(); gameRunning = true; $('#startGame').classList.add('hidden'); $('#miniGame').focus(); beginRoundCountdown(); gameFrame = requestAnimationFrame(runBreakout);
-}
-
-function loseBreakoutLife() {
-    gameLives -= 1;
-    if (gameLives <= 0) { gameRunning = false; $('#startGame').textContent = 'Reintentar partida →'; $('#startGame').classList.remove('hidden'); }
-    else { resetBreakoutLevel(); beginRoundCountdown(); }
-}
-
-function runBreakout() {
-    if (!gameRunning) return;
-    const board = $('.breakout-board');
-    const paddleWidth = gamePaddleWidth; const paddleHeight = 10;
-    if (gameKeys.left) gamePaddleX -= 5.5;
-    if (gameKeys.right) gamePaddleX += 5.5;
-    gamePaddleX = Math.max(0, Math.min(board.clientWidth - paddleWidth, gamePaddleX));
-    if (gameCountdown) { renderBreakout(); if (gameRunning) gameFrame = requestAnimationFrame(runBreakout); return; }
-    const paddleY = board.clientHeight - 22;
-    const gap = 4; const blockWidth = (board.clientWidth - gap * 13) / 12; const blockHeight = 12;
-    gameBalls.forEach(ball => {
-        ball.x += ball.vx; ball.y += ball.vy;
-        if (ball.x - ball.radius <= 0 || ball.x + ball.radius >= board.clientWidth) { ball.vx *= -1; ball.x = Math.max(ball.radius, Math.min(board.clientWidth - ball.radius, ball.x)); }
-        if (ball.y - ball.radius <= 0) { ball.y = ball.radius; ball.vy = Math.abs(ball.vy); }
-        if (ball.vy > 0 && ball.y + ball.radius >= paddleY && ball.y - ball.radius <= paddleY + paddleHeight && ball.x >= gamePaddleX && ball.x <= gamePaddleX + paddleWidth) {
-            const hit = (ball.x - (gamePaddleX + paddleWidth / 2)) / (paddleWidth / 2); ball.vx = hit * 4.5; ball.vy = -Math.abs(ball.vy);
+        if (
+            p.y + 14 >= GAME.paddle.y &&
+            p.y - 14 <= GAME.paddle.y + GAME.paddle.h &&
+            p.x + 14 >= GAME.paddle.x &&
+            p.x - 14 <= GAME.paddle.x + GAME.paddle.w
+        ) {
+            applyPowerUp(p.type);
+            spawnParticles(p.x, p.y, GAME.colors.green, 10);
+            GAME.powerups.splice(i, 1);
+            continue;
         }
-        gameBlocks.forEach(block => {
-            if (!block.alive) return;
-            const x = gap + block.column * (blockWidth + gap); const y = 18 + block.row * (blockHeight + gap);
-            if (ball.x + ball.radius > x && ball.x - ball.radius < x + blockWidth && ball.y + ball.radius > y && ball.y - ball.radius < y + blockHeight) {
-                ball.vy *= -1;
-                if (block.type === 'solid') return;
-                block.hits -= 1;
-                if (block.hits <= 0) { block.alive = false; gameScore += 10 * gameLevel; if (Math.random() < .28) gamePowerUps.push({ x: x + blockWidth / 2 - 9, y, type: ['expand', 'multi', 'life'][Math.floor(Math.random() * 3)] }); }
-            }
-        });
-    });
-    gamePowerUps.forEach(power => { power.y += 1.8; });
-    gamePowerUps = gamePowerUps.filter(power => {
-        const caught = power.y + 18 >= paddleY && power.y <= paddleY + 12 && power.x + 18 >= gamePaddleX && power.x <= gamePaddleX + paddleWidth;
-        if (caught) { if (power.type === 'expand') gamePaddleWidth = Math.min(150, gamePaddleWidth + 28); if (power.type === 'life' && gameLives < 3) gameLives += 1; if (power.type === 'multi' && gameBalls.length < 3) gameBalls.push({ ...gameBalls[0], vx: -gameBalls[0].vx, vy: gameBalls[0].vy }); return false; }
-        return power.y < board.clientHeight;
-    });
-    gameBalls = gameBalls.filter(ball => ball.y - ball.radius <= board.clientHeight);
-    if (!gameBalls.length) loseBreakoutLife();
-    if (!gameBlocks.some(block => block.alive && block.type !== 'solid')) { gameLevel += 1; gameScore += 100; resetBreakoutLevel(); }
-    renderBreakout();
-    if (gameRunning) gameFrame = requestAnimationFrame(runBreakout);
+
+        if (p.y > GAME.height + 20) GAME.powerups.splice(i, 1);
+    }
+
+    for (let i = GAME.particles.length - 1; i >= 0; i--) {
+        const pt = GAME.particles[i];
+        pt.x += pt.vx * step;
+        pt.y += pt.vy * step;
+        pt.vy += 0.15 * step;
+        pt.life -= 0.03 * step;
+        if (pt.life <= 0) GAME.particles.splice(i, 1);
+    }
+
+    if (GAME.shake.duration > 0) {
+        GAME.shake.duration -= step;
+        GAME.shake.x = (Math.random() - 0.5) * GAME.shake.intensity;
+        GAME.shake.y = (Math.random() - 0.5) * GAME.shake.intensity;
+        GAME.shake.intensity *= 0.92;
+    } else {
+        GAME.shake.x = 0;
+        GAME.shake.y = 0;
+    }
+
+    if (!GAME.winTransition) {
+        const destructible = GAME.blocks.filter(b => b.type !== 'solid');
+        if (destructible.every(b => !b.alive)) {
+            GAME.winTransition = true;
+            gameSetTimeout(() => {
+                GAME.level += 1;
+                GAME.score += 100;
+                GAME.powerups = [];
+                GAME.balls = [];
+                GAME.paddle.w = Math.min(110, GAME.width * 0.22);
+                rebuildBlocks();
+                spawnBall(true);
+                GAME.countdown = 2;
+                updateGameHud();
+                GAME.winTransition = false;
+            }, 800);
+        }
+    }
 }
 
-function moveBreakoutPaddle(clientX) { const board = $('.breakout-board'); if (!board) return; const rect = board.getBoundingClientRect(); gamePaddleX = Math.max(0, Math.min(board.clientWidth - gamePaddleWidth, clientX - rect.left - gamePaddleWidth / 2)); }
-function jumpMiniGame() { if (gameRunning) gameBalls.forEach(ball => { ball.vy = -Math.abs(ball.vy); }); }
+function hitBlock(block) {
+    block.hitFlash = 1;
+    if (block.type === 'solid') {
+        spawnParticles(block.x + block.w / 2, block.y + block.h / 2, '#8ba3c8', 3);
+        return;
+    }
+    block.hp -= 1;
+    if (block.hp <= 0) {
+        block.alive = false;
+        GAME.combo += 1;
+        GAME.comboTimer = 1.2;
+        const comboBonus = Math.min(GAME.combo, 10);
+        const points = (10 + comboBonus * 2) * GAME.level;
+        GAME.score += points;
+        updateGameHud();
+        spawnParticles(block.x + block.w / 2, block.y + block.h / 2, getBlockColor(block), 10);
+        triggerShake(2, 10);
+
+        const roll = Math.random();
+        if (roll < 0.10) spawnPowerUp(block.x + block.w / 2, block.y + block.h / 2, 'expand');
+        else if (roll < 0.18) spawnPowerUp(block.x + block.w / 2, block.y + block.h / 2, 'multi');
+        else if (roll < 0.22) spawnPowerUp(block.x + block.w / 2, block.y + block.h / 2, 'life');
+    } else {
+        spawnParticles(block.x + block.w / 2, block.y + block.h / 2, getBlockColor(block), 4);
+    }
+}
+
+function getBlockColor(block) {
+    if (block.type === 'solid') return '#445878';
+    if (block.type === 'hard') return GAME.colors.orange;
+    const palette = [GAME.colors.cyan, GAME.colors.violet, GAME.colors.pink, GAME.colors.green];
+    return palette[(block.row + GAME.level) % palette.length];
+}
+
+function spawnPowerUp(x, y, type) {
+    GAME.powerups.push({ x, y, type, rot: 0, vy: 3 });
+}
+
+function applyPowerUp(type) {
+    if (type === 'expand') {
+        GAME.paddle.w = Math.min(GAME.width * 0.4, GAME.paddle.w + 30);
+        GAME.paddle.x = Math.min(GAME.paddle.x, GAME.width - GAME.paddle.w - 6);
+    } else if (type === 'multi') {
+        const source = GAME.balls[0];
+        if (source && GAME.balls.length < 4) {
+            const b1 = { ...source, vx: source.vx * 0.9, vy: source.vy * 0.9, trail: [] };
+            const b2 = { ...source, vx: -source.vx * 0.9, vy: source.vy * 0.9, trail: [] };
+            GAME.balls.push(b1, b2);
+        }
+    } else if (type === 'life') {
+        GAME.lives = Math.min(3, GAME.lives + 1);
+        updateGameHud();
+    }
+}
+
+function spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1 + Math.random() * 4;
+        GAME.particles.push({
+            x, y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 1,
+            life: 1,
+            color,
+            size: 1 + Math.random() * 3
+        });
+    }
+}
+
+function triggerShake(intensity, duration) {
+    GAME.shake.intensity = Math.max(GAME.shake.intensity, intensity);
+    GAME.shake.duration = duration;
+}
+
+function renderGame() {
+    const ctx = GAME.ctx;
+    const W = GAME.width;
+    const H = GAME.height;
+
+    ctx.save();
+    ctx.clearRect(0, 0, W, H);
+
+    drawBackground(ctx, W, H);
+    ctx.translate(GAME.shake.x, GAME.shake.y);
+
+    GAME.blocks.forEach(block => {
+        if (!block.alive) return;
+        drawBlock(ctx, block);
+    });
+
+    GAME.powerups.forEach(p => drawPowerUp(ctx, p));
+    GAME.balls.forEach(ball => drawBall(ctx, ball));
+    drawPaddle(ctx, GAME.paddle);
+
+    GAME.particles.forEach(p => {
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    if (GAME.countdown > 0) {
+        ctx.fillStyle = 'rgba(2,6,17,0.55)';
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = GAME.colors.cyan;
+        ctx.font = `700 ${Math.min(72, W * 0.14)}px 'Space Grotesk', sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const secs = Math.ceil(GAME.countdown);
+        ctx.fillText(secs > 0 ? String(secs) : '¡YA!', W / 2, H / 2);
+    }
+
+    if (GAME.combo > 1 && GAME.comboTimer > 0) {
+        ctx.fillStyle = GAME.colors.orange;
+        ctx.font = `700 ${Math.min(22, W * 0.045)}px 'Space Grotesk', sans-serif`;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'top';
+        ctx.globalAlpha = Math.min(1, GAME.comboTimer);
+        ctx.fillText(`COMBO x${GAME.combo}`, W - 20, 54);
+        ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+}
+
+function drawBackground(ctx, W, H) {
+    const grad = ctx.createRadialGradient(W / 2, 0, 0, W / 2, 0, H);
+    grad.addColorStop(0, 'rgba(35, 60, 110, 0.4)');
+    grad.addColorStop(1, 'rgba(7, 11, 26, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = 'rgba(43, 227, 255, 0.04)';
+    ctx.lineWidth = 1;
+    for (let y = 60; y < H; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+    }
+}
+
+function drawBlock(ctx, block) {
+    const color = getBlockColor(block);
+
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = block.hitFlash > 0 ? 24 : 8;
+
+    const grad = ctx.createLinearGradient(block.x, block.y, block.x, block.y + block.h);
+    if (block.type === 'solid') {
+        grad.addColorStop(0, '#5a7aa8');
+        grad.addColorStop(1, '#2d4468');
+    } else {
+        grad.addColorStop(0, color);
+        grad.addColorStop(1, shadeColor(color, -35));
+    }
+    ctx.fillStyle = grad;
+    roundRect(ctx, block.x, block.y, block.w, block.h, 4);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    roundRect(ctx, block.x + 2, block.y + 1.5, block.w - 4, 2, 1);
+    ctx.fill();
+
+    if (block.type === 'hard' && block.hp === 1) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+        roundRect(ctx, block.x + 3, block.y + 3, block.w - 6, block.h - 6, 2);
+        ctx.fill();
+    }
+
+    if (block.hitFlash > 0) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${block.hitFlash * 0.6})`;
+        roundRect(ctx, block.x, block.y, block.w, block.h, 4);
+        ctx.fill();
+        block.hitFlash = Math.max(0, block.hitFlash - 0.15);
+    }
+
+    if (block.type === 'solid') {
+        ctx.strokeStyle = 'rgba(200, 220, 255, 0.5)';
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, block.x, block.y, block.w, block.h, 4);
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
+function drawBall(ctx, ball) {
+    ball.trail.forEach((pt, i) => {
+        const alpha = (1 - i / ball.trail.length) * 0.4;
+        ctx.fillStyle = `rgba(43, 227, 255, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, ball.r * (1 - i / ball.trail.length * 0.5), 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    ctx.save();
+    ctx.shadowColor = GAME.colors.cyan;
+    ctx.shadowBlur = 20;
+    const grad = ctx.createRadialGradient(ball.x - 2, ball.y - 2, 1, ball.x, ball.y, ball.r);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.5, GAME.colors.cyan);
+    grad.addColorStop(1, '#1a6ba8');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+}
+
+function drawPaddle(ctx, paddle) {
+    ctx.save();
+    ctx.shadowColor = GAME.colors.cyan;
+    ctx.shadowBlur = 18;
+    const grad = ctx.createLinearGradient(paddle.x, paddle.y, paddle.x + paddle.w, paddle.y);
+    grad.addColorStop(0, GAME.colors.cyan);
+    grad.addColorStop(0.5, GAME.colors.violet);
+    grad.addColorStop(1, GAME.colors.pink);
+    ctx.fillStyle = grad;
+    roundRect(ctx, paddle.x, paddle.y, paddle.w, paddle.h, 6);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    roundRect(ctx, paddle.x + 4, paddle.y + 1.5, paddle.w - 8, 2.5, 1.5);
+    ctx.fill();
+    ctx.restore();
+}
+
+function drawPowerUp(ctx, p) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    ctx.shadowColor = GAME.colors.green;
+    ctx.shadowBlur = 16;
+
+    const colors = {
+        expand: GAME.colors.cyan,
+        multi: GAME.colors.violet,
+        life: GAME.colors.pink
+    };
+    const icons = { expand: '↔', multi: '●●', life: '♥' };
+    const color = colors[p.type] || GAME.colors.green;
+
+    ctx.fillStyle = color;
+    roundRect(ctx, -14, -14, 28, 28, 8);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#071225';
+    ctx.font = '700 16px "Space Grotesk", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(icons[p.type] || '?', 0, 1);
+    ctx.restore();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
+function shadeColor(hex, percent) {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const r = Math.max(0, Math.min(255, (num >> 16) + percent));
+    const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + percent));
+    const b = Math.max(0, Math.min(255, (num & 0x0000FF) + percent));
+    return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+}
+
+function bindGameControls() {
+    const container = document.getElementById('miniGame');
+    if (!container) return;
+
+    window.addEventListener('keydown', (e) => {
+        if (!GAME.running) return;
+        if (['ArrowLeft', 'a', 'A'].includes(e.key)) GAME.input.left = true;
+        if (['ArrowRight', 'd', 'D'].includes(e.key)) GAME.input.right = true;
+        if (e.key === ' ' || e.key === 'Enter') {
+            e.preventDefault();
+            if (GAME.balls.some(b => b.stuck)) launchBalls();
+        }
+        if (['ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
+    });
+    window.addEventListener('keyup', (e) => {
+        if (['ArrowLeft', 'a', 'A'].includes(e.key)) GAME.input.left = false;
+        if (['ArrowRight', 'd', 'D'].includes(e.key)) GAME.input.right = false;
+    });
+
+    const onPointerMove = (e) => {
+        if (!GAME.running) return;
+        const rect = container.getBoundingClientRect();
+        const scaleX = GAME.width / rect.width;
+        const localX = (e.clientX - rect.left) * scaleX;
+        GAME.paddle.targetX = Math.max(6, Math.min(GAME.width - GAME.paddle.w - 6, localX - GAME.paddle.w / 2));
+        GAME.input.pointerActive = true;
+    };
+
+    container.addEventListener('pointermove', onPointerMove);
+    container.addEventListener('pointerdown', (e) => {
+        if (!GAME.running) return;
+        onPointerMove(e);
+        if (GAME.balls.some(b => b.stuck)) launchBalls();
+    });
+    container.addEventListener('pointerleave', () => {
+        GAME.input.pointerActive = false;
+    });
+    container.addEventListener('click', () => {
+        if (!GAME.running) return;
+        if (GAME.balls.some(b => b.stuck)) launchBalls();
+    });
+}
+
+function buildSkyGame() {
+    initGameCanvas();
+    bindGameControls();
+
+    const startBtn = document.getElementById('startGame');
+    const restartBtn = document.getElementById('restartGame');
+    if (startBtn) {
+        startBtn.removeEventListener('click', startGame);
+        startBtn.addEventListener('click', startGame);
+    }
+    if (restartBtn) {
+        restartBtn.removeEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+    }
+}
+
+window.addEventListener('beforeunload', () => {
+    stopGame();
+});
+
+/* =================================================================
+   ⚙️ EVENT LISTENERS GENERALES
+   ================================================================= */
 
 $$('.switch').forEach(button => button.addEventListener('click', () => setAuthMode(button.dataset.auth)));
 $('#rememberSession').checked = rememberSessionEnabled();
@@ -689,7 +1313,6 @@ $('#resetForm').addEventListener('submit', async event => {
     setButtonLoading(button, true, 'Actualizando contraseña');
     try { await callFunction('reset-password', { email: $('#resetEmail').value.trim(), code: $('#resetCode').value.trim(), password: $('#resetPassword').value }); closeModal('resetModal'); showToast('Contraseña actualizada. Ya puedes iniciar sesión.'); } catch (error) { $('#resetMessage').textContent = error.message; } finally { setButtonLoading(button, false); }
 });
-buildSkyGame();
 $$('[data-close]').forEach(button => button.addEventListener('click', () => closeModal(button.dataset.close)));
 $$('[data-open]').forEach(button => button.addEventListener('click', event => { event.preventDefault(); openModal(button.dataset.open); }));
 $$('.currency').forEach(button => button.addEventListener('click', () => setCurrency(button.dataset.currency)));
@@ -701,18 +1324,10 @@ document.addEventListener('visibilitychange', () => {
     if (document.hidden) stopCarouselAutoplay();
     else startCarouselAutoplay();
 });
-$('#miniGame')?.addEventListener('keydown', event => { if (['ArrowLeft', 'ArrowRight', ' '].includes(event.key)) event.preventDefault(); if (event.key === 'ArrowLeft') gameKeys.left = true; if (event.key === 'ArrowRight') gameKeys.right = true; if (event.key === ' ') jumpMiniGame(); });
-$('#miniGame')?.addEventListener('keyup', event => { if (event.key === 'ArrowLeft') gameKeys.left = false; if (event.key === 'ArrowRight') gameKeys.right = false; });
-document.addEventListener('keydown', event => { if (!$('#miniGame')?.matches(':focus')) return; if (event.key === 'ArrowLeft') gameKeys.left = true; if (event.key === 'ArrowRight') gameKeys.right = true; });
-document.addEventListener('keyup', event => { if (event.key === 'ArrowLeft') gameKeys.left = false; if (event.key === 'ArrowRight') gameKeys.right = false; });
-$('#miniGame')?.addEventListener('pointermove', event => { if (event.pointerType === 'touch' || event.pointerType === 'pen') moveBreakoutPaddle(event.clientX); });
-$('#miniGame')?.addEventListener('pointerdown', event => { if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return; moveBreakoutPaddle(event.clientX); if (!gameRunning) startMiniGame(); });
-document.addEventListener('keydown', event => { if (event.key === ' ' && document.activeElement?.id !== 'otpCode') jumpMiniGame(); });
 $$('.nav-link,[data-view]').forEach(button => button.addEventListener('click', () => { const view = button.dataset.view; if (!view) return; $$('.view').forEach(item => item.classList.toggle('active-view', item.id === view)); $$('.nav-link').forEach(item => item.classList.toggle('active', item.dataset.view === view)); }));
 ['openTopUp', 'openTopUpHero', 'openTopUpSmall', 'openTopUpCard'].forEach(id => $(`#${id}`)?.addEventListener('click', () => openModal('topUpModal')));
 $('#amountSlider').addEventListener('input', updateAmount);
 
-// 🆕 NUEVO: Listener de las flechas ↑↓
 document.querySelectorAll('.amount-step').forEach(button => {
     button.addEventListener('click', () => {
         const direction = Number(button.dataset.step);
@@ -790,9 +1405,10 @@ const { data: { session } } = await supabase.auth.getSession();
 authLog('Sesión recuperada al cargar la página.', { hasSession: Boolean(session), user: userLog(session?.user) });
 if (session?.user) await enterApp(session.user);
 
-//aaaaa
+/* =================================================================
+   🎯 REFERRAL UI
+   ================================================================= */
 
-// Crear interfaz de colaborador (no la inserta hasta que el usuario esté autenticado)
 function createReferralUi() {
     try {
         const anchor = document.createElement('a');
